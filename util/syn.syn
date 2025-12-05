@@ -1,0 +1,32 @@
+LEXICAL		rule-name, terminal-symbol.
+
+<grammar>	::= <rule>* .
+	INIT:	line := scan_string(get());
+<rule>		::= <rule-name> /rn/  '::=' body:<rule-body> '.' .
+	INIT:	var rname;
+	/rn/:	rname := sy;
+	EXIT:	put('\n', rname, '::='); body.print; put('.\n');
+		rules[rname] := body;
+<rule-body>	::= {(p:<primary> /addp/)+ '|' /adda/ }* .
+	INIT:	var prims := flex, alts := flex;;
+	/addp/:	alts.append(p);
+	/adda/: alts.append(body(prims)); prims := flex;
+	EXIT:	return(alt(alts));
+<primary>	::=
+	(<terminal-symbol> /ts/ | <rule-name> /rn/ | p:<option> |
+	  p:<compound> ) [ '+' | '*' ]  /rep/ | p : <list>.
+
+	/ts/:	p := term(sy);
+	/rn/:	p := nonterm(sy);
+	/rep/:	p.rep := if sy='+' then 1 elif sy='*' then 0 else undefined fi;
+	EXIT:	return(p);
+	
+<option>	::= '[' r:<rule-body> ']' .
+	EXIT:	return(alt([r,term('')]));
+<list>		::=
+	'{' p:<primary> <terminal-symbol> /ts/ '}' ( '+' | '*') .
+	INIT:	var t;
+	/ts/:	t := sy;
+	EXIT:	return(list(p,t,if sy = '+' then 1 else 0 fi));
+<compound>	::= '(' r:<rule-body> ')' .
+	EXIT:	return(r);

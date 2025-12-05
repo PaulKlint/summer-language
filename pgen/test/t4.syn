@@ -1,0 +1,10 @@
+LEXICAL string-const, ident, simple-integer, simple-real .
+
+<grammar> ::= BEGIN <r> END .
+
+<r>	::= t:<simple-integer> |
+	    t:<string-const> |
+	    t:<ident> |
+	    '{' t:<simple-real> '}' .
+
+	EXIT:	put('Value of t is: "', t, '"\n');

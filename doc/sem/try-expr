@@ -1,0 +1,51 @@
+.iy I ENV
+.iy I F
+.iy I FR
+.iy I N
+.iy I NR
+.iy I TRY
+.iy I UNTIL
+.iy I YRT
+.iy I a_undefined
+.iy I eval
+.iy I partial_state_copy
+.{{
+\fBif\fR \jg{{ \fIe\fR =\h'-0.3m'= \jh\s-2TRY\s0 \ji\fIexprlist\fR:{\*<expression\*> \*`\fI,\fR\^\*'}+ \fIu\fR:[\s-2UNTIL\s0 \jj\*<block\*>] \s-2YRT\s0 \jk}}
+\fBthen\fR
+\h'|\ngu'\fBvar\fR \jl\fIb\fR, \fIENV\fR1, \fIexpr\fR, \fIv\fR, \fIsig\fR;
+\h'|\ngu'\fIENV\fR1 := \fIENV\fR;
+\h'|\ngu'\fBfor\fR \jl\fIexpr\fR \fBin\fR \ji\fIexprlist\fR
+\h'|\ngu'\fBdo\fR \jm\fIENV\fR := \fIENV\fR.\fIpartial\*_state\*_copy\fR;
+\h'|\nmu'[\fIv\fR, \fIsig\fR] := \fIeval\fR\^(\fIexpr\fR);
+\h'|\nmu'\fBcase\fR \jh\fIsig\fR
+\h'|\nmu'\fBof\fR \jn\fIF\fR:   \jo\fIENV\fR := \fIENV\fR1,
+\h'|\nnu'\fIFR\fR:\h'|\nou'\fIENV\fR := \fIENV\fR1; \fIreturn\fR\^(\^[\fIv\fR, \fIFR\fR]\^),
+\h'|\nnu'\fINR\fR:\h'|\nou'\fIreturn\fR\^(\^[\fIv\fR, \fINR\fR]\^),
+\h'|\nnu'\fIN\fR:\h'|\nou'\fBif\fR \jp{{ \fIu\fR =\h'-0.3m'= \jq\s-2UNTIL\s0 \jr\fIb\fR:\*<block\*> }}
+\h'|\nou'\fBthen\fR
+\h'|\npu'[\fIv\fR, \fIsig\fR] := \fIeval\fR\^(\fIb\fR);
+\h'|\npu'\fBcase\fR \js\fIsig\fR
+\h'|\npu'\fBof\fR \jt\fIF\fR:\h'|\nqu'\fIENV\fR := \fIENV\fR1,
+\h'|\ntu'\fIFR\fR:\h'|\nqu'\fIENV\fR := \fIENV\fR1; \fIreturn\fR\^(\^[\fIv\fR, \fIFR\fR]\^),
+\h'|\ntu'\fINR\fR:\h'|\nqu'\fIreturn\fR\^(\^[\fIv\fR, \fINR\fR]\^),
+\h'|\ntu'\fIN\fR:\h'|\nqu'\fIreturn\fR\^(\^[\fIv\fR, \fIN\fR\|]\^)
+\h'|\npu'\fBesac\fR
+\h'|\nou'\fBelse\fR
+\h'|\npu'\fIreturn\fR\^(\^[\fIv\fR, \fIN\fR\|]\^)
+\h'|\nou'\fBfi\fR
+\h'|\nmu'\fBesac\fR
+\h'|\ngu'\fBod\fR;
+\h'|\ngu'\fIreturn\fR\^(\^[\fIa\*_undefined\fR, \fIF\fR\|]\^)
+\fBfi\fR;
+.}}
+.iy I ENV
+.iy I F
+.iy I FR
+.iy I N
+.iy I NR
+.iy I TRY
+.iy I UNTIL
+.iy I YRT
+.iy I a_undefined
+.iy I eval
+.iy I partial_state_copy

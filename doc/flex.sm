@@ -1,0 +1,41 @@
+# flex -- flexible arrays #
+
+class flex ()
+begin fetch update, retrieve, append, size, next, index;
+
+      var mem, size;
+
+      proc retrieve(i)
+      if 0 <= i < size then return(mem[i]) else stop(-1) fi;
+
+      proc update(i, v)
+      if 0 <= i < size then return(mem[i] := v) else stop(-1) fi;
+
+      proc append(v)
+      ( if size >= mem.size then
+           var i, m1 := array(mem.size + 10, undefined);
+	   for i in mem.index do m1[i] := mem[i] od;
+	   mem := m1
+	fi;
+	mem[size] := v;
+	size := size + 1;
+	return(v)
+      );
+
+      proc next(state)
+      ( if state = undefined then
+	 state := 0
+	fi;
+        if state < size then
+	   return([mem[state], state + 1])
+        else
+	   freturn
+        fi
+      );
+
+      proc index()
+      return(interval(0, size - 1, 1));
+
+init: mem := array(10, undefined);
+      size := 0;
+end flex;

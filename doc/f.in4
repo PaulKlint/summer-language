@@ -1,0 +1,6 @@
+var x := 'abc', y := 'def';
+var r := 3, s := 4;
+program p(z)
+( x := (x||y);
+  r := (r+s)
+)

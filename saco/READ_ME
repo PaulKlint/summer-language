@@ -1,0 +1,9 @@
+Deze directory bevat de volgende files:
+
+oldest:		Een directory met de beschrijving en implementatie van het
+		programma oldest.
+prefix:		Assembler-file met de constante definities voor de SAM.
+sep3:		Implementatie van een SUMMER compiler die gebruik van
+		incrementele vertaling maakt.
+sep5:		idem.
+

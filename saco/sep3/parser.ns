@@ -1,0 +1,5 @@
+include 'scanner.sm';
+
+	# scanner declares the procedures needed for scanning		#
+
+

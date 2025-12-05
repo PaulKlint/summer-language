@@ -1,0 +1,1054 @@
+.ND
+.LP
+.nr LL 6.8i
+.de ix
+\\$2\\$3\\$4
+..
+.rn DS @S
+.rn DE @E
+.de DS
+.ls 1
+.@S \\$1
+.ls 1
+..
+.de DE
+.@E \\$1
+.ls 2
+..
+.DS C
+FORMAL LANGUAGE DEFINITIONS CAN BE MADE PRACTICAL
+.sp 3
+Paul Klint
+.sp 3
+Mathematisch Centrum
+Kruislaan 413
+1098SJ Amsterdam
+The Netherlands
+.DE
+.sp 6
+.LP
+ABSTRACT
+.sp 1
+If some formal method is used to define a programming language,
+the problem arises that individuals with different backgrounds
+and intentions have to learn a notation and
+definition method they are unfamiliar with.
+The various uses of formal definitions are summarized in this paper and
+an improved method for operational language definitions is presented.
+This method aims at language descriptions that are understandable and
+useful for both designer, implementor and user of a defined language.
+The method has been used in the definition of the SUMMER programming language.
+Various examples of that definition are given and
+the method as a whole is assessed.
+.bp
+.in +1.0i
+ " ... The metalanguage of a formal definition must not become
+a language known to only the priests of the cult.
+Tempering science with magic is a sure way to return to
+the Dark Ages." [6]
+.in
+.SH
+1. THE PROBLEM
+.PP
+Programming languages are being designed using pre-scientific methods.
+Of course, there is no substitute for experience, taste, style and intuition 
+but a scientific design methodology to support them is lacking.
+Methods for describing programming languages are somewhat more
+developed, but most definitions are either
+ambiguous and inaccurate, or excessively formal and unreadable.
+In general, a language definition method should:
+.IP 1) 3
+help the language
+.UL designer
+by giving insight in the language he or she is designing and by exposing
+interactions that might exist between language features.
+The definition should at the same time be
+a pilot implementation of the defined language
+or it should at least be convertible into one.
+It is assumed here, that design and definition can best be carried out
+simultaneously.
+.IP 2) 3
+help the language
+.UL implementor
+by providing him with an unambiguous and complete definition that is capable
+of "executing" small programs in cases where the implementor is in doubt
+about the meaning of a particular language feature.
+.IP 3) 3
+help the
+.UL user
+by providing him with a precise definition in a language he is not too
+u_n_familiar with.
+.LP
+These three goals impose different and to a certain extent contradictory
+requirements on the definition method to be used.
+In particular, it seems difficult to combine precision and readability
+in one method, since a precise definition has to use some
+formalism to which the reader has to be initiated and such a definition
+will have a tendency to become long and unreadable.
+This paper reports on an experiment with a language definition method
+that may be considered as a first step in satisfying the above requirements.
+.PP
+The
+.UL defined
+language is SUMMER [3,4] an object-oriented
+string processing language.
+The definition method is similar in spirit to the SECD method [5],
+i.e. it is an operational language definition method which uses
+recursive functions and syntactic recognition functions to define
+a finite state machine that associates semantic actions
+with all constructs in the grammar of the language.
+In the method presented in this paper
+readability has been considerably enhanced by using a few
+imperative constructs and by introducing a very concise notation
+for parsing and decomposing the source-text of programs in the defined language.
+SUMMER, extended with such parsing and decomposing operations, is used as
+.ul
+defining language.
+The definition is hence circular (see Sections 2.1 and 3).
+.PP
+A complete description of the definition method can be found in [4].
+The next section gives only a birds-eye view of the description method
+and shows some illustrative examples from the SUMMER definition.
+In Section 3 the method as a whole and its application to SUMMER
+are assessed.
+.SH
+2. THE METHOD
+.SH
+2.1. Introduction
+.ds EL C-
+.PP
+An
+.ul
+evaluation process
+or
+.UL interpreter
+(with the name "eval") will be defined
+that takes an arbitrary source text ("the source program")
+as input and either computes the result of the execution of that program
+(if it is a legal program in the defined language)
+or detects a syntactic or semantic error.
+The evaluation process operates directly on the text of the source
+program and the process as a whole may be viewed as
+performing a series of string transformations on that text.
+During this process a global
+.UL environment
+may be inspected or updated.
+An environment is a mapping from identifiers in the source program
+to their actual values during the evaluation process.
+Environments are used to describe concepts such as variables, assignment
+and scope rules.
+.PP
+A fundamental question arises here:
+in which language do we write the definition?
+Several choices can be made, such as the formalism used in
+.ix I "denotational semantics"
+([1], this boils down to mathematical notation for recursive functions
+and domains) or the
+.ix I "Vienna Definition Language"
+([8], a programming language designed for the manipulation of trees).
+This is not the right place to discuss the merits of these formalisms, but
+none has the desired combination of properties as described in the
+previous paragraph.
+Instead of designing yet another definition language,
+the defined language itself (this is SUMMER in the examples given in this paper)
+will be used as definition language.
+This choice has the obvious disadvantage that the definition is
+circular, but it has the practical advantage that readers who have only
+a moderate familiarity with the defined language will be able
+to read the definition without great difficulty.
+An extensive discussion of circular language definitions can be found in [7].
+It should be emphasized that there is no
+.UL fundamental
+reason to make the definition circular.
+The definition method described here would also work if, for example,
+ALGOL 68 was used as defining language.
+In any case, it is essential that the defining language has powerful
+string operations and allows the creation of data structures
+(of dynamically determined sizes).
+This requirement makes, for example, PASCAL less suited as defining language.
+Choosing SUMMER as defining language gave us the opportunity to investigate
+the suitability of that language in the area of language definition (see Section 3).
+.ne 6
+.PP
+In the following sections the definition method and an example
+of its application (in the SUMMER definition) are described simultaneously.
+In Section 2.2
+some aspects of the use of SUMMER as a metalanguage
+are described.
+The definition method can be subdivided in the definition of
+semantic domains (Section 2.3) and of the evaluation process (Section 2.4).
+Some more detailed examples from the SUMMER definition are given in Section 2.5.
+.SH
+2.2. SUMMER as metalanguage
+.PP
+This paragraph focuses on some aspects of SUMMER that are used in
+the formal definition.
+Most of these constructs have some similarity with constructs in, for instance,
+PASCAL and are assumed to be self-explanatory.
+Only less obvious constructs that are essential for the understanding of
+the definition are mentioned here.
+.PP
+SUMMER is an object-oriented language with pointer semantics.
+This means that an object can be modified by assignment and that
+such modifications are visible through all access paths to that object.
+For example,
+.DS
+s := stack(10)
+.DE
+assigns a "stack" object of size 10 to the variable "s", and
+.DS
+s.push(v)
+.DE
+pushes the value of "v" on the stack "s".
+As a side-effect the stack "s" is modified such that subsequent operations
+on "s" may perceive the effect of that modification.
+In the formal definition this is relevant for the concepts "state"
+and "environment", which are modified in this way.
+.PP
+The language is dynamically typed, i.e. the type of variables is not fixed
+statically (as in PASCAL) but is only determined during the execution of
+the program (as in LISP or SNOBOL4).
+Moreover, generic operations on data structures are allowed.
+If an operation is defined on several data types, then the
+procedure to be executed when that operation occurs is determined
+by the type of the (left) operand of that operation.
+.PP
+Control structures and data structures are self-explanatory
+except possibly
+.UL arrays
+and
+.UL "for-statements."
+.PP
+Arrays are vectors of values,
+indexed by 0, ..., N-1,
+where N is the number of elements in the array.
+If "A" is an array then the operation "A.size" will yield the number
+of elements in the array.
+A new array is created by
+.DS
+[V\d0\u, ..., V\dN-1\u]
+.DE
+or
+.DS
+array(N, V)
+.DE
+In the former case, an array of size N is created and initialized to the
+values V\d0\u, ..., V\dN-1\u.
+In the latter case, an array of size N is created and all elements are
+initialized to the value V.
+Array denotations are also allowed as left hand side of assignments.
+This provides a convenient notation for multiple assignments.
+For example,
+.DS
+[x, y, z] := [10, 20, 30]
+.DE
+is completely equivalent with
+.DS
+x := 10; y := 20; z := 30;
+.DE
+and, more generally,
+.DS
+[x\d0\u, ..., x\dk\u] := a
+.DE
+is equivalent with
+.DS
+x\d0\u := a[0]; ... ; x\dk\u := a[k];
+.DE
+The general form of a for-statement is:
+.DS
+for V in G do S od
+.DE
+where V is a variable, G is an expression that has as value an object
+capable of generating a sequence of values VAL\di\u and where S is an
+arbitrary statement.
+For each VAL\di\u the assignment V:=VAL\di\u is performed and S is evaluated.
+In this paper, the expression G will be used in two forms:
+the value of G is either an array
+(in which case consecutive array elements are generated) or
+G is an array on which the operation "index" is performed
+(in which case all indices of consecutive array elements are generated).
+For example, in
+.DS
+a := [144, 13, 7];
+for x in a do print(x) od
+.DE
+an array object is assigned to the variable "a" and
+the values 144, 13 and 7 will be printed, while
+.DS
+for i in a.index do print(i) od
+.DE
+will print the values 0, 1 and 2.
+Further examples of for-statements will be found in the
+following paragraphs.
+.SH
+2.3. Semantic domains
+.PP
+A
+.ix I "semantic domain"
+is a set, whose elements either describe a primitive notion
+in the defined language (like "variable" or "procedure declaration")
+or have some common properties as far as the language definition is concerned.
+The relationship between these domains is given by a series of
+domain equations.
+.PP
+In the remainder of this paragraph the domains in the SUMMER definition
+are briefly described.
+The abstract properties of these domains are given in [4].
+Here, they are only introduced informally.
+First, the domain equations are given.
+Next, the meaning of each domain is described.
+.PP
+The relationship between the domains
+BASIC-VALUES, DENOTABLE-VALUES, STORABLE-VALUES, ENVIRONMENT, LOCATIONS, STATE, PROC, CLASS and INSTANCE is as follows
+. ("+", "X" and "->" respectively denote set union, Cartesian product
+. and function definition):
+.DS L
+BASIC-VALUES     = STRING + INTEGER + UNDEFINED
+DENOTABLE-VALUES = LOCATIONS + INSTANCE + PROC + CLASS + BASIC-VALUES
+STORABLE-VALUES  = INSTANCE + BASIC-VALUES
+ENVIRONMENT      = ID -> DENOTABLE-VALUES
+STATE            = LOCATIONS -> (STORABLE-VALUES + {unused})
+PROC             = PROC-DECL X ENVIRONMENT
+CLASS            = ID X CLASS-DECL
+INSTANCE         = ID X CLASS-DECL X ENVIRONMENT
+.DE
+.PP
+Here, ID, PROC-DECL and CLASS-DECL are the sets of string values that can
+be derived from the syntactic notions
+.ix I <identifier> ,
+.ix I <procedure-declaration>
+and
+.ix I <class-declaration>
+in the SUMMER grammar.
+BASIC-VALUES is the domain of
+primitive values in the language.
+DENOTABLE-VALUES is the domain of
+values which can be manipulated by the evaluation process.
+STORABLE-VALUES is the domain of
+values which can be assigned to variables in the source program.
+The domain LOCATIONS is
+used to model the notion "address of a cell capable of containing a value".
+Inspection of the contents of a location does not
+affect the contents of
+that location itself or of any other location.
+Modification of the contents of a location does not affect the contents of
+any other location.
+STATE is the domain that consists of functions that map locations on
+actual values or "unused".
+.PP
+.ix I PROC
+is the domain of procedures.
+Each element of this domain describes a procedure declaration and
+contains a literal copy of the text of the procedure declaration itself
+and an environment that reflects all names and values available at the
+point of declaration.
+.PP
+.ix I CLASS
+is the domain of classes.
+Each element of this domain describes one class declaration and contains
+the name of the class and a literal copy of the text of the
+class declaration.
+.ix I INSTANCE
+is the domain of class instances.
+All values that are created by a SUMMER program are instances of some class.
+An instance consists of the name of the class to which it belongs,
+the literal text of the declaration of that class and an environment
+that has to be used to inspect or update components from the instance.
+Operations are defined on elements in PROC, CLASS and INSTANCE
+to manipulate the components of an element in these domains.
+For completeness, these domains are mentioned here, but they will
+not be used in the remainder of this paper.
+.PP
+STRING, INTEGER and UNDEFINED are the domains modeling
+the values and operations for
+the built-in types "string", "integer" and "undefined" respectively.
+UNDEFINED is the domain consisting of undefined values.
+All variables are initialized to an undefined value.
+Operations are defined on elements in STRING, INTEGER and UNDEFINED
+that model the primitive operations on the data types "string", "integer" and "undefined".
+.PP
+.ix I ENVIRONMENT
+is the domain of environments.
+Environments administrate the binding between names and values and the
+introduction of new scopes (i.e. ranges in the program where
+names may be declared).
+The operations defined on environments modify, in general, the environment
+to which they are applied.
+.PP
+The definitions given in following sections are centered around operations
+on elements of these semantic domains,
+but we will see relatively few of them in the examples.
+Operations will only be explained when they occur in an example.
+.SH
+2.4. Evaluation process
+.PP
+An extended form of BNF notation is used to describe the syntax
+of the defined language.
+The extensions aim at providing a concise notation for the description
+of repeated or optional syntactic notions.
+A syntactic notion suffixed with "+" means one or more repetitions of
+that notion.
+A notion suffixed with "*" stands for zero or more repetitions
+of that notion.
+The notation
+.DS
+{ notion separator } replicator
+.DE
+i.e. a "notion" followed by a "separator" enclosed in braces
+followed by a "replicator",
+is used to describe a list of notions separated by the given separator.
+A replicator is either "+" or "*".
+The replicator "+" indicates that the list consists of one or more notions.
+The list begins and ends with a notion.
+The replicator "*" indicates that the list consists of zero or more notions.
+.PP
+An optional syntactic notion is indicated by
+enclosing that notion in square brackets, e.g. "[ notion ]".
+The terminal symbols of the grammar are either enclosed in single
+quotes (for example: ',' or ':=') or written in upper case letters
+if the terminal symbol consists solely of letters
+(for example: "IF" may be used to denote the terminal symbol "if").
+Where necessary, parentheses are used for grouping.
+.PP
+Some parts of a syntax rule may be labeled with a <tag>; their
+meaning will become clear below.
+.ne 6
+.PP
+The
+.ix I "evaluation process"
+is described in SUMMER extended with
+.ul
+parse expressions
+1)
+.FS
+.ll \*(LL
+.ls 1
+1) There is no
+.UL fundamental
+reason to introduce this language extension.
+However, the disadvantage of introducing such an ad-hoc extension
+is more than compensated by the fact that we use a notation which is
+sufficiently similar to BNF notation to be almost self-explanatory.
+The effect of introducing a language extension as proposed here
+is interesting in its own right but falls outside the scope of the
+current discussion.
+.FE
+of the form
+.DS
+ '{{' <identifier> '==' <syntax-rule> '}}'
+.DE
+which are used as a very concise notation for parsing and extracting
+information from the text of the source program.
+A parse expression succeeds if the identifier at the left hand side
+of the '==' sign has
+a string as value and if this string is of the form described by the
+<syntax-rule> at the right hand side of the '==' sign.
+All <tag>s occurring in the <syntax-rule> should have been declared as
+variables in the program containing the parse expression,
+in this case the evaluation process.
+Substrings of the parsed text are assigned to these variables.
+If the recognized part of the text is a list or repetition,
+then an array of string values is assigned to the variable
+corresponding with the tag.
+Consider, for example, the following program fragment:
+.DS
+if {{ e == WHILE t:<test> DO b:<body> OD }}
+then
+   put('e is a while expression')
+fi
+.DE
+The parse expression will succeed if "e" has the form of a while
+expression; the literal text of the
+<test>
+is then assigned to variable "t"
+and the text of the <body> is assigned to variable "b".
+Repetition occurs in
+.DS
+if {{ e == VAR list:{<identifier> ','}+ }}
+then
+   put('e is a variable declaration containing:');
+   for l in list do put(l) od
+fi
+.DE
+The parse expression succeeds if "e" has the form of a "variable declaration"
+(i.e. the keyword "var" followed by a list of <identifier>s separated
+by commas)
+and in that case
+an array of string values corresponding to the <identifier>s occurring in
+the declaration
+is assigned to the variable "list", which is printed subsequently.
+.PP
+Parse expressions may be used as test in if statements or may stand on their own.
+In the latter case, the string to be parsed
+.UL has
+to be of the form described by the parse expression.
+In this way, parse expressions can be used
+to decompose a string with a known form into substrings.
+.PP
+In the case of the SUMMER definition, the overall structure of the
+.ix I "evaluation process"
+is:
+.DS I
+var E;
+var S;
+var varinit;
+proc ERROR
+     ... ;
+proc eval(e)
+( var value, signal, ... ;
+
+  if {{ e == <program-declaration> }}
+  then
+     ...
+     return([value, signal])
+  fi;
+  if {{ e == <variable-declaration> }}
+  then
+     ...
+     return([value, signal])
+  fi;
+  ...
+  if {{ e == <empty> }}
+  then
+     ...
+     return([value, signal])
+  fi;
+  ERROR
+);
+.DE
+The variable "E" has as value the current environment and "S"
+has as value the current state.
+The variable
+.ix I varinit
+has as value a string consisting of the
+text of all
+.ix I <variable-initialization> s
+in the current
+.ix I <block> .
+.PP
+The procedure ERROR is called when a syntactic or semantic error is
+detected during evaluation.
+In that case, the whole evaluation process is aborted immediately.
+The main defining procedure is "eval", which selects an appropriate case
+depending on the syntactic form of its argument "e".
+Some examples of these various cases will be given in Section 2.5.
+Note that each of these cases involves a complete syntactic analysis
+of the string "e".
+The evaluation process is initiated by creating an initial, empty
+environment "E" and by calling "eval" with the text of the
+source program as argument.
+If the evaluation process is not terminated prematurely
+(by the detection of a semantic error)
+the result of the evaluation of the source program can be obtained
+by inspecting the resulting environment "E".
+Note how syntactically incorrect programs are intercepted in "eval" by
+ERROR, which is called if none of the listed cases applies.
+.PP
+The procedure "eval" delivers as result an
+.UL array
+of the form [value, signal], where "value" is the actual result of the
+procedure and "signal" is a success/fail flag that indicates how "value"
+should be interpreted.
+SUMMER uses a success-directed evaluation scheme:
+an expression can either
+.UL fail
+or
+.UL succeed.
+These success/fail signals are used by language constructs like
+<if-expression> and <while-expression> to determine the
+flow-of-control.
+The "signal" delivered by "eval" is used to model this evaluation mechanism.
+This "signal" may have the following values:
+.IP N: 4
+evaluation terminated normally.
+.IP F: 4
+evaluation failed.
+.IP NR: 4
+normal return; a
+.ix I <return-expression>
+was encountered during evaluation.
+.IP FR: 4
+failure return; a failure return was encountered during evaluation.
+.LP
+The signal is tested after each (recursive) invocation of "eval".
+In most cases eval performs an immediate return if the signal is not equal
+to N after the evaluation of a subexpression.
+Exceptions are cases such as
+.ix I <if-expression>
+and
+.ix I <return-expression>
+in
+which the signal is used to determine how evaluation should proceed.
+This organization has the effect that aborting the evaluation of the "current"
+expression, which is necessary if failure occurs in a deeply nested
+subexpression, can be achieved by passing a signal upwards until it
+reaches an incarnation of eval that can take appropriate measures.
+The difference between F and FR lies in the language constructs that
+handle these cases.
+For example, consider <if-expression>s.
+An F signal generated in the
+<test>
+part of an
+<if-expression>
+can
+be treated by the semantic rule associated with
+<if-expression>s.
+But an FR signal generated during the evaluation of the
+<test>
+can only be treated by the semantic rule associated with the invocation
+of the procedure in which the
+<if-expression>
+occurs.
+In general, the signals NR and FR are only
+.UL generated
+by return-expressions and are only
+.UL handled
+by the semantic rules associated with procedure calls.
+The latter rules turn NR into N and FR into F before the evaluation process
+is resumed at the point where it left off to perform the (now completed)
+procedure call.
+All other semantic rules return immediately when an NR or FR signal occurs.
+.PP
+Note that the [value, signal] artifact is induced by
+the specific form of expression evaluation in SUMMER
+and has nothing to do with the definition method itself.
+We have just chosen one particular way to describe a form of goto statement.
+.SH
+2.5. Some examples
+.SH
+2.5.1. If expressions
+.PP
+<if-expression>s correspond to the if-then-else statement found
+in most programming languages.
+If evaluation of the
+.ix I <test>
+immediately contained in the
+.ix I <if-expression>
+terminates successfully, the
+.ix I <block>
+following "then" is evaluated.
+Otherwise, the successive
+<test>s following subsequent "elif"s
+are evaluated until one such evaluation terminates successfully
+(in which case the following
+.ix I <block>
+is evaluated) or the list is exhausted.
+In the latter case, the
+.ix I <if-expression>
+may contain
+an "else" and then the
+.ix I <block>
+following that "else" is evaluated.
+The formal definition is:
+.DS L
+.nm 1
+if {{ e == IF t:<test> THEN b:<block>
+	     elifpart:(ELIF <test> THEN <block>)*
+	     elsepart: [ELSE <block>] FI }}
+then
+     [v, sig] := eval(t);
+     if sig = N then return(eval(b))
+     elif sig ~= F then return([v, sig])
+     else
+          for ei in elifpart
+          do {{ ei == ELIF t:<test> THEN b:<block> }} ;
+	     [v, sig] := eval(t);
+	     if sig = N then return(eval(b))
+	     elif sig ~= F then return([v, sig]) fi
+	  od;
+	  if {{ elsepart == ELSE b:<block> }}
+	  then
+	     return(eval(b))
+	  else
+	     return([a_undefined, N])
+	  fi
+     fi
+fi;
+.nm
+.DE
+The parse expression in lines 1-3 decomposes the string value of "e"
+in several parts.
+In line 5 the <test> of the <if-expression> is evaluated.
+Note how the occurrence of non-standard (i.e. sig = NR or sig = FR) signals
+terminates the evaluation of the <if-expression> (lines 7, 13).
+This is particularly relevant for the evaluation of the <test> part.
+SUMMER allows the occurrence of a return statement in a <test>.
+This is reflected in the above definition.
+.PP
+For a better understanding of the above definition, it may be useful to note
+that parts of the source program are parsed
+.UL repeatedly
+during
+.UL one
+evaluation of a given <if-expression>.
+For example, the <block> following an "elif" is parsed both
+in lines 2 and 10.
+(This explains, by the way, why the parse expression in line 10 needs
+not be contained in an if statement, see Section 2.4.)
+In general, the source text of the <if-expression> is parsed
+.UL each
+time that it is evaluated.
+.SH
+2.5.2. Variable declarations
+.PP
+A
+.ix I <variable-declaration>
+introduces in the current environment
+a series of new variables, i.e. names of locations whose contents
+may be inspected and/or modified.
+The declaration may contain
+<expression>s
+whose value is to be used
+for the initialization of the declared variables.
+First, these initializing expressions are evaluated.
+Next, the <expression>s
+following the <variable-declaration>s are evaluated.
+In the formal definition this is described by appending all
+variable initializations in the current
+.ix I <block>
+to the
+variable "varinit" and by evaluating the string value of that
+variable before the evaluation of the subsequent
+<expression>s in the <block>.
+The formal definition of <variable-declaration>s is:
+.DS L
+.nm 1
+if {{ e == VAR vi:{<variable-initialization> ',' }+ ';' }}
+then
+     for v in vi
+     do if {{ v == x:<identifier> ':=' <expression> }} then
+	   varinit := varinit || v || ';' ;
+	   E.bind(x, S.extend(a_undefined));
+	else
+	   {{ v == x:<identifier> }};
+	   E.bind(x, S.extend(a_undefined))
+	fi
+     od;
+     return([a_undefined, N])
+fi;
+.nm
+.DE
+In line 1, "e" is decomposed into an array of strings which have
+the form of a <variable-initialization>.
+These string values are considered in succession in the for loop
+in lines 3-11.
+If the <variable-initialization> contains an initializing
+expression, that expression is appended to "varinit" (line 5)
+using the string concatenation operator "||".
+In both cases, the state S is extend______ed with
+a location containing an undefined value, and that new location is
+.UL bound,
+in the current environment E, to the identifier being declared.
+Note that, in line 8, "v" is known to have the form of an <identifier>.
+.SH
+2.5.3. Blocks
+.PP
+A <block> introduces a new scope to be used for the declaration of
+new variables and constants.
+It consists of a (perhaps empty) list of declarations followed
+by a sequence of expressions separated by semicolons.
+A <block> is evaluated as follows:
+.IP 1) 3
+Evaluate all declarations
+.IP 2) 3
+Evaluate all variable-initializations resulting from the evaluation
+of the declarations.
+.IP 3) 3
+Evaluate the sequence of expressions in the <block>.
+(Note that SUMMER forbids the failure of an expression inside
+a sequence of expressions.
+Only the last expression in a sequence is allowed to fail; this failure
+is passed upwards to enclosing language constructs.)
+.LP
+The formal definition is:
+.DS L
+.nm 1
+if {{ e == dlist:<variable-declaration>*
+             elist:{[<expression>] ';'}* }}
+then
+     var E1, varinit1;
+     E1 := E;
+     E.new_inner_scope;
+     varinit1 := varinit;
+     varinit := '' ;
+     for d in dlist
+     do [v, sig] := eval(d);
+        if sig ~= N then ERROR fi
+     od;
+     [v, sig] := eval(varinit);
+     varinit := varinit1;
+     if sig ~= N then E := E1; return([v, sig]) fi;
+     for i in elist.index
+     do
+        [v, sig] := eval(elist[i]);
+        case sig of
+        N:  ,
+        F:  if i ~= elist.size - 1 then ERROR fi,
+        NR: FR: (E := E1;return([v, sig]))
+        esac
+     od;
+     E := E1;
+     return([v, sig])
+fi;
+.nm
+.DE
+In lines 5-8 local copies are made of "E" and "varinit"
+and new values are assigned to them.
+In lines 9-13 the list of <variable-declaration>s in the <block>
+and the resulting <variable-initialization>s are evaluated.
+In lines 16-24 the list of <expression>s in the <block> are evaluated.
+Note how failure of an expression in the middle of the list
+is treated (line 21, see above).
+.bp
+.SH
+3. ASSESSMENT
+.PP
+The formal language definition presented in the previous section will now
+be assessed.
+It is tempting to try to get statements like:
+.IP "" 3
+ "Users can answer 87% of their questions on language issues
+within five minutes if they have access to a formal language definition
+of the kind described in this article."
+.LP
+or
+.IP "" 3
+ "35% of all run-time errors in user programs are directly related to
+anomalies in the language definition".
+.LP
+In the absence of such results and with the methods to obtain them lacking,
+we have to live with qualitative and more or less
+speculative observations.
+.PP
+A rough indication for the
+.UL conciseness
+of the definition can be obtained by comparing various sizes
+as they apply to the SUMMER definition:
+.DS I
+formal definition		 20 pages
+reference manual		100 pages
+implementation			200 pages
+.DE
+These figures show that the implementation is ten times larger
+than the formal definition.
+This is not surprising, since the implementation has
+to be efficient while the formal definition does not have to be.
+In this light the "a-language-is-defined-by-its-implementation" approach
+can be rephrased
+as: "i_f_ a language
+is defined by its implementation,
+.UL then
+that implementation had better
+be small".
+.PP
+The definition is
+.UL precise
+and
+.UL complete,
+in the sense that
+.UL all
+semantic operations associated with a particular language construct
+.UL have
+to be specified to allow the construction of an
+.UL executable
+version of the definition.
+The number of
+.ul
+operational details,
+i.e. details in the definition which stem from the chosen definition method and
+have no inherent meaning in
+the defined language, is surprisingly small.
+This is a consequence of the choice of
+the defining language (which should have powerful data types and
+string manipulation operations) and the choice
+of high-level environment
+manipulation primitives which correspond directly to operations
+in the defined language and which are not (yet)
+perverted by implementational details.
+SUMMER extended with parse expressions seems a quite reasonable
+vehicle for language definition.
+It is, however, not possible to make continuation-style (see [1])
+definitions, since higher-order functions are lacking.
+.PP
+It is difficult to give an objective judgement on the
+.UL readability
+of the definition,
+but we have observed that only a moderate effort (a few days)
+is required on the part of a programmer without any training
+in formal semantics and without any previous exposure to the
+language to learn SUMMER using only the (annotated) formal
+definition.
+.PP
+The advantages and disadvantages of the formal definition for designer,
+implementor and user
+will now be discussed in some detail.
+.ne 4
+.ne 6
+.LP
+The advantages for the
+.UL designer
+are:
+.IP 1) 3
+Anomalies in the design are magnified.
+It is a general rule that ill-formed entities can only be described by
+ill-formed descriptions or by descriptions which list many exceptional cases.
+It is easier to locate such exceptions or anomalies in a concise formal definition
+than in an ambiguous natural language definition or in a bulky implementation.
+In the SUMMER definition, for example, a very specific operation on
+environments is needed ("partial-state-copy") to accommodate the definition
+of just one language feature ("try-expression").
+It turned out that
+a slight modification of that feature would
+at the same time simplify the definition
+and improve the feature.
+.IP 2) 3
+Exhaustive enumeration of language features.
+A formal definition method forces the designer to enumerate all
+language features in the same framework and
+this may help him to find omissions in the design.
+.IP 3) 3
+Interactions between language features can be studied.
+In the SUMMER definition, for example, the designer is forced to
+decide what happens when a <return-expression> is evaluated
+during the evaluation of any other expression.
+There is, however, no guarantee that all interactions can be found,
+since the formal definition may still contain hidden interactions between
+language features.
+The use of auxiliary functions in the definition is an aid in making
+interactions explicit.
+One may even apply techniques
+such as calling graph analysis and data flow analysis to the
+definition to discover clusters of interacting features
+and to establish certain properties of the definition.
+.IP 4) 3
+An executable formal definition can be tested and used.
+This may help eliminate
+clerical and gross errors from the definition.
+An executable definition allows the designer to play with (toy) programs
+written in the language he is designing.
+Here is, however, a problem with circular definitions:
+some implementation of the defined language has to exist before
+the definition itself can be made executable.
+.ne 6
+.ne 6
+.LP
+Disadvantages for the
+.UL designer
+are:
+.IP 1) 3
+A considerable effort is required to construct a formal definition.
+.IP 2) 3
+A general problem is that
+there are no canned, satisfactory definition methods available and
+that the designer has to begin with either creating a new method or adapting and
+extending an existing one.
+.ne 6
+.ne 6
+.LP
+Advantages for the
+.UL implementor
+are:
+.IP 1) 3
+Unambiguous language definition.
+.IP 2) 3
+The implementor may be in doubt as to the meaning of a certain
+combination of features.
+Such cases can be executed both by the implementation and by the definition
+and the results can be compared.
+.ne 6
+.ne 6
+.LP
+Disadvantages for the implementor are:
+.IP 1) 3
+The implementor must be familiar with the definition method
+or become acquainted with it.
+This is only a minor effort if one compares it with the total effort
+required to implement the language.
+.IP 2) 3
+It is non-trivial to derive an implementation strategy from the
+language definition.
+This is a problem shared by all "abstract" language definitions,
+in which no attempt is made to use primitives in the definition
+with a direct counterpart in an implementation.
+This leads to the conclusion that such abstract definitions should
+be accompanied by an "annotation for implementors", which states
+where well-known implementation techniques can be used and where
+certain optimizations are possible.
+.ne 6
+.ne 6
+.LP
+Advantages for the
+.UL user
+are:
+.IP 1) 3
+Unambiguous and concise language definition.
+.IP 2) 3
+The user is used to reading programs and the formal definition can be read
+as such.
+In the case of a circular definition,
+the formal definition may be considered as a very informative
+example program.
+.ne 6
+.ne 6
+.LP
+Disadvantages for the
+.UL user
+are:
+.IP 1) 3
+The user must be exposed to the definition method.
+.IP 2) 3
+A formal definition is harder to read then a "natural language" definition.
+.IP 3) 3
+In the case of the SUMMER definition,
+the circularity may be confusing for the naive user.
+.PP
+In retrospect, it seems justified to conclude that the method presented
+in this paper is a first step in satisfying the requirements given
+in Section 1.
+However, many problems remain to be investigated.
+Does the given method lend itself to mathematical analysis?
+How can the "complexity" of a language be derived from its definition?
+Is it possible to "optimize" the executable version of definitions?
+(Attempts in this direction can be found in [2].)
+What is the relationship between this definition method
+and extensible languages?
+Answers to these questions will provide more insight in the
+structure of programming languages and the methods for defining them.
+.SH
+ACKNOWLEDGEMENT
+.PP
+J. Heering, H.J. Sint and A.H. Veen made useful comments on
+various drafts of this paper.
+Parts of it were discussed with
+L.J.M. Geurts,
+F.E.J. Kruseman Aretz and
+L.G.L.T. Meertens.
+I am grateful for their support.
+.SH
+REFERENCES
+.IP [1]
+Gordon, M.J.C., "The
+denotational description of programming languages",
+Springer-Verlag, 1979.
+.IP [2]
+Jones, N.D., "Semantics-directed compiler generation",
+Springer-Verlag, 1980.
+.IP [3]
+Klint, P., "An overview of the SUMMER programming language",
+Conference Record of the 7th Annual ACM Symposium on
+Principles of Programming Languages, Jan. 1980, 47-55.
+.IP [4]
+Klint, P., "SUMMER Reference Manual",
+Mathematical Centre, (to appear).
+.IP [5]
+Landin, P.J., "The mechanical evaluation of expressions",
+Computer Journal, 6_ (1964) 308-320.
+.IP [6]
+Marcotty, M., Ledgard, H.F. and Bochmann, G.V., "A sampler
+of formal definitions", Computing Surveys 8_ (1976) 191-276.
+.IP [7]
+Reynolds, J.C., "Definitional interpreters for higher-order languages",
+Proceedings ACM Annual Conference, Aug. 1972, 717-740.
+.IP [8]
+Wegner, P., "The Vienna Definition Language",
+Computing Surveys 4_ (1972) 5-63.

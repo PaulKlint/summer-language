@@ -1,0 +1,5 @@
+program xx()
+( var f := file('zzz', 'wb');
+  f.put(3, '', 4);
+  f.close
+)

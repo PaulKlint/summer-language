@@ -1,0 +1,6 @@
+<string-constant>  ::=  <single-quote> <string-item>* <single-quote> .
+
+<string-item>      ::=  <any-character-from-limited-ascii-set> |
+                        '\' ('b' | 'n' | 't' | '\') |
+                        '\' <digit> <digit> <digit> |
+                        <single-quote> <single-quote> .

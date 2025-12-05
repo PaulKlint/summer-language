@@ -1,0 +1,108 @@
+.{{
+\*# flexible\*_array \jg\*#
+.sp 0.5
+\fBclass\fR \jh\fIflexible\*_array\fR (\^)
+\fBbegin\fR \jh\fBfetch\fR \ji\fIupdate\fR, \fIretrieve\fR, \fIappend\fR, \fIdelete\fR, \fIsize\fR, \fInext\fR, 
+\h'|\niu'\fIindex\fR, \fItop\fR;
+\h'|\nhu'\fBstore\fR \ji\fIsize\fR : \fIchange\*_size\fR;
+.sp 0.5
+\h'|\nhu'\fBvar\fR \jj\fImem\fR, \fIsize\fR;
+.sp 0.5
+\h'|\nhu'\fBproc\fR \jk\fIextend\fR\^(\fIn\fR)
+\h'|\nhu'(  \jl\fBvar\fR \jm\fIi\fR, \fIm\fR1 := \fIarray\fR\^(\fIn\fR, \fIundefined\fR\|);
+\h'|\nlu'\fBfor\fR \jm\fIi\fR \fBin\fR \jn\fImem\fR.\fIindex\fR \fBdo\fR \jo\fIm\fR1[\fIi\fR\|] := \fImem\fR\^[\fIi\fR\|] \fBod\fR;
+\h'|\nlu'\fImem\fR := \fIm\fR1
+\h'|\nhu');
+.sp 0.5
+\h'|\nhu'\fBproc\fR \jk\fIretrieve\fR\^(\fIi\fR\|)
+\h'|\nlu'\fBif\fR \ji0 <= \fIi\fR < \fIsize\fR \fBthen\fR \jo\fIreturn\fR\^(\fImem\fR\^[\fIi\fR\|]\^) \fBelse\fR \jp\fIstop\fR\^(\(mi1) \fBfi\fR;
+.sp 0.5
+\h'|\nhu'\fBproc\fR \jk\fIupdate\fR\^(\fIi\fR, \fIv\fR)
+\h'|\nlu'\fBif\fR \ji0 <= \fIi\fR < \fIsize\fR \fBthen\fR \jo\fIreturn\fR\^(\fImem\fR\^[\fIi\fR\|] := \fIv\fR) \fBelse\fR \jq\fIstop\fR\^(\(mi1) \fBfi\fR;
+.sp 0.5
+\h'|\nhu'\fBproc\fR \jk\fIappend\fR\^(\fIv\fR)
+\h'|\nhu'(\h'|\nlu'\fBif\fR \ji\fIsize\fR >= \fImem\fR.\fIsize\fR \fBthen\fR \jr\fIextend\fR\^(\fIsize\fR + 10) \fBfi\fR;
+\h'|\nlu'\fImem\fR\^[\fIsize\fR] := \fIv\fR;
+\h'|\nlu'\fIsize\fR := \fIsize\fR + 1;
+\h'|\nlu'\fIreturn\fR\^(\fIv\fR)
+\h'|\nhu');
+.sp 0.5
+\h'|\nhu'\fBproc\fR \jk\fIdelete\fR\^(\fIn\fR)
+\h'|\nlu'\fBif\fR \ji\fIn\fR >= 0 \fBthen\fR \js\fIreturn\fR\^(\fIchange\*_size\fR\^(\fIsize\fR \(mi \fIn\fR)) \fBelse\fR \jt\fIstop\fR\^(\(mi1) \fBfi\fR;
+.sp 0.5
+\h'|\nhu'\fBproc\fR \jk\fIchange\*_size\fR\^(\fIn\fR)
+\h'|\nlu'\fBif\fR \ji\fIn\fR < 0
+\h'|\nlu'\fBthen\fR
+\h'|\niu'\fIfreturn\fR
+\h'|\nlu'\fBelse\fR
+\h'|\niu'\fBif\fR \ju\fIn\fR > \fImem\fR.\fIsize\fR
+\h'|\niu'\fBthen\fR
+\h'|\nuu'\fIextend\fR\^(\fIn\fR)
+\h'|\niu'\fBelse\fR
+\h'|\nuu'\fBvar\fR \jv\fIi\fR;
+\h'|\nuu'\fBfor\fR \jv\fIi\fR \fBin\fR \js\fIinterval\fR\^(\fIn\fR, \fIsize\(mi\fR1, 1)
+\h'|\nuu'\fBdo\fR \jn\fImem\fR\^[\fIi\fR\|] := \fIundefined\fR \fBod\fR
+\h'|\niu'\fBfi\fR;
+\h'|\niu'\fIreturn\fR\^(\fIsize\fR := \fIn\fR)
+\h'|\nlu'\fBfi\fR;
+.sp 0.5
+\h'|\nhu'\fBproc\fR \jk\fInext\fR\^(\fIstate\fR)
+\h'|\nhu'(\h'|\nlu'\fBif\fR \ji\fIstate\fR = \fIundefined\fR \fBthen\fR \jw\fIstate\fR := 0 \fBfi\fR;
+\h'|\nlu'\fBif\fR \ji\fIstate\fR < \fIsize\fR
+\h'|\nlu'\fBthen\fR
+\h'|\niu'\fIreturn\fR\^(\^[\fImem\fR\^[\fIstate\fR], \fIstate\fR + 1]\^)
+\h'|\nlu'\fBelse\fR
+\h'|\niu'\fIfreturn\fR
+\h'|\nlu'\fBfi\fR
+\h'|\nhu');
+.sp 0.5
+\h'|\nhu'\fBproc\fR \jk\fIindex\fR\^(\^)
+\h'|\nlu'\fIreturn\fR\^(\fIinterval\fR\^(0, \fIsize\fR \(mi 1, 1));
+.sp 0.5
+\h'|\nhu'\fBproc\fR \jk\fItop\fR\^(\^)
+\h'|\nlu'\fBif\fR \ji\fIsize\fR = 0 \fBthen\fR \jx\fIfreturn\fR \fBelse\fR \jy\fIreturn\fR\^(\fImem\fR\^[\fIsize\(mi\fR1]\^) \fBfi\fR;
+.sp 0.5
+\fBinit\fR:  \jz\fImem\fR := \fIarray\fR\^(10, \fIundefined\fR\|);
+\h'|\nhu'\fIsize\fR := 0;
+\fBend\fR \jA\fIflexible\*_array\fR;
+.sp 0.5
+.sp 0.5
+\fBproc\fR \jB\fIp\fR4(\fIv\fR) \fIput\fR\^(\fIstring\fR\^(\fIv\fR).\fIright\fR\^(4, \*`\fI \fR\^\*'\^));
+.sp 0.5
+\fBprogram\fR \jC\fIdemo\*_flex\fR\^(\^)
+\z(  \jD\fBvar\fR \jh\fIf\fR, \fIi\fR, \fIk\fR;
+\h'|\nDu'\fBconst\fR \jC\fIN\fR := 12;
+.sp 0.5
+\h'|\nDu'\fIf\fR := \fIflexible\*_array\fR;
+\h'|\nDu'\fIput\fR\^(\*`\fI\h'-0.1m'Initialize f:\fR\^\*'\^);
+\h'|\nDu'\fBfor\fR \jh\fIi\fR \fBin\fR \jk\fIinterval\fR\^(0, \fIN\(mi\fR1, 1)
+\h'|\nDu'\fBdo\fR \jB\fIf\fR.\fIappend\fR\^(\fIi\fR\v'0.25m'*\v'-0.25m'\fIi\fR\|); \fIp\fR4(\|\|\fIf\fR\|\|[\fIi\fR\|]\^);
+\h'|\nBu'\fBassert\fR \ji\fIf\fR.\fItop\fR = \fIi\fR\v'0.25m'*\v'-0.25m'\fIi\fR & \fIf\fR\|\|[\fIi\fR\|] = \fIi\fR\v'0.25m'*\v'-0.25m'\fIi\fR & \fIf\fR.\fIsize\fR = \fIi\fR+1;
+\h'|\nDu'\fBod\fR;
+.sp 0.5
+\h'|\nDu'\fIput\fR\^(\*`\fI\v'-0.25m'\s-2\\\s0\v'0.25m'nIndices in f:\fR\^\*'\^);
+\h'|\nDu'\fIi\fR := 0;
+\h'|\nDu'\fBfor\fR \jh\fIk\fR \fBin\fR \jk\fIf\fR.\fIindex\fR
+\h'|\nDu'\fBdo\fR \jB\fIp\fR4(\fIk\fR);
+\h'|\nBu'\fBassert\fR \ji\fIk\fR = \fIi\fR;
+\h'|\nBu'\fIi\fR := \fIi\fR + 1
+\h'|\nDu'\fBod\fR;
+\h'|\nDu'\fBassert\fR \jl\fIi\fR = \fIN\fR;
+.sp 0.5
+\h'|\nDu'\fIput\fR\^(\*`\fI\v'-0.25m'\s-2\\\s0\v'0.25m'nValues in f: \fR\^\*'\^);
+\h'|\nDu'\fIi\fR := 0;
+\h'|\nDu'\fBfor\fR \jh\fIk\fR \fBin\fR \jk\fIf\fR
+\h'|\nDu'\fBdo\fR \jB\fIp\fR4(\fIk\fR);
+\h'|\nBu'\fBassert\fR \ji\fIk\fR = \fIf\fR\|\|[\fIi\fR\|] & \fIk\fR = \fIi\fR\v'0.25m'*\v'-0.25m'\fIi\fR;
+\h'|\nBu'\fIi\fR := \fIi\fR + 1
+\h'|\nDu'\fBod\fR;
+\h'|\nDu'\fBassert\fR \jl\fIi\fR = \fIN\fR;
+.sp 0.5
+\h'|\nDu'\fIf\fR.\fIdelete\fR\^(2);
+\h'|\nDu'\fBassert\fR \jl\fIf\fR.\fIsize\fR = \fIN\(mi\fR2;
+.sp 0.5
+\h'|\nDu'\fIf\fR.\fIsize\fR := 7;
+\h'|\nDu'\fBassert\fR \jl\fIf\fR.\fIsize\fR = 7;
+.sp 0.5
+)
+.}}

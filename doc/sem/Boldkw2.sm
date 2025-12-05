@@ -1,0 +1,222 @@
+# Boldkw -- insert troff commands in SUMMER program #
+
+const letter := 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-';
+const lcase  := 'abcdefghijklmnopqrstuvwxyz';
+const ucase  := 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+var kwtab := table(30, undefined) init[
+'else': 'monadic': 'subclass': 'assert': 'end': 'od': 'begin': 'esac': 'of': 'succeeds':
+'case': 'fails': 'op': 'class': 'fetch': 'proc': 'then': 'code': 'fi': 'program': 'try':
+'const': 'for': 'default': 'rof': 'until': 'do': 'if': 'scan': 'var':
+'dyadic':
+'in': 'while': 'elif': 'init': 'store': 'yrt':
+'PATPAT':	# for the benefit of SPRING programs #
+	1];
+var synnotion := table(30, undefined);
+
+var lastabs;			# last absolute position generated #
+var posmode;			# position mode #
+const ABS := 0, REL := 1;	# ABS/REL positioning #
+const true := 1, false := 0;
+var brseen;
+
+const COPY := 0, PROG := 1;	# COPY: literally copying text #
+				# PROG: expanding program text #
+var lino := 0;			# linenumber in source text #
+
+
+proc genabs(n, fill)
+( lastabs := n;
+  if posmode = ABS then
+     put('\\h''|', n, 'n''')
+  else
+     put(fill)
+  fi
+);
+
+proc process(line)
+( var pre, inside;
+
+  brseen := false;
+  scan line
+  for
+    lastabs := cursor;
+    while ~rpos(0)
+    do
+      if lit(' ') then
+         if pre := span(' ') then
+            genabs(cursor, pre || ' ')
+         else
+            put(' ')
+         fi
+      elif lit('''') then
+         var inside;
+         if inside := break('''') fails then
+            error('missing "''"');
+            put('''')
+         else
+            lit('''');
+            put('\\*`\\fI', ul_beatify(inside), '\\fP\\*''')
+         fi
+      elif lit('#') then
+         if inside := break('#') fails then
+            error('missing "#"');
+            put('#');
+         else
+            put('#', ul_beatify(inside));
+            genabs(cursor, '');
+            put(lit('#'));
+         fi
+      elif lit('{{') then
+         put('{{');
+         brseen := true;
+      elif lit('==') then
+         put('=\\h''-0.3m''=');
+         if pre := span(' ')
+         then
+            if brseen = true
+            then
+               genabs(cursor, pre)
+            else
+               put(pre)
+            fi
+         fi
+      elif lit('-') then
+         put('\\(mi')
+      elif lit('~=') then
+         put('\\*~=');
+      elif lit('~') then
+         put('\\*~');
+      elif lit('([') then
+         put('(\\ [')
+      elif lit('])') then
+         put(']\\ )')
+      elif lit('<') then
+         if pre := any(letter) then
+            identifier('<', pre)
+         else
+            put('<')
+         fi
+      elif pre := any(letter) then
+         identifier('', pre);
+      else
+         put(move(1))
+      fi
+    od;
+  rof
+);
+
+proc identifier(angle, pre)
+( var w, sep;
+
+  w := pre || (span(letter) | '');
+  if kwtab[w] ~= undefined
+  then
+     if w = 'PATPAT' then w := 'pat' fi;
+     if angle ~= '' then error('keyword a preceeded by "<"') fi;
+     put('\\*[', w, '\\*]');
+     if sep := span(' ') then
+        if lastabs + w.size + sep.size = cursor then
+           genabs(cursor, sep);
+        else
+           put(sep)
+        fi
+     fi
+  elif synnotion[w] ~= undefined
+  then
+     put(w);
+     if sep := span(' ') then
+        if lastabs + w.size + sep.size = cursor then
+           genabs(cursor, sep);
+        else
+           put(sep)
+        fi
+     fi
+  elif angle = '<'  & lit('>') then
+       put('\\*<', w, '\\*>');
+  else
+     put(angle, '\\fI', ul_beatify(w), '\\fP')
+  fi
+);
+
+proc ul_beatify(w)
+( var c, res := '';
+
+  for c in w
+  do if c = '_' then c := '\\*_' fi;
+     res := res || c
+  od;
+  return(res)
+);
+
+
+proc uc(s) return(s.replace(lcase, ucase));
+
+
+proc error(s) stand_er.put('Line ', lino, ': ', s, '\n');
+
+program boldkw()
+( var f, com, line, mode := COPY, lastopen := 0, lastclose := 0;
+
+  for f in kwtab.index do synnotion[uc(f)] := 1 od;
+
+  synnotion['ARRAY'] := synnotion['TABLE'] :=
+  synnotion['RETURN'] := synnotion['FRETURN'] :=
+  synnotion['FAILS'] := synnotion['SUCCEEDS'] :=
+  synnotion['SELF'] := synnotion['SUBJECT'] :=
+  synnotion['UNDEFINED'] := 1;
+  while line := get()
+  do lino := lino + 1;
+     com := if line.size <= 3 then line else line.substr(0, 3) fi;
+     if com = '.{{' then
+	lastopen := lino;
+	if mode ~= COPY then
+	   error('nested .{{')
+        fi;
+        put(line);
+        mode := PROG;
+     elif com = '.}}' then
+        lastclose := lino;
+        if mode ~= PROG then
+	   error('unmatched .}}')
+        fi;
+        if line.size > 3 then
+           put(line.substr(3, line.size - 3))
+        fi;
+        put('\n.}}\n');
+        mode := COPY;
+     elif mode = COPY then
+        var pre, inside;
+        scan line
+        for while pre := find('\\*{')
+            do put(pre);
+               lit('\\*{');
+               if inside := find('\\*}') fails
+               then
+                  error('missing \\*}')
+               else
+                  lit('\\*}');
+		  posmode := REL;
+                  process(inside)
+               fi
+            od;
+            put(rtab(0), '\n')
+        rof
+     elif mode = PROG then
+        if com ~= '' & com[0] = '.' then
+           put('\n', line)
+        else
+           put('\n');
+           posmode := ABS;
+	   process(line);
+        fi
+     else
+        error('FATAL ERROR')
+     fi
+  od;
+  if mode ~= COPY then
+     stand_er.put('Line ', lino, ': .}} missing\n',
+                  'Last .{{ at line ',  lastopen,
+                  '\nLast .}} at line ', lastclose, '\n')
+  fi
+)

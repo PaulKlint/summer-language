@@ -1,0 +1,5 @@
+var y;
+program q()
+( var a := [1,2,3];
+  scan a for y := size rof
+)

@@ -1,0 +1,22 @@
+.iy I N
+.iy I dereference
+.iy I eval
+.iy I eval_field_selection
+.{{
+\fBif\fR \jg{{ \fIe\fR =\h'-0.3m'= \jh\fIexpr\fR1:\*<unit\*> \*`\fI[\fR\^\*' \fIexpr\fR2:\*<expression\*> \*`\fI]\fR\^\*' }}
+\fBthen\fR
+\h'|\ngu'\fBvar\fR \ji\fIv\fR1, \fIv\fR2, \fIsig\fR;
+.sp 0.5
+\h'|\ngu'[\fIv\fR1, \fIsig\fR] := \fIeval\fR\^(\fIexpr\fR1);
+\h'|\ngu'\fBif\fR \jj\fIsig\fR \(ap\h'-0.2m'= \fIN\fR \fBthen\fR \jk\fIreturn\fR\^(\^[\fIv\fR1, \fIsig\fR]\^) \fBfi\fR;
+\h'|\ngu'\fIv\fR1 := \fIdereference\fR\^(\fIv\fR1);
+\h'|\ngu'[\fIv\fR2, \fIsig\fR] := \fIeval\fR\^(\fIexpr\fR2);
+\h'|\ngu'\fBif\fR \jj\fIsig\fR \(ap\h'-0.2m'= \fIN\fR \fBthen\fR \jk\fIreturn\fR\^(\^[\fIv\fR2, \fIsig\fR]\^) \fBfi\fR;
+\h'|\ngu'\fIv\fR2 := \fIdereference\fR\^(\fIv\fR2);
+\h'|\ngu'\fIreturn\fR\^(\fIeval\*_field\*_selection\fR\^(\*`\fI\h'-0.1m'fetch\fR\^\*', \fIv\fR1, \*`\fI\h'-0.1m'retrieve\fR\^\*', [\fIv\fR2]\^))
+\fBfi\fR;
+.}}
+.iy I N
+.iy I dereference
+.iy I eval
+.iy I eval_field_selection

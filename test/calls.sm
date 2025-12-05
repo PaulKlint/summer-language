@@ -1,0 +1,82 @@
+var bl := ' ', newl := '\n', cnt := 0;
+
+dyadic !!;
+
+proc fcalls()
+(	var x, y;
+	x := c0;
+	scan x for g0 rof;
+	y := c1(10);
+	scan y for g2(1,10) rof
+);
+
+proc g0()
+(	if d0
+	then	put('d0 ok', bl)
+	else	put('d0 error', bl)
+	fi;
+	put(subject !! 5, newl)
+);
+
+proc g2(low,up)
+(	if d0(low) + d1(up) > 100
+	then	put('d0 + d1 ok', bl)
+	else	put('d0 + d1 error', bl)
+	fi;
+	put(-subject, newl)
+);
+
+class c0()
+begin	fetch d0, !!;
+
+	op !!(a)	return(d0 + a);
+
+	proc d0()
+	(	noop();
+		if cnt = 0 then return(0) else freturn fi;
+	);
+	proc noop() ;
+
+end c0;
+
+class c00(arg)
+begin subclass of c0;
+end c00;
+
+class c1(arg)
+begin	fetch d0, d1, -;
+
+	op -() return(d1(arg) + 2*d0(arg) - 1);
+
+	proc d0(a)
+		return(a * a * a);
+
+	proc d1(a)
+		return(d0(2 * a));
+end c1;
+
+proc gg2(a, b)
+	return(a + b);
+
+proc bcalls()
+(	var x, y;
+	x := c0; put(x.d0, bl);
+	y := c1(5); put(-y, bl, y.d0(10), bl);
+	put(gg2(1,11), bl);
+	scan x
+	for	put(d0, bl)	rof;
+	scan y
+	for	put(d1(4), newl)	rof
+);
+
+
+
+program calls()
+(	fcalls();
+	bcalls()
+);
+#
+d0 ok 5
+d0 + d1 ok 9999
+0 1244 1000 12 0 512
+#

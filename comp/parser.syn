@@ -1,0 +1,1065 @@
+#*************************************************************************#
+#*************************************************************************#
+#**                                                                     **#
+#**     SUMMER COMPILER PART II : syntax + actions			**#
+#**                                                                     **#
+#** This file contains the SUMMER grammar and associated actions	**#
+#** that call the parse tree building routines.				**#
+#**									**#
+#*************************************************************************#
+
+LEXICAL	identifier,
+	integer_constant,
+	real_constant,
+	string_constant,
+	operator_symbol .
+
+<summer_program>    ::= (  <global_variable_declaration>
+			 | nms:<constant_declaration> /cns/
+			 | p:<global_procedure_declaration> /remember/
+			 | p:<global_operator_declaration> /remember/
+			 | p:<class_declaration> /remember/
+			 | <monadic_symbol_declaration>
+			 | <dyadic_symbol_declaration>
+			 | p:<program_declaration> /prg/
+			 | <include_file>
+			 | 'eof_include' /switchfile/
+			)* .
+
+	INIT:	var cnms := [], the_program := undefined, pname := args[0];
+		if src := SOURCE(pname || '.sm', undefined) fails
+		then	cant(pname || '.sm')
+		fi;
+		if f_er := file(pname || '.er', 'w') fails
+		then	cant(pname || '.er');
+		fi;
+		init_scanner();
+		init_tables();
+	/cns/:	cnms := concat(cnms, nms);
+
+	/prg/:	if the_program = undefined
+		then	the_program := p
+		else	ermsg('multiple program declaration', lnr)
+		fi;
+		src.decls.append(p);
+	/remember/:
+		src.decls.append(p);
+	/switchfile/:
+		src.back_to_previous;
+
+	EXIT:	if the_program = undefined
+		then	ermsg('program declaration missing', lnr)
+		fi;
+		src.back_to_previous | '';
+
+		check_forward_references();
+		
+		if errcnt = 0 then
+		   var g;
+		   # program body := caseinit ; globinit ; program body #
+		   for g in globinit do caseinit.append(g) od;
+		   caseinit.append(the_program.body);
+		   the_program.body := SEMI(caseinit);
+		   if f_s := file(pname || '.s', 'w') fails
+		   then
+		      cant(pname || '.s')
+		   fi;
+		   prefix();
+		   exp_classes();
+		   exp_fields();
+		   for p in src.decls do p.generate_body od
+		fi;
+		remove(cnms);
+		exp_terminate();
+		if errcnt = 0 then stop(0) else stop(1) fi;
+
+<global_variable_declaration> ::=
+			VAR { <global_initialization> ',' }+ ';' .
+
+<global_initialization> ::= <identifier> /id/
+			    [ <operator_symbol> /ass/ e:<expression> /exp/ ] .
+
+	INIT:	var name := '',
+		    v := '',
+		    stlnr := lnr;
+
+	/id/:	name := sy;
+		v := VARIABLE(name, GlobalVar);
+		symentry(name, level, v);
+
+	/ass/:	if sy ~= ':='
+		then	ermsg('":=" expected instead of "' || sy || '"', lnr)
+		fi;
+
+	/exp/:	if errcnt = 0
+		then	globinit.append(VARINIT(stlnr, v, e, lnr))
+		fi;
+
+<constant_declaration> ::=
+		CONST { ci:<constant_initialization> /nxt/ ',' }+ ';' .
+	INIT: var nms := [];
+
+	/nxt/:	if ci ~= undefined then nms.append(ci) fi;
+
+	EXIT:	return(nms);
+				
+<constant_initialization> ::= <identifier> /id/
+			      <operator_symbol> /ass/ e:<expression> .
+
+	INIT:	var name := '';
+
+	/id/:	name := sy;
+
+	/ass/:	if sy ~= ':='
+		then	ermsg('":=" expected instead of "' || sy || '"', lnr)
+		fi;
+
+	EXIT:	if errcnt = 0 then
+		   if type(e) ~= 'CONSTANT' then
+		      ermsg('constant expression required', lnr);
+		      e := UNDEFINED
+		   fi
+		else e := UNDEFINED
+		fi;
+		if name ~= '' & symentry(name, level, e) = True
+		then
+			return(name)
+		else
+			return(undefined)
+		fi;
+
+<global_procedure_declaration> ::= PROC <identifier> /id/
+		       		        fnms:<formals_of_procedure> /par/
+		       			( e:<expression> | <empty> /emp/ ) ';' .
+
+	INIT:	var name := '';
+
+		curproc := PROC_DECL(GlobalProc);
+
+	/id/:	name := sy;
+
+	/par/:	loclist := copy(fnms);
+		if name ~= ''
+		then	symentry(name, level-1, curproc)
+		fi;
+
+	/emp/:	e := UNDEFINED;
+
+	EXIT:	curproc.complete(name, fnms, e);
+		return(curproc);
+
+<formals_of_procedure> ::= '(' { <identifier> /nxt/ ',' }* ')' .
+
+	INIT:	var nms := [];
+
+	/nxt/:	if symentry(sy, level, VARIABLE(sy, LocalVar)) = True
+		then	nms.append(sy)
+		fi;
+
+	EXIT:	return(nms);
+
+<global_operator_declaration> ::= OP <operator_symbol> /sym/
+			 	     fnms:<formals_of_procedure> /par/
+		         	     ( e:<expression> | <empty> /emp/ ) ';' .
+
+	INIT:	var name := '', nf := 0;
+
+		fnms := [];
+		curproc := PROC_DECL(GlobalProc);
+
+	/sym/:	name := sy;
+
+	/par/:	nf := fnms.size;
+ 		if ~ (1 <= nf <= 2)
+		then	ermsg('operator should have one or two parameters', lnr)
+		fi;
+		loclist := copy(fnms);
+        	if name ~= ''
+	        then	var entry, tab, intname := name || '.' || string(nf);
+
+			tab := if nf = 1 then montab else dytab fi;
+                  	entry := tab[name];
+		  	if   entry = undefined
+		  	then tab[name] :=
+			     [intname,nf,1,priofdef(nf),priogdef(nf),'*error*']
+			elif entry[O_STATUS] < 0
+			then	entry[O_STATUS] := 1;
+			elif entry[O_STATUS] = 3
+			then	entry[O_STATUS] := 2;
+				fieldtab[intname].addglobf(curproc);
+		  	else ermsg('global operator "' || name || '" redeclared', lnr)
+			fi;
+			# make symbol table entry for the benefit	#
+			# <operator_field_dclation> and exp_terminate	#
+			symentry(intname, 0, curproc);
+		fi;
+
+		#*******************************************************#
+		# This creates a correct entry for the global operator	#
+		# in montab or dytab.  From the following possibilities #
+		# only cases a, b and e are legal:			#
+		# a. (entry undefined)					#
+		#	the operator was never declared before;		#
+		# b. (state < 0)					#
+		#	the operator was declared in a MONADIC or	#
+		#	DYADIC statement;				#
+		# c. (state = 1)					#
+		#	the operator was declared before as a global	#
+		#	operator only;					#
+		# d. (state = 2)					#
+		#	the operator was declared in a another class	#
+		#	and was also defined globally;			#
+		# e. (state = 3)					#
+		#	the operator was declared in another class.	#
+		#*******************************************************#
+
+	/emp/:	e := UNDEFINED;
+	
+	EXIT:	curproc.complete(name, fnms, e);
+		return(curproc);
+
+<class_declaration> ::= CLASS   <identifier> /id/
+			        fnms:<formals_of_class> /par/
+			BEGIN	super:<subclass_declaration>
+				<fetch_associations>
+				<store_associations>
+				(  p:<procedure_field_declaration> /remember/
+				 | p:<operator_field_declaration> /remember/
+				 | <data_field_declaration>
+				 | c:<constant_declaration> /cns/
+				)* /body/
+				(  'init' ':' self_init:<block> /init/
+				 | <empty> /emp/
+				)
+			END <identifier> /end/ ';' .
+
+	INIT:	var nf := 0,
+		    stlnr,
+		    cnms := [],
+		    sup_init, loc;
+
+		offset := -1;
+		classvarinit := [];
+		classprocs := [];
+
+	/id/:	clname := sy;
+		level := level+1;
+
+	/par/:	par_flds := copy(fnms);
+
+	/cns/:	cnms := concat(cnms, c);
+
+	/remember/:
+		classprocs.append(p);
+
+	/body/:	curproc := PROC_DECL(Class);
+		fnms := concat(['self'], par_flds);
+		symentry(clname, 0, curproc);
+
+		# the formal parameters of the class creation procedure	#
+		# are teated as class variables and not as local vars.	#
+		loclist := copy(fnms);
+		loccnt := loclist.size;
+		if super ~= undefined
+		then	var su := symtab[super][S_VALUE],
+			    nfs := su.nformals, i,
+			    args := array(nfs, 0);
+			for i in args.index
+			do args[i] := symtab[fnms[i]][S_VALUE] od;
+			sup_init := SUP_CALL(su, args);
+		fi;
+
+		#*******************************************************#
+		# If the current class is a subclass, a call to the	#
+		# init-procedure of the superclass is generated.	#
+		# If the superclass had n-1 declared parameter, then	#
+		# the actual parameters of this call are exactly the	#
+		# first n parameters of the current class (including	#
+		# the parameter which equals the "self" object.		#
+		# This accounts for the pushing on the stack of the	#
+		# locals.						#
+		#*******************************************************#
+
+	/init/:	if super ~= undefined
+		then	
+			self_init := SEMI([sup_init, self_init])
+		fi;
+
+	/emp/:	if super = undefined then
+		   self_init := UNDEFINED
+		else
+		   self_init := sup_init
+		fi;
+
+	/end/:	if sy ~= clname
+		then	ermsg('"end" not followed by class name "' ||
+				clname ||'"', lnr)
+		fi;
+
+	EXIT:	putassocs(fetch_type); putassocs(store_type);
+		fetchtab := table(5, undefined);
+		storetab := table(5, undefined);
+		assoctab := table(5, undefined);
+		curproc.complete(clname, fnms, self_init);
+		classtab[clname] :=
+		[offset+1, par_flds, data_flds, proc_flds, op_flds, nclasses];
+		nclasses := nclasses + 1;
+		# par_flds already remove by cuproc.complete #
+		remove(data_flds);
+		remove(proc_flds);
+		remove(cnms);
+		level := level-1;
+		par_flds := [];
+		data_flds := [];
+		proc_flds := [];
+		op_flds := [];
+		clname := '';
+		inhertab := table(10, undefined);
+		return(curproc);
+
+<formals_of_class> ::= '(' { <identifier> /nxt/ ',' }* ')' .
+
+	INIT:	var nms := [];
+
+	/nxt/:	offset := offset + 1;
+		if fieldentry(sy, clname, VAR, offset, NOFETCH, NOSTORE) = True
+		then	symentry(sy, level, VARIABLE(sy, ClassVar));
+			nms.append(sy);
+		fi;
+
+	EXIT:	return(nms);
+
+<subclass_declaration> ::= [ SUBCLASS OF <identifier> /id/ ';' ] .
+
+	INIT:	var super;
+
+	/id/:	super := sy;
+		do_subclass(super);
+
+	EXIT:	return(super);
+
+<fetch_associations> ::= [  FETCH
+			   { ( (<identifier> /fld/ | <operator_symbol> /fld/ )
+			       ( ':' <identifier> /ass/ | <empty> /emp/)
+			     ) ','
+			   }+ ';'
+			 ] .
+
+	INIT:	var field;
+
+	/fld/:	field := sy;
+
+	/ass/:	fetchtab[field] := sy;
+		assoctab[sy] := fetch_type;
+
+	/emp/:	if field ~= undefined
+		then	fetchtab[field] := '_s'
+		fi;
+
+<store_associations> ::= [  STORE
+			   { ( (<identifier> /fld/ | <operator_symbol> /fld/ )
+			       ( ':' <identifier> /ass/ | <empty> /emp/)
+			     ) ','
+			   }+ ';'
+			 ] .
+
+	INIT:	var field;
+
+	/fld/:	field := sy;
+
+	/ass/:	storetab[field] := sy;
+		assoctab[sy] := store_type;
+
+	/emp/:	if field ~= undefined
+		then	storetab[field] := '_s'
+		fi;
+
+<procedure_field_declaration> ::= PROC <identifier> /id/
+		      		  n_nms:<formals_of_procedure> /par/
+		      		  ( e:<expression> | <empty> /emp/ ) ';' .
+
+	INIT:	var name := '',
+		    nf := 0,
+		    fnms := '', nm;
+
+		curproc := PROC_DECL(ClassProc);
+
+	/id/:	name := sy;
+
+	/par/:	loclist := concat(loclist, n_nms);
+		fnms := copy(loclist);
+		nf := fnms.size - 1;		#excluding 'self' #
+		if name ~= ''
+		then 	if assoctab[name] = store_type
+			then if nf ~= 1
+			     then ermsg('store assoc "' || name ||
+					'" should have one parameter', lnr)
+			     fi
+			elif assoctab[name] = fetch_type
+			then if nf ~= 0
+			     then ermsg('fetch assoc "' || name ||
+					'" cannot have parameters', lnr)
+			     fi
+			fi;
+			if fieldentry(name,clname,PROC,curproc,NOFETCH,NOSTORE) = True
+			then	proc_flds.append(name);
+				symentry(name, level-1, curproc)
+			fi;
+		fi;
+
+	/emp/:	e := UNDEFINED;
+
+	EXIT:	curproc.complete(name, fnms, e);
+		if assoctab[name] ~= undefined
+		then	if curproc.retcnt ~= 1
+			then	ermsg('fetch or store association "' ||
+			       	      name || '" does not return value', lnr)
+			fi
+		fi;
+		return(curproc);
+
+<operator_field_declaration> ::= OP <operator_symbol> /sym/
+			 	    n_nms:<formals_of_procedure> /par/
+		         	    ( e:<expression> | <empty> /emp/ ) ';' .
+
+	INIT:	var name := '',
+		    nf := 0,
+		    fnms := '';
+
+		curproc := PROC_DECL(ClassProc);
+
+	/sym/:	name := sy;
+
+	/par/:	loclist := concat(loclist, n_nms);
+		fnms := copy(loclist);
+		nf := fnms.size ;		# including 'self' #
+		if nf > 2
+		then	ermsg('operator has too many parameters', lnr)
+		fi;
+        	if name ~= ''
+             	then	var intname := name || '.' || string(nf), entry, tab;
+
+                  	if fieldentry(intname,clname,PROC,curproc,NOFETCH,NOSTORE)=True
+		  	then	op_flds.append(intname)
+		  	fi;
+			tab := if nf = 1 then montab else dytab fi;
+                  	entry := tab[name];
+                  	if entry = undefined  # not existing ? #
+                  	then    tab[name] :=
+				[intname,nf,3,priofdef(nf),priogdef(nf),'*error*']
+			elif entry[O_STATUS] < 0 # MONADIC or DYADIC decl ? #
+			then	entry[O_STATUS] := 3;
+		  	elif entry[O_STATUS] = 1 # user, global ? #
+                  	then    fieldtab[intname].addglobf(symtab[intname][S_VALUE]);
+				entry[O_STATUS] := 2
+                  	fi
+		fi;
+
+		#*******************************************************#
+		# A fieldentry and an entry in an operator table are	#
+		# created. From the following possibilities all cases	#
+		# are legal:						#
+		# a. (entry undefined)					#
+		#	the operator was never declared before;		#
+		# b. (state < 0)					#
+		#	the operator was declared in a MONADIC or	#
+		#	DYADIC statement;				#
+		# c. (state = 1)					#
+		#	the operator was declared before as a global	#
+		#	operator only;					#
+		# d. (state = 2)					#
+		#	the operator was declared in a another class	#
+		#	and was also defined globally;			#
+		# e. (state = 3)					#
+		#	the operator was declared in another class.	#
+		# In cases d and e nothing needs to be done. Note that	#
+		# fieldentry checks for redeclarations.			#
+		#*******************************************************#
+
+	/emp/:	e := UNDEFINED;
+	
+	EXIT:	curproc.complete(name, fnms, e);
+		return(curproc);
+
+<data_field_declaration> ::= VAR { <field_initialization> ',' }+ ';' .
+
+<field_initialization> ::= <identifier> /id/
+			   [ <operator_symbol> /ass/ e:<expression> /exp/ ] .
+
+	INIT:	var name := '',
+		    v := '',
+		    stlnr := lnr;
+
+	/id/:	name := sy;
+		offset := offset+1;
+		v := VARIABLE(name, ClassVar);
+		if fieldentry(name, clname, VAR, offset, NOFETCH, NOSTORE) = True
+		then	symentry(name, level, v);
+			data_flds.append(sy);
+		fi;
+
+	/ass/:	if sy ~= ':='
+		then	ermsg('":=" expected instead of "' || sy || '"', lnr)
+		fi;
+
+	/exp/:	if errcnt = 0
+		then	classvarinit.append(VARINIT(stlnr, v, e, lnr));
+		fi;
+
+<monadic_symbol_declaration> ::= MONADIC { <operator_symbol> /sy/ ',' }+ ';' .
+
+	/sy/:	montab[sy] :=
+		[sy || '.1', 1, -lnr, priofdef(1), priogdef(1), '*error*'];
+
+<dyadic_symbol_declaration> ::= DYADIC { <operator_symbol> /sy/ ',' }+ ';' .
+
+	/sy/:	dytab[sy] :=
+		[sy || '.2', 2, -lnr, priofdef(2), priogdef(2), '*error*'];
+
+<program_declaration> ::= PROGRAM <identifier> /id/
+			  fnms:<formals_of_procedure> /par/
+			  ( e:<expression> | <empty> /emp/) [';'] .
+
+	INIT:	var name := '';
+
+		curproc := PROC_DECL(Program);
+
+	/id/:	name := sy;
+		if symtab[name] ~= undefined
+		then	ermsg('"' || name || '" redeclared',lnr)
+		fi;
+
+	/par/:	loclist := copy(fnms);
+		if fnms.size > 1
+		then	ermsg('program can have at most one parameter', lnr)
+		fi;
+		if name ~= ''
+		then	symentry(name, 0, curproc)
+		fi;
+
+	/emp/:	e := UNDEFINED;
+
+	EXIT:	curproc.complete(name, fnms, e);
+		return(curproc);
+
+<include_file> ::= INCLUDE <string_constant> /remember/ ';' /treatstring/ .
+	INIT: var filename, newsrc;
+
+	/remember/:
+		filename := sy;
+	/treatstring/:
+		if newsrc := SOURCE(filename, src) fails
+		then ermsg('cannot open "' || filename || '"', lnr)
+		else src.decls.append(newsrc);
+		     src := newsrc
+		fi;
+
+<expression> ::= <monadic_expression>
+		 ( <operator_symbol> /op/ <monadic_expression> ) * .
+
+	INIT:	var res;
+		opush(dytab[o_lpar]);
+
+	/op/:	check_dyop(sy);
+		treatop(dytab[sy]);
+	
+	EXIT:	res := emptystack();
+		return(res);
+
+<monadic_expression> ::= <operator_symbol>* /op/ <primary> .
+
+	/op/:	check_monop(sy);
+		treatop(montab[sy]);
+
+<primary> ::= u:<unit> /un/ ( /sub1/ su:<subscript> /sub2/ |
+			      /sel1/ se:<select> /sel2/)* .
+	INIT:	var m_sub, m_sel, a, p;
+
+	/un/:	m_sub := may_sub; m_sel := may_sel;
+	/sub1/:	if m_sub = False
+		then	ermsg('illegal subscription', lnr);
+			m_sub := True
+		fi;
+	/sub2/:	u := ARIND(u, su);
+
+	/sel1/:	if m_sel = False
+		then	ermsg('illegal field selection', lnr);
+			m_sel := True
+		fi;
+	/sel2/: u := FIELDSEL(u, se[0], se[1]);
+	EXIT:	ndpush(u);
+
+<subscript> ::= '[' e:<expression> ']' .
+
+	EXIT:	return(e);
+
+<select> ::= '.' <identifier> /id/ [ act:<actuals> ] .
+
+	INIT:	var fname;
+		act := [];
+
+	/id/:	fname := sy;
+
+	EXIT:	return([fname, act]);
+
+<unit> ::=	  e:<constant>			/sel/
+		| e:<identifier_or_call>	/all/
+		| e:<parenthesized_expression>	/all/
+		| e:<if_expression>		/all/
+		| e:<for_expression>		/no/
+		| e:<array_expression>		/all/
+		| e:<table_expression>		/all/
+		| e:<array_or_table_initialization>	/all/
+		| e:<case_expression>		/all/
+		| e:<while_expression>		/no/
+		| e:<return_expression>		/no/
+		| e:<scan_expression>		/all/
+		| e:<try_expression>		/all/
+		| e:<assert_expression>		/all/
+		| e:<self>			/all/
+		| e:<subject>			/all/
+		.
+
+	/no/:	may_sub := False; may_sel := False;
+	/sel/:	may_sub := False; may_sel := True;
+	/all/:	may_sub := may_sel := True;
+
+	EXIT:	return(e);
+
+	#***************************************************************#
+	# The formal syntax allows a subscript and a field selection	#
+	# following each unit. In some cases, it is however easy to	#
+	# detect that subscription and/or selection are illegal: e.g.	#
+	# after a while-do expression, which does not yield a value,	#
+	# both subscription and selection are illegal; a constant can	#
+	# not be subscripted. Therefore, unit returns an array which	#
+	# denotes  whether subscription (0) and field selection (1)	#
+	# are allowed.							#
+	#***************************************************************#
+
+<constant> ::=    <string_constant>  /str/
+		| <integer_constant> /int/
+		| <real_constant>    /real/
+		| UNDEFINED	     /und/
+		.
+	INIT:	var res;
+	/str/:	res := CONSTANT(sy);
+	/int/:	if sy.size > MAXINT.size | sy.right(MAXINT.size, '0') > MAXINT then
+		   ermsg('too large integer constant ' || sy, lnr);
+		   sy := '0'
+		fi;
+		res := CONSTANT(integer(sy));
+	/real/:	res := CONSTANT(real(sy));
+	/und/:	res := UNDEFINED;
+	EXIT:	return(res);
+
+<identifier_or_call> ::= <identifier> /id/ [ act:<actuals> /call/ ] .
+
+	INIT:	var res, typ;
+	/id/:	res := typ := checktype(sy);
+	/call/:	if ~typ.can_call then ermsg('illegal call', lnr) fi;
+		res := CALL(typ, act);
+	EXIT:	return(res);
+
+<actuals> ::= '(' [ exprs:<expression_list> ] ')' .
+
+	INIT:	exprs := [];
+	EXIT:	return(exprs);
+
+<expression_list> ::= { e:<expression> /add/ ','}+ .
+
+	INIT:	var exprs := [];
+	/add/:	exprs.append(e);
+	EXIT:	return(exprs);
+
+	#***************************************************************#
+	# Expression_list parses at least one expression;		#
+	# empty alternatives are always included explicitly		#
+	# in the calling rule.						#
+	#***************************************************************#
+
+<self> ::= SELF .
+
+	EXIT:	if clname = '' then ermsg('"self" used outside class', lnr) fi;	
+		return(SELF);
+
+<subject> ::= SUBJECT .
+
+	EXIT:	return(SUBJECT);
+
+<return_expression> ::=   RETURN (  '(' (e:<expression> /rv/ | <empty> /re/) ')'
+				  | <empty> /re/
+			         ) /ret/
+			| FRETURN /fr/ .
+
+	INIT:	var n := 0;
+
+	/rv/:	n := 1;
+
+	/re/:	e := undefined;
+
+	/ret/:	if curproc.retcnt = undefined
+		then	curproc.retcnt := n
+		elif curproc.retcnt ~= n
+		then	ermsg('incompatible number of return values', lnr)
+		fi;
+		e := RETURN(e);
+
+	/fr/:	e := FRETURN;
+	EXIT:	return(e);
+
+	#***************************************************************#
+	# There is a slight deviation here from the syntax accepted	#
+	# by the "formal" imlementation: this rule accepts "return"	#
+	# as well as "return()", while the formal syntax only accepts	#
+	# "return".							#
+	#***************************************************************#
+
+<if_expression> ::=	IF e:<if_body> FI .
+	EXIT:	return(e);
+
+	#***************************************************************#
+	# The syntax of the if-then-else deviates from the one given	#
+	# in the formal definition of SUMMER. This is a consequence	#
+	# of the parsetree structure, which for e.g.			#
+	# "if t1 then e1 elif t2 then e2 fi" looks like			#
+	# ife(t1, e1, ife(t2, e2, e3)). Building the innermost "ife"	#
+	# first is simplified by the recursion.				#
+	# Another possibility would be, to make 'ife' an n-adic operator#
+	# like ";".							#
+	#***************************************************************#
+
+<if_body> ::=	t:<test>
+		THEN b1:<block>
+	      (  ELIF b2:<if_body>	/ife/
+	       | ELSE b2:<block>	/ife/
+	       | <empty>	/ift/
+	      ) .
+
+	INIT:	var res, l := LINE();
+
+	/ife/:	res := IFELSE(l, t, b1, b2);
+
+	/ift/:	res := IFTHEN(l, t, b1);
+	EXIT:	return(res);
+
+<test> ::= e:<expression> [ FAILS /f/ | SUCCEEDS ] .
+
+	/f/:	e := MONOP('~', e);
+	EXIT:	return(e);
+
+<case_expression> ::= CASE e:<expression>
+		      OF { ( ce:<case_entry> /inc/ | <empty> ) ',' }*
+			 ( DEFAULT ':' def:<block> | <empty> ) 
+		      ESAC .
+
+	INIT:	var caselabs := [], caseexprs := [], cinit := [],
+		    res, deflab, gnm, stlnr := lnr, l := LINE();
+	/inc/:	caselabs.append(ce[0]); caseexprs.append(ce[1]);
+		cinit.append(ce[2]);
+	EXIT:	if errcnt = 0
+		then	deflab := clab.next;
+			gnm := VARIABLE('', GlobalVar);
+			symentry(gnm.name, 0, gnm);
+			caseinit.append(VARINIT(
+					stlnr,
+					gnm,
+					TABINIT(CONSTANT(30),
+					 	deflab,
+						caseexprs.size,
+						cinit),
+					lnr));
+			res := CASE(l, gnm, e, deflab, def, caselabs, caseexprs)
+		fi;
+		return(res);
+
+<case_entry> ::= b:<block> ( ':' /tst/ b:<block> )+ .
+
+	INIT:	var cl := 'C0', exprs := [];
+
+		if errcnt = 0
+		then	cl := clab.next();
+		fi;
+
+	/tst/:	if errcnt = 0 then
+		   if type(b) = 'CONSTANT' then
+		      exprs.append(b)
+		   else
+		      ermsg('key in case not constant', lnr)
+		   fi
+		fi;
+
+	EXIT:	return([cl, b, KEY(exprs, cl)]);
+
+	#***************************************************************#
+	# In order to enforce the LL(1) property, the constant key in	#
+	# a case is parsed as a block. The procedure key_out afterwards	#
+	# checks, whether this block was indeed a simple constant: if	#
+	# not, an error message is issued.				#
+	# The LL(1) restrictions also require that <case_entry>s cannot #
+	# produce empty, hence the repetition.				#
+	#***************************************************************#
+
+<while_expression> ::= WHILE t:<test> DO b:<block> OD .
+
+	INIT:	var l := LINE();
+		inloop := inloop + 1;
+
+	EXIT:	inloop := inloop - 1;
+		return(WHILEDO(l, t, b));
+		
+<for_expression> ::= FOR <identifier> /id/ IN e:<expression> DO b:<block> OD .
+
+	INIT:	var l, typ, var1, var2;
+
+		inloop := inloop + 1;
+		l := LINE();
+
+	/id/:	typ := checktype(sy);
+		if  ~typ.can_assign
+		then	ermsg('illegal control variable in for loop', lnr)
+		fi;
+		if errcnt = 0
+		then	if inproc = True
+			then	var1 := VARIABLE('', LocalVar);
+				var2 := VARIABLE('', LocalVar);
+				loclist.append(''); loclist.append('');
+				   # to keep the relationship between local #
+				   # number and position in loclist valid   #
+				   # for the sake of the tracer. 	    #
+			else	var1 := VARIABLE('', GlobalVar);
+				var2 := VARIABLE('', GlobalVar);
+				symentry(var1.name, 0, var1);
+				symentry(var2.name, 0, var2);
+			fi;
+		fi;
+
+	EXIT:	inloop := inloop - 1;
+		return(SEMI([ASSIGN(var1, UNDEFINED),
+			     ASSIGN(var2, e),
+			     WHILEDO(l,
+				     ASSIGN(ARINIT(CONSTANT(2),
+						   UNDEFINED,
+						   [typ,  var1]),
+					    FIELDSEL(var2, 'next', [var1])),
+				     b)]));
+	#***************************************************************#
+	# 'for x in c do e od' is translated as if it reads		#
+	#	var1 := undefined;					#
+	#	var2 := c;						#
+	#	while [x,var1] := var2.next(var1) do e od;		#
+	#***************************************************************#
+
+<scan_expression> ::= SCAN e:<expression> FOR b:<block> ROF .
+
+	EXIT:	return(SCAN(e, b));
+
+<try_expression> ::= TRY exprs:<expression_list>
+		     (UNTIL /tru1/ b:<block> /tru2/ | <empty> /try/)
+		     YRT .
+
+	INIT:	var res, l := LINE();
+
+	/tru1/:	inloop := inloop + 1;
+
+	/tru2/:	res := TRY(l, exprs, b);
+		inloop := inloop - 1;
+
+	/try/: res := TRY(l, exprs, undefined);
+
+	EXIT:	return(res);
+
+	#***************************************************************#
+	# The code generated for the two forms of the try-statement	#
+	# (with or without until) is nearly identical. The value	#
+	# delivered is in the first case the value delivered by the	#
+	# expression following 'until', and in the second case the value#
+	# delivered by the succeeding expression in the list following	#
+	# 'try'. This is signalled to the code-generator by the two	#
+	# different operator forms.					#
+	#***************************************************************#
+
+<assert_expression> ::= ASSERT e:<expression> .
+
+	EXIT:	return(ASSERT(e));
+
+<parenthesized_expression> ::= '(' b:<block> ')' .
+	EXIT:	return(b);
+
+<array_expression> ::= ARRAY (  sd:<size_definition>
+				[ 'init' exprs:<array_initialization> ]
+			      | exprs:<array_initialization> 
+			     ) .
+	INIT:	var args, s, d;
+		exprs := [];
+
+	EXIT:	if sd = undefined then
+		   s := CONSTANT(exprs.size); d := UNDEFINED
+		else
+		   s := sd[0]; d := sd[1]
+		fi;
+		return(ARINIT(s, d, exprs));
+
+<size_definition> ::= '(' s:<expression> ',' d:<expression> ')' .
+	EXIT:	return([s, d]);
+
+<array_initialization> ::= '[' e:<expression_list> ']' .
+
+	EXIT:	return(e);
+
+<table_expression> ::= TABLE (  sd:<size_definition>
+				[ 'init' ti:<table_initialization> ]
+			      |  ti:<table_initialization>
+			     ) .
+
+	INIT:	var s, d;
+		ti := [0,[]]; # number of table_elements; list of keys #
+
+	EXIT:	if sd = undefined then
+		   s := CONSTANT(0); d := UNDEFINED
+		else
+		   s := sd[0]; d := sd[1]
+		fi;
+		return(TABINIT(s, d, ti[0], ti[1]));
+
+<table_initialization> ::= '[' { te:<table_element> /nxt/ ',' }* ']' .
+
+	INIT:	var tes := [], nel := 0;
+
+	/nxt/:	nel := nel + te[0];
+		tes.append(te[1]);
+
+	EXIT:	return([nel, tes]);
+
+<table_element> ::= { e:<expression> /inc/ ':' }+ .
+
+	INIT:	var laste, m, exprs := [];
+
+	/inc/:	exprs.append(e);
+
+	EXIT:	m := exprs.size;
+		if m < 1 then
+		   ermsg('key(s) missing in table', lnr);
+		   laste := UNDEFINED
+		else
+		   laste := exprs.delete
+		fi;
+		return([m, KEY(exprs, laste)]);
+
+<array_or_table_initialization> ::=
+		'['
+		 (   ']' /ar/
+		   | e1:<expression>
+			  (   /one/ ']' /ar/
+			    | ',' elist:<expression_list> /add/ ']' /ar/
+			    | ':' elist:<table_element_tail> /nxt1/
+			      [ ',' { telem:<table_element> /nxt2/ ',' }* ]
+			      ']' /tab/
+			  )
+		 ) .
+	INIT:	var args := [], res, nelem := 0, te := [], laste,
+		    def := UNDEFINED;
+	/one/:	args := [e1];
+	/add/:	args := concat([e1], elist);
+	/ar/:	res := ARINIT(CONSTANT(args.size), def, args);
+	/nxt1/:	nelem := nelem + elist.size;
+		laste := elist.delete;
+		te.append(KEY(concat([e1], elist), laste));
+	/nxt2/:	nelem := nelem + telem[0];
+		te.append(telem[1]);
+	/tab/:	res := TABINIT(CONSTANT(nelem), def, nelem, te);
+	EXIT:	return(res);
+
+<table_element_tail> ::= {e:<expression> /inc/ ':'}+ .
+
+	INIT:	var exprs := [];
+
+	/inc/:	exprs.append(e);
+
+	EXIT:	return(exprs);
+
+<block> ::= (   v:<local_variable_declaration> /var/
+	      | c:<constant_declaration>       /cns/
+	    )* /enddecls/
+	      { [e:<expression> /cnt/] ';' }* .
+
+	INIT:	var n, exprs := [], cnms := [], vnms := [];
+
+		level := level+1;
+
+	/var/:	vnms := concat(vnms, v[0]);
+		exprs := concat(exprs, v[1]);
+
+	/cns/:	cnms := concat(cnms, c);
+
+	/enddecls/:
+		loclist := concat(loclist, vnms);
+
+	/cnt/:	exprs.append(e);
+
+	EXIT:	n := exprs.size;
+		if n = 0
+		then	e := UNDEFINED
+		elif n  = 1
+		then
+			e := exprs[0]
+		else
+			e := SEMI(exprs)
+		fi;
+		remove(vnms);
+		remove(cnms);
+		level := level - 1;
+		return(e);
+
+<local_variable_declaration> ::=
+			VAR { e:<local_initialization> /nxt/ ',' }+ ';' .
+
+	INIT:	var names := [], exprs := [];
+
+		if inproc = False
+		then	ermsg('local variable declarations outside procedure',
+				lnr)
+		fi;
+
+	/nxt/:	if e[0] ~= undefined then names.append(e[0]) fi;
+		if e[1] ~= undefined then exprs.append(e[1]) fi;
+
+	EXIT:	return([names, exprs]);
+
+<local_initialization> ::= <identifier> /id/
+			   (  <operator_symbol> /ass/ e:<expression> /notemp/
+			    | <empty> /emp/
+			   ) .
+
+	INIT:	var name := '', v;
+		e := undefined;
+
+	/id/:	name := sy;
+		v := VARIABLE(name, LocalVar);
+		if symentry(sy, level, v) = False
+		then
+		   name := undefined
+		fi;
+
+	/ass/:	if sy ~= ':='
+		then	ermsg('":=" expected instead of "' || sy || '"', lnr)
+		fi;
+
+	/notemp/:
+		e := ASSIGN(v, e);
+
+	/emp/:	if inloop > 0 then
+			e := ASSIGN(v, UNDEFINED);
+		fi;
+
+	EXIT:	return([name, e]);
+
+	#***************************************************************#
+	# All declarations of local variables are translated as assign-	#
+	# ments, either of the initialisation expression, or of the	#
+	# value 'undefined'. The latter is done to assure that variables#
+	# local to a loop body are re-initialised on each new entry of	#
+	# the body.							#
+	#***************************************************************#
+
+<empty> ::= .

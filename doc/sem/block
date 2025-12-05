@@ -1,0 +1,63 @@
+.iy I ENV
+.iy I ERROR
+.iy I F
+.iy I FR
+.iy I N
+.iy I NR
+.iy I a_undefined
+.iy I eval
+.iy I index
+.iy I name_copy
+.iy I new_inner_scope
+.iy I size
+.{{
+\fBif\fR \jg{{ \fIe\fR =\h'-0.3m'= \jh\fIdecllist\fR:  \ji(\*<variable-declaration\*>|\*<constant-declaration\*>)\v'0.25m'*\v'-0.25m'
+\h'|\nhu'\fIexprlist\fR:\h'|\niu'{[\*<expression\*>] \*`\fI;\fR\^\*'}\v'0.25m'*\v'-0.25m' }}
+\fBthen\fR
+\h'|\ngu'\fBvar\fR \jj\fIdecl\fR, \fIexpr\fR, \fIENV\fR1, \fIv\fR, \fIvarinit\fR1, \fIsig\fR;
+.sp 0.5
+\h'|\ngu'\fIENV\fR1 := \fIENV\fR;
+\h'|\ngu'\fIENV\fR  \jk:= \fIENV\fR.\fIname\*_copy\fR;
+\h'|\ngu'\fIENV\fR.\fInew\*_inner\*_scope\fR;
+\h'|\ngu'\fIvarinit\fR1 := \fIvarinit\fR;
+\h'|\ngu'\fIvarinit\fR := \*`\fI\fR\^\*' ;
+\h'|\ngu'\fBfor\fR \jj\fIdecl\fR \fBin\fR \jl\fIdecllist\fR \fBdo\fR \jm[\fIv\fR, \fIsig\fR] := \fIeval\fR\^(\fIdecl\fR\|) \fBod\fR;
+\h'|\ngu'[\fIv\fR, \fIsig\fR] := \fIeval\fR\^(\fIvarinit\fR);
+\h'|\ngu'\fIvarinit\fR := \fIvarinit\fR1;
+\h'|\ngu'\fBif\fR \jn\fIsig\fR \(ap\h'-0.2m'= \fIN\fR
+\h'|\ngu'\fBthen\fR
+\h'|\nnu'\fIENV\fR := \fIENV\fR1;
+\h'|\nnu'\fBif\fR \jo\fIsig\fR = \fIF\fR \fBthen\fR \ji\fIERROR\fR \fBelse\fR \jp\fIreturn\fR\^(\^[\fIv\fR, \fIsig\fR]\^) \fBfi\fR
+\h'|\ngu'\fBfi\fR;
+\h'|\ngu'\fBif\fR \jn\fIexprlist\fR.\fIsize\fR = 0
+\h'|\ngu'\fBthen\fR
+\h'|\nnu'\fIENV\fR := \fIENV\fR1;
+\h'|\nnu'\fIreturn\fR\^(\^[\fIa\*_undefined\fR, \fIN\fR\|]\^)
+\h'|\ngu'\fBelse\fR
+\h'|\nnu'\fBvar\fR \jq\fIi\fR;
+.sp 0.5
+\h'|\nnu'\fBfor\fR \jq\fIi\fR \fBin\fR \jl\fIexprlist\fR.\fIindex\fR
+\h'|\nnu'\fBdo\fR \jo[\fIv\fR, \fIsig\fR] := \fIeval\fR\^(\fIexprlist\fR\^[\fIi\fR\|]\^);
+\h'|\nou'\fBcase\fR \jr\fIsig\fR
+\h'|\nou'\fBof\fR \js\fIN\fR:         \jt\*# do nothing \ju\*#,
+\h'|\nsu'\fIF\fR:\h'|\ntu'\fBif\fR \jv\fIi\fR \(ap\h'-0.2m'= \fIexprlist\fR.\fIsize\fR \(mi 1 \fBthen\fR \jw\fIERROR\fR \fBfi\fR,
+\h'|\nsu'\fINR\fR: \fIFR\fR:\h'|\ntu'\fIENV\fR := \fIENV\fR1; \fIreturn\fR\^(\^[\fIv\fR, \fIsig\fR]\^)
+\h'|\nou'\fBesac\fR
+\h'|\nnu'\fBod\fR;
+\h'|\nnu'\fIENV\fR := \fIENV\fR1;
+\h'|\nnu'\fIreturn\fR\^(\^[\fIv\fR, \fIsig\fR]\^)
+\h'|\ngu'\fBfi\fR
+\fBfi\fR;
+.}}
+.iy I ENV
+.iy I ERROR
+.iy I F
+.iy I FR
+.iy I N
+.iy I NR
+.iy I a_undefined
+.iy I eval
+.iy I index
+.iy I name_copy
+.iy I new_inner_scope
+.iy I size

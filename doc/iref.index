@@ -1,0 +1,117 @@
+ANNOTATED PROGRAMS	9
+Array expressions	7.2.12
+Assert expressions	7.2.10
+Case expressions	7.2.5
+Class declarations	7.1.5
+Compound patterns	1.4.2
+Constant declarations	7.1.3
+Constant expressions	7.2.18
+Constants	7.2.1
+DESIGN CONSIDERATIONS	2
+DESIGN/intro	2.1
+Declarations	7.1
+Dereference	7.3.1
+Description method	6.3.1
+Dyadic expressions	7.2.17
+EPILOGUE	5
+Equal	7.3.2
+Evaluation process	6.3.4
+Expressions	7.2
+FORMAL LANGUAGE DEFINITIONS	4
+FORMAL/assessment	4.3
+FORMAL/examples	4.2.5
+FORMAL/examples/block	4.2.5.3
+FORMAL/examples/if	4.2.5.1
+FORMAL/examples/var	4.2.5.2
+FORMAL/meta/domains	4.2.3
+FORMAL/method	4.2
+FORMAL/method/eval	4.2.4
+FORMAL/method/intro	4.2.1
+FORMAL/method/meta	4.2.2
+FORMAL/problem	4.1
+Field selection	7.2.14
+Fig eval	2.1
+Fig eval overview	6.1
+Flexible arrays	9.2.2
+For expressions	7.2.7
+INTRODUCTION	1
+Identifiers and procedure calls	7.2.2
+If expressions	7.2.4
+Lexical considerations	6.2
+Lib/array	8.5
+Lib/bits	8.10
+Lib/copy	8.11.1
+Lib/file	8.9
+Lib/integer	8.2
+Lib/interval	8.6
+Lib/miscellaneous	8.11
+Lib/real	8.3
+Lib/scan_string	8.8
+Lib/string	8.4
+Lib/table	8.7
+Lib/type	8.11.5
+Miscellaneous functions	7.3
+Monadic expressions	7.2.16
+Operator symbol declarations	7.1.6
+PRELIMINARIES	6
+Parenthesized expressions and blocks	7.2.11
+Procedure and operator declarations	7.1.4
+Return expressions	7.2.3
+SEMI FORMAL DEFINITION	7
+SUMMER LIBRARY	8
+SUMMER OVERVIEW	3
+SUMMER as metalanguage	6.3.2
+SUMMER/caches	3.3
+SUMMER/evaluation	3.2
+SUMMER/generalized pm	3.5.2
+SUMMER/intro	3.1
+SUMMER/pm extension	3.5
+SUMMER/procedures	3.4
+SUMMER/related work	3.6
+SUMMER/string pm	3.5.1
+SYNTAX SUMMARY	10
+Scan expressions	7.2.9
+Semantic considerations	6.3
+Semantic domains	6.3.3
+Snobol4 introduction	1.4.1
+Snobol4 problems	1.4.4
+Subscription	7.2.15
+Substring and string_equal	7.3.3
+Summer program	7.1.1
+Syntactical considerations	6.1
+Table expressions	7.2.13
+Try expressions	7.2.8
+Unspecified	6.4
+Variable declarations	7.1.2
+While expressions	7.2.6
+algebraic transformations	2.3.2
+basic operations	1.2
+bookkeeping	1.3.1
+checklist	1.5
+checklist:recognition strategy	1.5.2
+checklist:treatment subject	1.5.1
+common defs	2.4.1
+comparison bt methods	2.4
+description methods	2.3
+existing languages	1.3.4
+failure handling	1.3.3
+fig and/or	1.7
+fig break	1.6
+fig len	1.1
+fig pos	1.4
+fig rtab	1.3
+fig span	1.5
+fig tab	1.2
+fig trace	2.2
+immediate/conditional model	2.4.2
+problems sp languages	1.4
+recognition strategy	1.3.2
+recovery model	2.4.3
+recursive coroutines	2.3.3
+rewriting systems	2.3.4
+set of pm operators	2.2
+set of strings	2.3.1
+side effects	1.4.3
+sp languages special?	1.3
+subject monograph	1.1
+unification	2.5

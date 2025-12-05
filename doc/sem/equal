@@ -1,0 +1,31 @@
+.iy I class_decl
+.iy I intval
+.iy I is_integer
+.iy I is_string
+.iy I same_as
+.iy I string_equal
+.iy I stringval
+.{{
+\fBproc\fR \jg\fIequal\fR\^(\fIa\fR, \fIb\fR)
+\z(  \jh\fBif\fR \jg\fIis\*_integer\fR\^(\fIa\fR) & \fIis\*_integer\fR\^(\fIb\fR)
+\h'|\nhu'\fBthen\fR
+\h'|\ngu'\fIreturn\fR\^(\fIa\fR.\fIintval\fR = \fIb\fR.\fIintval\fR\|)
+\h'|\nhu'\fBelif\fR \ji\fIis\*_string\fR\^(\fIa\fR) & \fIis\*_string\fR\^(\fIb\fR)
+\h'|\nhu'\fBthen\fR
+\h'|\ngu'\fIreturn\fR\^(\fIstring\*_equal\fR\^(\fIa\fR.\fIstringval\fR, \fIb\fR.\fIstringval\fR\|))
+\h'|\nhu'\fBelif\fR \ji\fIis\*_composite\*_instance\fR\^(\fIa\fR) & \fIis\*_composite\*_instance\fR\^(\fIb\fR) & 
+\h'|\niu'\fIstring\*_equal\fR\^(\fIa\fR.\fIclass\*_decl\fR.\fIname\fR, \fIb\fR.\fIclass\*_decl\fR.\fIname\fR)
+\h'|\nhu'\fBthen\fR
+\h'|\ngu'\fIreturn\fR\^(\fIa\fR.\fIsame\*_as\fR\^(\fIb\fR))
+\h'|\nhu'\fBelse\fR
+\h'|\ngu'\fIfreturn\fR
+\h'|\nhu'\fBfi\fR
+);
+.}}
+.iy I class_decl
+.iy I intval
+.iy I is_integer
+.iy I is_string
+.iy I same_as
+.iy I string_equal
+.iy I stringval

@@ -1,0 +1,75 @@
+.iy I ENV
+.iy I ERROR
+.iy I N
+.iy I array
+.iy I binding
+.iy I dereference
+.iy I eval
+.iy I eval_call
+.iy I eval_field_selection
+.iy I has_binding
+.iy I index
+.iy I is_class
+.iy I is_instance
+.iy I is_loc
+.iy I is_proc
+.iy I size
+.iy I subject
+.{{
+\fBif\fR \jg{{ \fIe\fR =\h'-0.3m'= \jh\fIid\fR:\*<identifier\*> \fIact\fR:[\*<actuals\*>] }}
+\fBthen\fR
+\h'|\ngu'\fBvar\fR \ji\fIactual\*_vals\fR, \fIexprlist\fR;
+.sp 0.5
+\h'|\ngu'\fBif\fR \jj{{ \fIact\fR =\h'-0.3m'= \jk\*`\fI\z( \jl\fR\^\*' \fIexprlist\fR:{\*<expression\*> \*`\fI,\fR\^\*' }\v'0.25m'*\v'-0.25m' \*`\fI)\fR\^\*' }}
+\h'|\ngu'\fBthen\fR
+\h'|\nju'\fBvar\fR \jm\fIi\fR, \fIv\fR, \fIsig\fR;
+.sp 0.5
+\h'|\nju'\fIactual\*_vals\fR := \fIarray\fR\^(\fIexprlist\fR.\fIsize\fR, \fIundefined\fR\|);
+\h'|\nju'\fBfor\fR \jm\fIi\fR \fBin\fR \jn\fIexprlist\fR.\fIindex\fR
+\h'|\nju'\fBdo\fR \jo[\fIv\fR, \fIsig\fR] := \fIeval\fR\^(\fIexprlist\fR\^[\fIi\fR\|]\^);
+\h'|\nou'\fBif\fR \jp\fIsig\fR \(ap\h'-0.2m'= \fIN\fR \fBthen\fR \jq\fIreturn\fR\^(\^[\fIv\fR, \fIsig\fR]\^) \fBfi\fR;
+\h'|\nou'\fIactual\*_vals\fR\^[\fIi\fR\|] := \fIdereference\fR\^(\fIv\fR);
+\h'|\nju'\fBod\fR;
+\h'|\ngu'\fBelse\fR
+\h'|\nju'\fIactual\*_vals\fR := \fIarray\fR\^(0, \fIundefined\fR\|);
+\h'|\ngu'\fBfi\fR;
+\h'|\ngu'\fBif\fR \jj\fIENV\fR.\fIhas\*_binding\fR\^(\fIid\fR\|)
+\h'|\ngu'\fBthen\fR
+\h'|\nju'\fBvar\fR \jm\fIidbinding\fR := \fIENV\fR.\fIbinding\fR\^(\fIid\fR\|);
+.sp 0.5
+\h'|\nju'\fBif\fR \jo\fIis\*_instance\fR\^(\fIidbinding\fR) | \fIis\*_loc\fR\^(\fIidbinding\fR) 
+\h'|\nju'\fBthen\fR
+\h'|\nou'\fBif\fR \jp{{ \fIe\fR =\h'-0.3m'= \jr\*<identifier\*> }}
+\h'|\nou'\fBthen\fR
+\h'|\npu'\fIreturn\fR\^(\^[\fIidbinding\fR, \fIN\fR\|]\^)
+\h'|\nou'\fBelse\fR
+\h'|\npu'\fIERROR\fR
+\h'|\nou'\fBfi\fR
+\h'|\nju'\fBelif\fR \jh\fIis\*_proc\fR\^(\fIidbinding\fR) | \fIis\*_class\fR\^(\fIidbinding\fR)
+\h'|\nju'\fBthen\fR
+\h'|\nou'\fIreturn\fR\^(\fIeval\*_call\fR\^(\fIid\fR, \fIactual\*_vals\fR))
+\h'|\nju'\fBelse\fR
+\h'|\nou'\fIERROR\fR
+\h'|\nju'\fBfi\fR
+\h'|\ngu'\fBelse\fR
+\h'|\nju'\fIreturn\fR\^(\fIeval\*_field\*_selection\fR\^(\*`\fI\h'-0.1m'fetch\fR\^\*', \fIENV\fR.\fIbinding\fR\^(\*`\fI\h'-0.1m'subject\fR\^\*'\^), \fIid\fR, \fIactual\*_vals\fR))
+\h'|\ngu'\fBfi\fR
+\fBfi\fR;
+.}}
+.iy I ENV
+.iy I ERROR
+.iy I N
+.iy I array
+.iy I binding
+.iy I dereference
+.iy I eval
+.iy I eval_call
+.iy I eval_field_selection
+.iy I has_binding
+.iy I index
+.iy I is_class
+.iy I is_instance
+.iy I is_loc
+.iy I is_proc
+.iy I size
+.iy I subject

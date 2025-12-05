@@ -1,0 +1,2 @@
+<operator-symbol-declaration> ::=
+        (MONADIC | DYADIC) { <operator-symbol> ',' }+ ';' .

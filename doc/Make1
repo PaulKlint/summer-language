@@ -1,0 +1,3 @@
+(cat ix.ms; iref -k -iiref.index counters $@ 2>.er) | eqn | pic | Boldkw >M$$
+troff mctract M$$ 2>x.index.all
+: rm M$$

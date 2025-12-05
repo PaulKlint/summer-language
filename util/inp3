@@ -1,0 +1,8 @@
+some name containing spaces is #{some name containing spaces}
+~ is #{~}
+*^^* !! is #{*^^* !!}
+#{counter,,0}
+#{+} #{>A}
+#{some   name containing  spaces=}
+#{~=+}
+#{*^^* !!=>a+;} #{*^^* !!}

@@ -1,0 +1,295 @@
+class CONST_SUM(name, val, own_lnr)
+begin
+      fetch activate, name, val;
+      
+      proc activate()
+      (
+        lnr := own_lnr;
+	symentry(name, 0, CONSTANT(val));
+	cnms.append(name)
+      ); # activate #
+      
+end CONST_SUM;
+
+class VAR_SUM(name, own_lnr)
+begin
+      fetch activate, name;
+      
+      proc activate()
+      (
+        lnr := own_lnr;
+	symentry(name, 0, VARIABLE(name, GlobalVar))
+      ); # activate #
+      
+end VAR_SUM;
+
+class PROC_SUM(name, nf, own_lnr)
+begin
+      fetch activate, name, nf;
+      
+      proc activate()
+      (
+        var curproc;
+        lnr := own_lnr;
+	curproc := PROC_DECL(GlobalProc);
+	symentry(name, 0, curproc);
+	curproc.complete(name, array(nf, undefined), UNDEFINED);
+      ); # activate #
+      
+end PROC_SUM;
+
+class PROGRAM_SUM(name, nf, own_lnr)
+begin
+      fetch activate, name, nf;
+      
+      proc activate()
+      (
+        lnr := own_lnr;
+	the_program := PROC_DECL(Program);
+	symentry(name, 0, the_program);
+	the_program.complete(name, array(nf, undefined), UNDEFINED);
+      ); # activate #
+      
+end PROGRAM_SUM;
+
+class OP_SUM(name, nf, own_lnr)
+begin
+      fetch activate, name, nf;
+      
+      proc activate()
+      (
+	var
+	  intname := name || '.' || string(nf),
+	  tab :=
+	    if nf = 1
+	    then
+	      montab
+	    else
+	      dytab
+	    fi,
+	  entry := tab[name],
+	  curproc := PROC_DECL(GlobalProc);
+        lnr := own_lnr;
+	curproc.complete(name, array(nf, undefined), UNDEFINED);
+	symentry(intname, 0, curproc);
+	if entry = undefined
+	then
+	  tab[name] := [intname, nf, 0, priofdef(nf), priogdef(nf), 
+	    '*error*']
+	elif entry[O_STATUS] < 0
+	then
+	  entry[O_STATUS] := 1
+	elif entry[O_STATUS] = 3
+	then
+	  entry[O_STATUS] := 2;
+	  fieldtab[intname].addglobf(curproc)
+	else
+	  ermsg('global operator "' || name || '" redeclared', own_lnr);
+	fi
+      ); # activate #
+      
+end OP_SUM;
+
+class CLASS_SUM(name, super, classfld_sum,
+                own_fetchtab, own_storetab, own_assoctab, own_lnr)
+begin
+      fetch activate, name, super, classfld_sum, own_fetchtab, own_storetab,
+        own_assoctab;
+
+      store own_fetchtab, own_storetab, own_assoctab;
+
+      proc activate()
+      (
+        var
+	  x,
+	  i,
+	  curproc;
+        lnr := own_lnr;
+	level := level + 1;
+        offset := -1;
+        clname := name;
+        while [x,i] := classfld_sum.next(i) & type(x) = 'PARFLD_SUM'
+	do
+	  x.activate
+	od;
+	if i ~= undefined & type(x) ~= 'PARFLD_SUM'
+	then
+	  i := i - 1
+	fi;
+        if super ~= undefined
+        then
+          do_subclass(super)
+        fi;
+	while [x,i] := classfld_sum.next(i)
+	do
+	  x.activate;
+	od;
+	curproc := PROC_DECL(Class);
+	curproc.complete(name, array(par_flds.size + 1, undefined), 
+	  UNDEFINED);
+	symentry(name, 0, curproc);
+        fetchtab := own_fetchtab;
+        storetab := own_storetab;
+        assoctab := own_assoctab;
+        putassocs(fetch_type);
+        putassocs(store_type);
+        fetchtab := table(5, undefined);
+        storetab := table(5, undefined);
+        assoctab := table(5, undefined);
+        classtab[name] := [offset + 1, par_flds, data_flds,
+	  proc_flds, op_flds, nclasses];
+        nclasses := nclasses + 1;
+        level := level - 1;
+        par_flds := [];
+        data_flds := [];
+        proc_flds := [];
+        op_flds := [];
+        clname := '';
+        inhertab := table(10, undefined);
+      ); # activate #
+      
+end CLASS_SUM;
+
+class MONADIC_SUM(name, lnr)
+begin
+      fetch activate, name;
+      
+      proc activate()
+      (
+	montab[name] := [name || '.1', 1, -lnr, priofdef(1), priogdef(1), 
+	  '*error*']
+      ); # activate #
+      
+end MONADIC_SUM;
+
+class DYADIC_SUM(name, lnr)
+begin
+      fetch activate, name;
+      
+      proc activate()
+      (
+	montab[name] := [name || '.2', 2, -lnr, priofdef(2), priogdef(2), 
+	  '*error*']
+      ); # activate #
+      
+end DYADIC_SUM;
+
+class SOURCE_SUM(name, own_lnr)
+begin
+      fetch activate, name;
+      
+      proc activate()
+      (
+	var newsrc;
+	if (system('$OLDEST ' || name || '.o ' || name || '.sm') = 512 & 
+	  newsrc := SOURCE(name, src, False)) | newsrc := SOURCE(name, src, 
+	  True)
+	then
+	  src.decls.append(newsrc);
+	  src := newsrc
+	else
+	  ermsg('can''t open "' || name || '.sm', own_lnr)
+	fi
+      ); # activate #
+      
+end SOURCE_SUM;
+
+class EOF_SUM()
+begin
+      fetch activate;
+      
+      proc activate()
+      (
+	
+      ); # activate #
+      
+end EOF_SUM;
+
+class PARFLD_SUM(name, own_lnr)
+begin
+      fetch activate, name;
+      
+      proc activate()
+      (
+        lnr := own_lnr;
+	offset := offset + 1;
+	if fieldentry(name, clname, VAR, offset, NOFETCH, NOSTORE) = True
+	then
+	  par_flds.append(name)
+	fi
+      ); # activate #
+      
+end PARFLD_SUM;
+
+class DATAFLD_SUM(name, own_lnr)
+begin
+      fetch activate, name;
+      
+      proc activate()
+      (
+        lnr := own_lnr;
+	offset := offset + 1;
+	if fieldentry(name, clname, VAR, offset, NOFETCH, NOSTORE) = True
+	then
+	  data_flds.append(name)
+	fi
+      ); # activate #
+      
+end DATAFLD_SUM;
+
+class PROCFLD_SUM(name, own_lnr)
+begin
+      fetch activate, name;
+      
+      proc activate()
+      (
+	var curproc := PROC_DECL(ClassProc);
+        lnr := own_lnr;
+	curproc.complete(name, [], UNDEFINED);
+	if fieldentry(name, clname, PROC, curproc, NOFETCH, NOSTORE) = True
+	then
+	  proc_flds.append(name)
+	fi
+      ); # activate #
+      
+end PROCFLD_SUM;
+
+class OPFLD_SUM(name, nf, own_lnr)
+begin
+      fetch activate, name;
+      
+      proc activate()
+      (
+        var
+	  intname := name || '.' || string(nf),
+	  curproc := PROC_DECL(ClassProc),
+	  tab :=
+	    if nf = 1
+	    then
+	      montab
+	    else
+	      dytab
+	    fi,
+	  entry := tab[name];
+	lnr := own_lnr;
+        if fieldentry(intname, clname, PROC, curproc, NOFETCH, NOSTORE) = 
+	  True
+	then
+	  op_flds.append(intname)
+	fi;
+	curproc.complete(name, array(nf, undefined), UNDEFINED);
+	if entry = undefined
+	then
+	  tab[intname] := [intname, nf, 3, priofdef(nf), priogdef(nf), 
+	    '*error*']
+	elif entry[O_STATUS] < 0
+	then
+	  entry[O_STATUS] := 3
+	elif entry[O_STATUS] = 1
+	then
+	  fieldtab[intname].addglobf(symtab[intname][S_VALUE]);
+	  entry[O_STATUS] := 2
+	fi
+      ); # activate #
+      
+end OPFLD_SUM;

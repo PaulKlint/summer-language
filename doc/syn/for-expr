@@ -1,0 +1,1 @@
+<for-expression> ::= FOR <identifier> IN <expression> DO <block> OD .

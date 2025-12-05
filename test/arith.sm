@@ -1,0 +1,57 @@
+#                                       #
+# arith -- arithmetical operations	#
+#                                       #
+
+include 'heading.sm';
+
+program arith ()
+( var x, y, z, n, i, previ;
+
+  start('arith');
+  test(n := 0);
+  if 0 ~= 0 | 1 ~= 1 | 2 ~= 2 | 1234 ~= 1234 then error(n+0) fi;
+  if 0 ~= 00 | 1 ~= 01 | 11 ~= 011 | 222 ~= 0000222 then error(n+1) fi;
+  if 0 = 1 | 1 = 2 | 1234 = 1235 then error(n+2) fi;
+  if 3 < 2 | 3 <= 2 then error(n+3) fi;
+  if 2 > 3 | 2 >= 3 then error(n+4) fi;
+
+  test(n := 10);
+  if 0 + 0 ~= 0 then error(n+0) fi;
+  if 0 + 1 ~= 1 then error(n+1) fi;
+  if 1 + 1 ~= 2 then error(n+2) fi;
+  if 456 + 789 ~= 1245 then error(n+3) fi;
+
+  test(n := 20);
+  if 1 - 0 ~= 1 then error(n+0) fi;
+  if 0 - 0 ~= 0 then error(n+1) fi;
+  if 0 - 1 ~= -1 then error(n+2) fi;
+  if 456 - 789 ~= -333 then error(n+3) fi;
+
+  test(n := 30);
+  if 1 * 1 ~= 1 then error(n+0) fi;
+  if 1 * 0 ~= 0 then error(n+1) fi;
+  if 0 * 1 ~= 0 then error(n+2) fi;
+  if -1 * 1 ~= -1 then error(n+3) fi;
+  if -1 * -1 ~= 1 then error(n+4) fi;
+  if 45 * 67 ~= 3015 then error(n+5) fi;
+
+  test(n := 40);
+  if 0 % 1 ~= 0 then error(n+0) fi;
+  if 1 % 1 ~= 1 then error(n+1) fi;
+  if -1 % 1 ~= -1 then error(n+2) fi;
+  if 1 % -1 ~= -1 then error(n+3) fi;
+  if -1 % -1 ~= 1 then error(n+4) fi;
+  if 3015 % 67 ~= 45 then error(n+5) fi;
+
+  test(n := 50);
+  i := -500;
+  previ := i - 1;
+  while i < 500
+  do if i - 1 ~= previ then error(n) fi;
+     previ := i;
+     i := i + 1;
+  od;
+
+  finish('arith');
+
+)

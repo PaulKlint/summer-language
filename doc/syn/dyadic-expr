@@ -1,0 +1,2 @@
+<dyadic-expression> ::=
+        <monadic-expression> (<dyadic-operator> <monadic-expression>)* .

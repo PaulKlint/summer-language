@@ -1,0 +1,47 @@
+#					#
+# revio -- reversible i/o		#
+#					#
+
+proc m(n, s)
+( var x;
+
+  if ~(x := move(n)) then put('move(', n, ',', s, ') fails\n'); stop(1) fi;
+  if x ~= s then put('move(', n, ',', s, ') delivers: ', x, '\n') fi;
+  freturn
+);
+
+program revio()
+( var f, line;
+  if ~ (f := file('tmp.rev','w')) then put('ERROR') fi;
+
+  f.put('abcdefg');
+	try (f.put('h') ; 0=1) yrt |
+	try (f.put('hi'); 0=1) yrt |
+	try (f.put('hij'); 0=1) yrt |
+	try (f.put('hijk'); 0=1) yrt |
+	try (f.put('hijkl'); 0=1) yrt |
+	try (f.put('hijklm'); 0=1) yrt |
+	1=1;
+  f.put('HIJKLM');
+  f.close ;
+  f := file('tmp.rev','r');
+
+  line := f.get ;
+  if line ~= 'abcdefgHIJKLM' then
+     put('WRONG FILE CONTENTS ON WRITE: ', line, '\n');
+     stop(1)
+  fi;
+  f.close ;
+  f := file('tmp.rev','r');
+  scan f for
+		try m(1, 'a') yrt |
+		try m(2, 'ab') yrt |
+		try m(3, 'abc') yrt |
+		try m(4, 'abcd') yrt |
+		try m(5, 'abcde') yrt |
+		try m(6, 'abcdef') yrt |
+		try m(7, 'abcdefg') yrt |
+		1 = 1;
+  	m(8, 'abcdefgH') | ''
+  rof;
+)

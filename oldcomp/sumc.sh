@@ -1,0 +1,85 @@
+: sumc [-S] [.cs] [.dc] [.gl] [.ic] [.im] [.in] [.s] [.st] [.o] [all] prog
+: compile the SUMMER program on "prog.sm" and optionally
+: preserve some of the intermediate files with the indicated suffixes.
+: The argument "all" preserves all intermediate files.
+
+: The shell variables have the following meaning
+: SUMMERBIN	directory where the standard SUMMER system resides.
+: PARSER	-
+: CODGEN	- experimental version of various parts
+: PREFIX	-
+: INT		-
+: CC		- C compiler to be used either "cc" or "pcc".
+SUMMERBIN=/summer/paulk/sys/bin
+CC=cc
+PARSER=${PARSER-$SUMMERBIN/parser}
+CODGEN=${CODGEN-$SUMMERBIN/codgen}
+PREFIX=${PREFIX-$SUMMERBIN/prefix}
+INT=${INT-$SUMMERBIN/int.a}
+: First extract the name of the source file "prog" from the argument list.
+SQUEEZE=
+IC=
+for i
+do
+	if /bin/test $i = -S
+	then
+		SQUEEZE=-S
+	elif /bin/test $i = .ic
+	then
+		IC=-IC
+	else
+		prog=$i
+	fi
+done
+if /bin/test x${prog}x = xx
+then
+	echo "Usage: sumc file"
+	exit
+fi
+base=`basename $prog .sm`
+: if basename modified "prog" and "prog" was not of the form $base.sm
+: we must recover the lost prefix
+if /bin/test $prog != $base -a $prog != $base.sm
+then	dir=`echo $prog | sed "s/[^\/]*$//"`
+fi
+prog=$dir$base
+: remove intermediate files on unexpected signals. quit leaves all files intact
+trap "rm $prog.cs $prog.dc $prog.gl $prog.ic $prog.im $prog.in $prog.in\
+$prog.s $prog.st $prog.o >/dev/null" 1 2 4 5 6 7 8 9 10 11 12 13 14 15
+: Parse the program. Error messages are written to "prog.er".
+if $PARSER -m34000 -s4000 $prog </dev/null
+then
+:	No errors during parsing. Remove the empty "prog.er" file.
+	rm $prog.er
+:	Sort the string file - identical strings become adjacent.
+	sort -t, +1n +1 $prog.st > $prog.ss
+
+:	Start code generation.
+        if $CODGEN -m30000 -s2500 $IC $SQUEEZE $PREFIX $prog </dev/null
+	then
+:		No errors during code generation.
+		as -o $prog.o $prog.s
+:		Now link the object program with the interpreter routines.
+                $CC -s $prog.o $INT
+	else
+:		Errors during code generation.
+:		are directly written to the error stream.
+	fi
+else
+:	Errors during parsing.
+	if /bin/test -r $prog.er
+	then cat $prog.er
+	fi
+fi
+: Now selectively delete the intermediate files.
+for s in .cs .dc .gl .ic .im .in .s .st .ss .o
+do	rem=yes
+	for i
+	do case $i in
+		$s|all) rem=no
+	   esac
+	done
+	case $rem in
+		yes) rm $prog$s > /dev/null
+	esac
+done

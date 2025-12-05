@@ -1,0 +1,435 @@
+#*************************************************************************#
+#*************************************************************************#
+#**                                                                  	**#
+#**                 	LEXICAL ANALYZER                              	**#
+#**                                                                  	**#
+#** This file contains procedures which together form a lexical	     	**#
+#** analyzer for the SUMMER language. Together with parser.syn and	**#
+#** parser.ud it forms the input for pgen, a parser generator written	**#
+#** in SUMMER.								**#
+#**                                                                  	**#
+#** The following variables/procedures/constants are (pre)defined by	**#
+#** the	parser generator:						**#
+#**		line:		current line,				**#
+#**		lnr:		current line number,			**#
+#**		ermsg:		produces error messages,		**#
+#**		errcnt:		number of errors in source,		**#
+#**		sy:		current symbol,				**#
+#**		t_sy:		current symbol type,			**#
+#**		predef:		types of predefined LEXICAL classes,	**#
+#**		keytab:		types of keywords,			**#
+#**		kartab:		types of "literals" (e.g. ':', ':='),	**#
+#**		lower:		lower case letters,			**#
+#**		upper:		upper case letters,			**#
+#**		digit:		digits,					**#
+#**		ASCII:		ordered string of ASCII characters,	**#
+#**				the first one is the space.		**#
+#**									**#
+#** The following variables and constants are defined in parser.ud:	**#
+#**		montab:		contains monadic operators,		**#
+#**		dytab:		contains dyadic operators,		**#
+#**		sc:		= ',',					**#
+#**		quote:		= '''',					**#
+#**		newl:		= '\n'.					**#
+#**									**#
+#*************************************************************************#
+#*************************************************************************#
+
+const	alpha		:= 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
+	alphanum	:= 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_',
+	ops		:= '*+-/:<=>|&~!$%\\@?',
+	empty_string	:= '',
+	layout		:= ' \t',
+	TRUE		:= 1,
+	FALSE		:= 0;
+
+
+
+var	f_src,
+		# File containing the SUMMER source #
+	f_st,
+		# file containing symbolic representations of strings #
+	slab := 0,
+		# Determines the next stringlabel ('nextslab') #
+	octab,
+		# actal conversion table #
+	laststringcon;
+		# last <string-constant> read. Is undefined if the last	#
+		# string-constant contained esacpe sequences. For the	#
+		# benefit of <include_file>				#
+
+var	t_str, t_int, t_real, t_op, t_ident, t_dot, t_lp, t_rp, t_lbr,
+	t_rbr, t_comma, t_semi, t_colon, t_EOF;
+
+proc init_types()
+(	var i;
+
+	t_str	:= predef['string_constant'];
+	t_int	:= predef['integer_constant'];
+	t_real	:= predef['real_constant'];
+	t_op	:= predef['operator_symbol'];
+	t_ident	:= predef['identifier'];
+	t_dot	:= kartab['.'];
+	t_lp	:= kartab['('];
+	t_rp	:= kartab[')'];
+	t_lbr	:= kartab['['];
+	t_rbr	:= kartab[']'];
+	t_comma	:= kartab[','];
+	t_semi	:= kartab[';'];
+	t_colon	:= kartab[':'];
+	t_EOF	:= predef['EOF'];
+
+	octab := table(96, undefined);
+	for i in ASCII.index
+	do	var c := ASCII[i];
+		octab[c] := octal(i + 32)
+	od;
+
+	octab['\b'] := '010';
+	octab['\t'] := '011';
+);
+	#***************************************************************#
+	# This procedure initializes symbol types. It is called just	#
+	# before the first call to nextsym; in that way it is certain	#
+	# that predef and kartab are initialized at the moment these	#
+	# types are initialized.					#
+	#***************************************************************#
+
+proc comment()
+(	var cseen := TRUE, readln := TRUE;
+
+        while TRUE
+        do      if cseen = FALSE
+		then	line.span(layout) | empty_string;
+			if line.lit('#')
+			then	cseen := TRUE; readln := FALSE;
+			elif line.rpos(0)
+			then	readln := TRUE;
+			else	return
+			fi;
+		fi;
+		if cseen = TRUE 
+		then	if line.break('#') & line.move(1)
+			then	cseen := FALSE;
+				readln :=
+				if line.rpos(0) then TRUE else FALSE fi;
+			else	readln := TRUE
+			fi
+		fi;
+		if readln=TRUE & ~(line:=scan_string(f_src.get ) & lnr:=lnr+1)
+		then	line := scan_string('');
+			if cseen = TRUE
+			then	ermsg('non closed comment', lnr) fi;
+			return
+		fi;
+	od;
+);
+
+proc octal(n)
+(	var d0, d1, d2;
+
+	d2 := string(n - (n:=n%8)*8);
+	d1 := string(n - (n:=n%8)*8);
+	d0 := string(n);
+	return(if d0 ~= '0' then '0' else '' fi || d0 || d1 || d2)
+);
+	#***************************************************************#
+	# 'octal' converts an integer between 32 and 127 to the string	#
+	# representation of the octal equivalent (32 to '040'). It is	#
+	# ensured that the octal representation starts with a zero.	#
+	# This is a machine-dependent feature , since it relies on the	#
+	# Unix assembler convention for octal numbers.			#
+	# See also 'convstr'						#
+	#***************************************************************#
+
+proc nextslab() return('S' || string(slab := slab+1));
+
+
+proc convstr(sz)
+(	var curs, s;
+
+	lit(quote);
+	curs := cursor;
+	if s := break('\t\b\\''') & lit(quote) & ~lit(quote)
+	then	var oc, c, cnt;
+
+		laststringcon := s;
+		if (cnt := s.size) = 0
+		then	return('z')
+		else	var sl;
+			if errcnt ~= 0 then return('') fi;
+			sl := nextslab();
+			f_st.put('dclstr\t', sl, sc, cnt);
+			for c in s
+			do	oc := octab[c];
+				if oc = undefined
+				then	oc := empty_string;
+					ermsg('illegal character in string', lnr);
+				fi;
+				f_st.put(sc, oc);
+			od;
+			f_st.put(newl);
+			return(sl);
+		fi
+	else	var cnt := 0,
+		    res := array(sz,0),
+		    c;
+
+		move(curs - cursor);
+		while ~rpos(0) & (~lit(quote) | lit(quote) & move(-1))
+		do	res[cnt] :=
+			if lit('\\')
+			then	if   lit('\\')  then '0134'
+				elif lit('t')   then '011'
+				elif lit('n')   then '012'
+				elif lit('b')   then '010'
+				elif lit('r')   then '015'
+				elif c := (lit('0') | lit('1')) ||
+				          any('01234567') ||
+				          any('01234567')
+				then	c
+				else (ermsg('illegal escape sequence in string',
+					     lnr);
+				      empty_string
+				     )
+				fi
+			else(	  c := move(1) &
+				  undefined ~= octab[c]
+				| ermsg('illegal character in string', lnr) &
+				  empty_string
+			    )
+			fi;
+			cnt := cnt + 1;
+			if cnt >= sz
+			then	res := enlarge(res, 10, sz+10);
+				sz := sz + 10;
+			fi;
+		od;
+		if text[cursor-1] ~= quote
+		then	ermsg('newline not allowed in string', lnr);
+			rtab(0);
+			laststringcon := '';
+			return('');
+		fi;
+		if cnt = 0
+		then	return('z')
+		else	var i := 0, sl;
+			laststringcon := undefined;
+			if errcnt ~= 0 then return('') fi;
+			sl := nextslab();
+			f_st.put('dclstr\t', sl, sc, cnt, sc);
+			for i in interval(0, cnt-2, 1)
+			do	f_st.put(res[i], sc)	od;
+			f_st.put(res[cnt-1], newl);
+			return(sl)
+		fi
+	fi
+);
+	#***************************************************************#
+	# 'convstr' produces the representation of a string on the .st	#
+	# file, and returns the label invented for that string.		#
+	# 'convstr' is called within the scope of a 'scan .... for ...' #
+	# with the cursor positioned before the opening quote.	 	#
+	# The length of the string is determined in advance and passed	#
+	# as an argument. During conversion, the converted characters	#
+	# are stored in an array; 'sz' allows this array to be declared #
+	# with approximately the right size. (In theory, the length of	#
+	# a string is only limited by the maximum length allowed for	#
+	# a source line, which can be anything). The main loop converts #
+	# one character to its AsCII equivalent. Special characters	#
+	# start with a '\', followed by either 't', 'n', 'b' or 'r',	#
+	# (tab, newline, backspace, carriage return), or by a three	#
+	# digit octal number between 000 and 177, which denotes the cor-#
+	# responding AsCII value. A '\' itself is represented as '\\'.	#
+	# The string AsCII contains all AsCII characters from blank	#
+	# (040) up to and including '~' (176) in the right order. The	#
+	# AsCII value of a character in this range is computed by	#
+	# determining its position in the string AsCII, adding 32 (octal#
+	# 40), and calling 'octal'. The only two characters outside this#
+	# range which can be represented directly are TAB and BS (),	#
+	# hence the lines ('elif lit('\t')...' and 'elif lit('\b')...'.	#
+	# If per chance there are any others, a compiler error is issued#
+	# The condition governing the 'while' looks strange but is	#
+	# correct: If '~lit(quote)' fails, then lit(quote) has succeeded#
+	# and the cursor is positioned now past the first quote.	#
+	# As a quote itself is represented by '' within a string, the	#
+	# alternative is peeking  ahead for a second quote (the cursor	#
+	# is reset in order to get that quote converted).		#
+	# 'convstr' is called by 'str' (with the current source line as	#
+	# scan string) and by 'convlocs' with the list of local names as#
+	# scan string).							#
+	#***************************************************************#
+
+proc get_str()
+(	t_sy := t_str;
+	scan line
+	for	move(-1);	# recover initial quote #
+		sy := convstr(10);
+	rof
+);
+	#***************************************************************#
+	# get_str delegates the reading of a string constant to		#
+	# which generates the internal representation for string cons.	#
+	#***************************************************************#
+
+
+proc get_number()
+assert  scan line
+	for   var tail;
+	      if tail := span(digit)
+	      then sy := if sy = '0' then tail else sy || tail fi
+	      fi &
+	      t_sy := t_int &
+	      if sy := sy || lit('.') || (span(digit) | '')
+	      then t_sy := t_real
+	      fi &
+	      if sy := sy || lit('e') ||
+				    (lit('+') | lit('-') | '') || span(digit)
+	      then t_sy := t_real
+	      fi
+	rof;
+
+	#***************************************************************#
+	#    Get_number parses a number which start with a digit	#
+	#    (and not with a dot). After parsing a sequence of digits,	#
+	#    type t_int is assigned. If that sequence is followed by	#
+	#    either a dot (possibly followed by another string of 	#
+	#    digits), or e [+|-|nothing] followed by a string of digits,#
+	#    or both, the type is t_real.				#
+	#***************************************************************#
+
+proc get_real_or_dot()
+scan line
+for   if sy := sy || span(digit) ||
+		     (  lit('e') || (lit('+') | lit('-') | '') || span(digit)
+		      | ''
+		     )
+      then t_sy := t_real
+      else t_sy := t_dot
+      fi
+rof;
+	#***************************************************************#
+	# 3. To parse a single dot, or a real denotation which starts	#
+	#    with a dot, and then must be followed by at least one	#
+	#    digit. '.e3' is not a legal real denotation because of the	#
+	#    difficulties it would cause 'nextsym' to distinguish	#
+	#    between a field selection and a real.			#
+	#***************************************************************#
+
+
+proc get_opname()
+scan line
+for	sy := sy || span(alphanum) | 'OK';
+	t_sy := t_op;
+	if montab[sy] ~= undefined | dytab[sy] ~= undefined
+	then return
+	elif scan sy for lit('_') & any(alpha) & rtab(1) & lit('_') rof fails
+	then	ermsg('illegal operator name "' || sy || '"', lnr)
+	fi
+rof;
+
+proc nextsym()
+while TRUE
+do line.span(layout) | empty_string;
+   if sy := line.any(alpha) || (line.span(alphanum) | empty_string)
+   then
+	t_sy := (undefined ~= keytab[sy] | t_ident);
+	return;
+   elif sy := line.move(1)
+   then 
+	case sy
+	of	'0':		# skip leading zeros #
+				line.span('0') | empty_string;
+				get_number();
+				return,
+		'1': '2': '3': '4': '5': '6': '7': '8': '9':
+				get_number();
+				return,
+		'.':
+				get_real_or_dot();
+				return,
+		'''':
+				get_str();
+				return,
+		'_':		get_opname();
+				return,
+		'*': '+': '-': '/': ':': '<': '=': '>': '?':
+		'|': '&': '~': '!': '$': '%': '\\': '@':
+				sy := sy || line.span(ops) | 'OK';
+				if sy = ':'
+				then	t_sy := t_colon
+				else	t_sy := t_op
+				fi;
+				return,
+		'(':
+				t_sy := t_lp;
+				return,
+		')':
+				t_sy := t_rp;
+				return,
+		'[':
+				t_sy := t_lbr;
+				return,
+		']':
+				t_sy := t_rbr;
+				return,
+		',':
+				t_sy := t_comma;
+				return,
+		';':
+				t_sy := t_semi;
+				return,
+		'#':
+				comment(),
+		default:
+				ermsg('illegal character "' || sy || '"', lnr)
+	esac
+   elif line := scan_string(get(f_src))
+   then lnr := lnr + 1
+   elif src_stack.size > 0
+   then var os := src_name;
+
+	f_src.close;
+	[f_src, src_name, line, lnr, lastlnr] := src_stack.delete;
+	if errors_on_tab[os] ~= undefined
+	then	errors_on_tab[src_name] := undefined;
+			# a new "errors on ..." must be produced	#
+			# if an error occurs.				#
+	fi;
+   else sy := 'EOF';
+	t_sy := t_EOF;
+	return
+   fi
+od;
+	#***************************************************************#
+	# comment must be updated					#
+	# 'nextsym' determines the next lexical symbol (in 'sy') and	#
+	# its type (in 't_sy'). First, tabs and spaces are skipped.	#
+	# If then nothing is left on the current line, the proecdure	#
+	# reads new lines until it finds one with a meaningful symbol.	#
+	# There are altogether 15 possibilities:			#
+	# 1. Identifiers and keywords, which get a separate treatment	#
+	#    to speed up their recognition. Their type is either	#
+	#    extracted from keytab, or t_int.				#
+	# 2. Integers, and reals for so far they start with a digit.	#
+	# 3. A single dot, which could also be the start of a real.	#
+	# 4. A string.							#
+	# 5. An operator name starting with an underline.		#
+	# 6. An operator consisting of a sequence of operator symbols.	#
+	#    An explicit test for a single colon is included here.	#
+	# 7. A left parenthesis.					#
+	# 8. A right parenthesis.					#
+	# 9. A left bracket.						#
+	#10. A right bracket.						#
+	#11. A comma.							#
+	#12. A semi_colon.						#
+	#13. The start of a comment. After the comment has been parsed,	#
+	#    a next pass through the loop is executed, to retrieve	#
+	#    a meaningful symbol.					#
+	#14. If the current line contains a non_layout character which	#
+	#    is none of the above, it is illegal. An error message is	#
+	#    issued an a new pass through the loop executed.		#
+	#15. If the current line is empty and no new line can be read	#
+	#    from the source file, we are at end-of-file.		#
+	#***************************************************************#
+

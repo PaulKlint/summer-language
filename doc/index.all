@@ -1,0 +1,1356 @@
+.In C "1 INTRODUCTION  " 3
+.In C "1.1. Subject of this monograph" 3
+.In C "1.2. Basic operations on strings" 5
+.In C "1.3. Why are string processing languages special?" 8
+.In C "1.3.1. Bookkeeping" 8
+.In C "1.3.2. Recognition strategy" 8
+.In C "1.3.3. Failure handling" 9
+.In C "1.3.4. Existing languages and string processing" 10
+.In C "1.4. Problems in string processing languages" 11
+.In C "1.4.1. A short introduction to \s-2SNOBOL\s04" 11
+.In C "1.4.2. Compound patterns" 12
+.In C "1.4.3. Side-effects during pattern matching" 13
+.In C "1.4.4. Problems with the \s-2SNOBOL\s04 approach" 14
+.In C "1.5. A checklist for string processing languages" 15
+.In C "1.5.1. Treatment of the subject" 15
+.In C "1.5.2. Recognition strategy" 15
+.In C "1.6. References for Chapter 1" 16
+.In C "2 DESIGN CONSIDERATIONS FOR STRING PROCESSING LANGUAGES" 17
+.In C "2.1. Introduction" 17
+.In C "2.2. Some representative pattern matching functions and operators" 18
+.In C "2.3. Description methods for pattern matching" 18
+.In C "2.3.1. Patterns defined by sets of strings" 19
+.In C "2.3.2. Patterns defined by algebraic transformations" 19
+.In C "2.3.3. Patterns defined by recursive coroutines" 20
+.In C "2.3.4. Patterns defined by operational semantics" 20
+.In C "2.4. A comparison of two backtracking models" 21
+.In C "2.4.1 Common definitions for the two models" 21
+.In C "2.4.2. The immediate/conditional model" 23
+.In C "2.4.2.1. Overview" 23
+.In C "2.4.2.2. Formal description" 25
+.In C "2.4.3. The recovery model" 31
+.In C "2.4.3.1. Overview" 31
+.In C "2.4.3.2. Formal description" 33
+.In C "2.5. Unification of pattern and expression language" 35
+.In C "2.6. References for Chapter 2" 36
+.In C "3 AN OVERVIEW OF THE SUMMER PROGRAMMING LANGUAGE" 38
+.In C "3.1. Introduction" 38
+.In C "3.2. Success-directed evaluation and control structures" 38
+.In C "3.3. Recovery of side-effects" 40
+.In C "3.4. Procedures, operators and classes" 42
+.In C "3.5. A pattern matching extension" 44
+.In C "3.5.1. String Pattern Matching" 44
+.In C "3.5.2. Generalized pattern matching" 47
+.In C "3.6. Related work" 48
+.In C "3.7. References for Chapter 3" 48
+.In C "4 FORMAL LANGUAGE DEFINITIONS CAN BE MADE PRACTICAL" 49
+.In C "4.1. The problem" 49
+.In C "4.2. The method" 50
+.In C "4.2.1. Introduction" 50
+.In I "denotational semantics" 50
+.In I "Vienna Definition Language" 50
+.In C "4.2.2. S\s-2UMMER\s0 as a metalanguage" 50
+.In C "4.2.3. Semantic domains" 52
+.In I "semantic domain" 52
+.In I "<identifier>" 52
+.In I "<procedure-declaration>" 52
+.In I "<class-declaration>" 52
+.In I "PROCEDURE" 53
+.In I "CLASS" 53
+.In I "COMPOSITE-INSTANCE" 53
+.In I "ENVIRONMENT" 53
+.In C "4.2.4. Evaluation process" 53
+.In I "evaluation process" 54
+.In I "evaluation process" 54
+.In I "<variable-initialization>" 55
+.In I "<block>" 55
+.In I "<return-expression>" 56
+.In C "4.2.5. Some examples" 56
+.In C "4.2.5.1. If expressions" 56
+.In C "4.2.5.2. Variable declarations" 57
+.In C "4.2.5.3. Blocks" 58
+.In C "4.3. Assessment" 59
+.In C "4.4. References for Chapter 4" 61
+.In C "5 ASSESSMENT  " 62
+.In C "5.1. Looking backward" 62
+.In C "5.1.1. S\s-2UMMER\s0 as a language" 62
+.In C "5.1.2. The \s-2SUMMER\s0 implementation" 63
+.In C "5.1.3. Use of a formal definition" 63
+.In C "5.2. Looking forward" 64
+.In C "5.3. References for Chapter 5" 65
+.In C "6 PRELIMINARIES TO THE DEFINITION OF SUMMER" 69
+.In C "6.1. Syntactic considerations" 69
+.In I "syntax notation" 69
+.In C "6.2. Lexical considerations" 70
+.In I "lexical units" 70
+.In I "<identifier>" 70
+.In I "<integer-constant>" 70
+.In I "<real-constant>" 70
+.In I "<string-constant>" 70
+.In I "<operator-symbol>" 70
+.In I "layout symbols" 70
+.In I "comment" 70
+.In I "comment symbol" 70
+.In I "<delimiter>" 70
+.In I "<identifier>" 70
+.In I "keywords" 70
+.In I "<integer-constant>" 70
+.In I "integer" 70
+.In I "<real-constant>" 70
+.In I "real" 70
+.In I "<string-constant>" 71
+.In I "string" 71
+.In I "single quote character" 71
+.In I "non-printable characters" 71
+.In I "escape sequence" 71
+.In I "<operator-symbol>" 71
+.In C "6.3. Semantic considerations" 71
+.In C "6.3.1. Description method" 71
+.In I "evaluation process" 71
+.In I "environment" 71
+.In I "denotational semantics" 71
+.In I "Vienna Definition Language" 71
+.In C "6.3.2. S\s-2UMMER\s0 as a metalanguage" 72
+.In I "metalanguage" 72
+.In C "6.3.3. Semantic domains" 74
+.In I "semantic domain" 74
+.In I "<identifier>" 74
+.In I "<procedure-declaration>" 74
+.In I "<class-declaration>" 74
+.In I "basic values (BASIC-INSTANCE)" 74
+.In I "STORABLE-VALUE" 74
+.In I "DENOTABLE-VALUE" 74
+.In I "LOCATION" 74
+.In I "state (STATE)" 74
+.In I "INTEGER" 74
+.In I "a_integer" 74
+.In I "intval" 74
+.In I "is_integer" 74
+.In I "has" 75
+.In I "operation" 75
+.In I "STRING" 75
+.In I "a_string" 75
+.In I "stringval" 75
+.In I "is_string" 75
+.In I "operation" 75
+.In I "UNDEFINED" 75
+.In I "a_undefined" 75
+.In I "is_undefined" 75
+.In I "has" 75
+.In I "operation" 75
+.In I "COMPOSITE-INSTANCE" 75
+.In I "a_composite_instance" 76
+.In I "is_composite_instance" 76
+.In I "class_decl" 76
+.In I "env" 76
+.In I "same_as" 76
+.In I "PROCEDURE" 76
+.In I "a_proc" 76
+.In I "is_proc" 76
+.In I "CLASS" 76
+.In I "a_class" 76
+.In I "is_class" 77
+.In I "\fIextend\fP (state)" 77
+.In I "contents" 77
+.In I "modify (a location)" 77
+.In I "is_loc" 77
+.In I "ENVIRONMENT" 77
+.In I "environment" 77
+.In I "bind" 77
+.In I "binding" 77
+.In I "has_binding" 77
+.In I "names" 78
+.In I "new_inner_scope" 78
+.In I "new_proc_scope" 78
+.In I "name_copy" 78
+.In I "partial_state_copy" 78
+.In C "6.3.4. Evaluation process" 78
+.In I "evaluation process" 78
+.In I "parse expression" 78
+.In I "evaluation process" 79
+.In I "varinit" 79
+.In I "<variable-initialization>" 79
+.In I "<block>" 79
+.In I "<return-expression>" 81
+.In C "6.4. Features not specified in the definition" 81
+.In C "6.5. References for chapter 6" 82
+.In C "7 A SEMI-FORMAL DEFINITION OF THE SUMMER KERNEL" 83
+.In C "7.1. Declarations" 83
+.In I "declarations" 83
+.In I "scope" 83
+.In C "7.1.1. Summer program" 83
+.In C "7.1.1.a. Syntax" 83
+.In C "7.1.1.b. Pragmatics" 83
+.In I "<summer-program>" 83
+.In I "<variable-initialization>" 83
+.In I "<variable-declaration>" 83
+.In I "<summer-program>" 83
+.In I "varinit" 83
+.In I "<expression>" 84
+.In I "<program-declaration>" 84
+.In C "7.1.1.c. Semantics" 84
+.In I "ENV" 84
+.In I "ENVglobal" 84
+.In I "ERROR" 84
+.In I "N" 84
+.In I "PROGRAM" 84
+.In I "STATE" 84
+.In I "bind" 84
+.In I "binding" 84
+.In I "eval" 84
+.In I "extend" 84
+.In I "is_proc" 84
+.In I "names" 84
+.In I "new_proc_scope" 84
+.In I "ENV" 84
+.In I "ENVglobal" 84
+.In I "ERROR" 84
+.In I "N" 84
+.In I "PROGRAM" 84
+.In I "STATE" 84
+.In I "bind" 84
+.In I "binding" 84
+.In I "eval" 84
+.In I "extend" 84
+.In I "is_proc" 84
+.In I "names" 84
+.In I "new_proc_scope" 84
+.In C "7.1.2. Variable declarations" 85
+.In C "7.1.2.a. Syntax" 85
+.In I "<variable-declaration>" 85
+.In I "<variable-initialization>" 85
+.In C "7.1.2.b. Pragmatics" 85
+.In I "<variable-declaration>" 85
+.In I "<block>" 85
+.In I "<variable-declaration>" 85
+.In I "varinit" 85
+.In C "7.1.2.c. Semantics" 85
+.In I "ENV" 85
+.In I "N" 85
+.In I "STATE" 85
+.In I "VAR" 85
+.In I "a_undefined" 85
+.In I "bind" 85
+.In I "extend" 85
+.In I "ENV" 86
+.In I "N" 86
+.In I "STATE" 86
+.In I "VAR" 86
+.In I "a_undefined" 86
+.In I "bind" 86
+.In I "extend" 86
+.In C "7.1.2.d. Examples" 86
+.In C "7.1.3. Constant declarations" 86
+.In C "7.1.3.a. Syntax" 86
+.In I "<constant-declaration>" 86
+.In I "<constant-initialization>" 86
+.In I "<constant-expression>" 86
+.In C "7.1.3.b. Pragmatics" 86
+.In I "<constant-declaration>" 86
+.In C "7.1.3.c. Semantics" 86
+.In I "CONST" 86
+.In I "ENV" 86
+.In I "ERROR" 86
+.In I "N" 86
+.In I "a_undefined" 86
+.In I "bind" 86
+.In I "eval" 86
+.In I "require_constant_expression" 86
+.In I "CONST" 86
+.In I "ENV" 86
+.In I "ERROR" 86
+.In I "N" 86
+.In I "a_undefined" 86
+.In I "bind" 86
+.In I "eval" 86
+.In I "require_constant_expression" 86
+.In I "<constant-expression>" 86
+.In C "7.1.3.d. Examples" 86
+.In C "7.1.4. Procedure and operator declarations" 87
+.In C "7.1.4.a. Syntax" 87
+.In I "<procedure-declaration>" 87
+.In I "<operator-declaration>" 87
+.In C "7.1.4.b. Pragmatics" 87
+.In C "7.1.4.c. Semantics" 87
+.In I "ENV" 87
+.In I "N" 87
+.In I "OP" 87
+.In I "PROC" 87
+.In I "a_proc" 87
+.In I "a_undefined" 87
+.In I "bind" 87
+.In I "ENV" 87
+.In I "N" 87
+.In I "OP" 87
+.In I "PROC" 87
+.In I "a_proc" 87
+.In I "a_undefined" 87
+.In I "bind" 87
+.In C "7.1.4.d. Examples" 87
+.In C "7.1.5. Class declarations" 88
+.In C "7.1.5.a. Syntax" 88
+.In I "<class-declaration>" 88
+.In I "<subclass-declaration>" 88
+.In I "<fetch-associations>" 88
+.In I "<store-associations>" 88
+.In I "<associations>" 88
+.In I "<association>" 88
+.In I "<field-identifier>" 88
+.In C "7.1.5.b. Pragmatics" 88
+.In I "<class-declaration>" 88
+.In I "instance" 88
+.In I "<class-declaration>" 88
+.In I "<fetch-associations>" 88
+.In I "<store-associations>" 88
+.In I "<class-declaration>" 88
+.In I "<subclass-declaration>" 88
+.In I "<subclass-declaration>" 89
+.In I "<subclass-declaration>" 89
+.In I "<class-declaration>" 89
+.In I "<subclass-declaration>" 89
+.In I "<subclass-declaration>" 89
+.In I "<class-declaration>" 89
+.In I "<class-declaration>" 89
+.In I "<class-declaration>" 89
+.In I "<subclass-declaration>" 89
+.In I "<fetch-associations>" 89
+.In I "<store-associations>" 89
+.In I "<association>" 89
+.In I "<field-identifier>" 89
+.In I "<field-identifier>" 89
+.In I "<store-associations>" 89
+.In I "<fetch-associations>" 89
+.In I "<associations>" 89
+.In I "<fetch-associations>" 89
+.In I "<fetch-associations>" 89
+.In I "<associations>" 89
+.In I "<store-associations>" 89
+.In I "<store-associations>" 89
+.In C "7.1.5.c. Semantics" 89
+.In I "BEGIN" 89
+.In I "CLASS" 89
+.In I "END" 89
+.In I "ENV" 89
+.In I "ERROR" 89
+.In I "INIT" 89
+.In I "N" 89
+.In I "a_class" 89
+.In I "a_undefined" 89
+.In I "bind" 89
+.In I "expand_super_class" 89
+.In I "string_equal" 89
+.In I "BEGIN" 90
+.In I "CLASS" 90
+.In I "END" 90
+.In I "ENV" 90
+.In I "ERROR" 90
+.In I "INIT" 90
+.In I "N" 90
+.In I "a_class" 90
+.In I "a_undefined" 90
+.In I "bind" 90
+.In I "expand_super_class" 90
+.In I "string_equal" 90
+.In C "7.1.5.d. Examples" 90
+.In C "7.1.6. Operator symbol declarations" 92
+.In C "7.1.6.a. Syntax" 92
+.In I "<operator-symbol-declaration>" 92
+.In I "<operator-symbol>" 92
+.In C "7.1.6.b. Pragmatics" 92
+.In I "<operator-symbol-declaration>" 92
+.In I "<monadic-operator>" 92
+.In I "<dyadic-operator>" 92
+.In I "<monadic-operator>" 92
+.In I "<dyadic-operator>" 92
+.In I "<monadic-operator>" 92
+.In I "<dyadic-operator>" 92
+.In I "<operator-declaration>" 92
+.In I "<formals>" 92
+.In I "<operator-symbol-declaration>" 92
+.In C "7.1.6.c. Semantics" 93
+.In C "7.1.6.d. Examples" 93
+.In C "7.2. Expressions" 93
+.In I "<expression>" 93
+.In C "7.2.1. Constants" 94
+.In C "7.2.1.a. Syntax" 94
+.In I "<string-constant>" 94
+.In I "<integer-constant>" 94
+.In I "<real-constant>" 94
+.In I "<constant>" 94
+.In C "7.2.1.b. Pragmatics" 94
+.In C "7.2.1.c. Semantics" 94
+.In I "N" 94
+.In I "a_integer" 94
+.In I "N" 94
+.In I "a_integer" 94
+.In I "N" 94
+.In I "a_string" 94
+.In I "size" 94
+.In I "substring" 94
+.In I "N" 94
+.In I "a_string" 94
+.In I "size" 94
+.In I "substring" 94
+.In I "a_string" 94
+.In I "eval_call" 94
+.In I "a_string" 94
+.In I "eval_call" 94
+.In C "7.2.1.d. Examples" 94
+.In C "7.2.2. Identifiers and procedure calls" 94
+.In C "7.2.2.a. Syntax" 94
+.In I "<identifier-or-call>" 94
+.In I "<identifier>" 94
+.In I "<actuals>" 94
+.In C "7.2.2.b. Pragmatics" 95
+.In I "<identifier>" 95
+.In I "subject" 95
+.In I "<expression>" 95
+.In I "<formals>" 95
+.In I "<procedure-declaration>" 95
+.In I "<formals>" 95
+.In I "<class-declaration>" 95
+.In I "self" 95
+.In I "<class-declaration>" 95
+.In I "<block>" 95
+.In C "7.2.2.c. Semantics" 95
+.In I "ENV" 96
+.In I "ERROR" 96
+.In I "N" 96
+.In I "array" 96
+.In I "binding" 96
+.In I "dereference" 96
+.In I "eval" 96
+.In I "eval_call" 96
+.In I "eval_field_selection" 96
+.In I "has_binding" 96
+.In I "index" 96
+.In I "is_class" 96
+.In I "is_instance" 96
+.In I "is_loc" 96
+.In I "is_proc" 96
+.In I "size" 96
+.In I "subject" 96
+.In I "ENV" 96
+.In I "ERROR" 96
+.In I "N" 96
+.In I "array" 96
+.In I "binding" 96
+.In I "dereference" 96
+.In I "eval" 96
+.In I "eval_call" 96
+.In I "eval_field_selection" 96
+.In I "has_binding" 96
+.In I "index" 96
+.In I "is_class" 96
+.In I "is_instance" 96
+.In I "is_loc" 96
+.In I "is_proc" 96
+.In I "size" 96
+.In I "subject" 96
+.In I "subject" 96
+.In I "instance (creation of)" 96
+.In I "self" 96
+.In I "type" 96
+.In I "BEGIN" 96
+.In I "CLASS" 96
+.In I "END" 96
+.In I "ENV" 96
+.In I "ENVglobal" 96
+.In I "ERROR" 96
+.In I "F" 96
+.In I "FR" 96
+.In I "INIT" 96
+.In I "N" 96
+.In I "NR" 96
+.In I "PROC" 96
+.In I "STATE" 96
+.In I "a_undefined" 96
+.In I "bind" 96
+.In I "binding" 96
+.In I "eval" 96
+.In I "eval_call" 96
+.In I "eval_standard_procedure" 96
+.In I "extend" 96
+.In I "index" 96
+.In I "is_class" 96
+.In I "is_proc" 96
+.In I "name_copy" 96
+.In I "names" 96
+.In I "new_inner_scope" 96
+.In I "new_proc_scope" 96
+.In I "self" 96
+.In I "size" 96
+.In I "text" 96
+.In I "type" 96
+.In I "BEGIN" 98
+.In I "CLASS" 98
+.In I "END" 98
+.In I "ENV" 98
+.In I "ENVglobal" 98
+.In I "ERROR" 98
+.In I "F" 98
+.In I "FR" 98
+.In I "INIT" 98
+.In I "N" 98
+.In I "NR" 98
+.In I "PROC" 98
+.In I "STATE" 98
+.In I "a_undefined" 98
+.In I "bind" 98
+.In I "binding" 98
+.In I "eval" 98
+.In I "eval_call" 98
+.In I "eval_standard_procedure" 98
+.In I "extend" 98
+.In I "index" 98
+.In I "is_class" 98
+.In I "is_proc" 98
+.In I "name_copy" 98
+.In I "names" 98
+.In I "new_inner_scope" 98
+.In I "new_proc_scope" 98
+.In I "self" 98
+.In I "size" 98
+.In I "text" 98
+.In I "type" 98
+.In I "ERROR" 98
+.In I "a_integer" 98
+.In I "a_string" 98
+.In I "a_undefined" 98
+.In I "class_decl" 98
+.In I "eval_standard_procedure" 98
+.In I "intval" 98
+.In I "is_integer" 98
+.In I "is_string" 98
+.In I "is_undefined" 98
+.In I "size" 98
+.In I "stringval" 98
+.In I "type" 98
+.In I "ERROR" 99
+.In I "a_integer" 99
+.In I "a_string" 99
+.In I "a_undefined" 99
+.In I "class_decl" 99
+.In I "eval_standard_procedure" 99
+.In I "intval" 99
+.In I "is_integer" 99
+.In I "is_string" 99
+.In I "is_undefined" 99
+.In I "size" 99
+.In I "stringval" 99
+.In I "type" 99
+.In C "7.2.2.d. Examples" 99
+.In I "subject" 99
+.In C "7.2.3. Return expressions" 99
+.In C "7.2.3.a. Syntax" 99
+.In I "<return-expression>" 99
+.In C "7.2.3.b. Pragmatics" 99
+.In C "7.2.3.c. Semantics" 100
+.In I "NR" 100
+.In I "RETURN" 100
+.In I "a_undefined" 100
+.In I "NR" 100
+.In I "RETURN" 100
+.In I "a_undefined" 100
+.In I "F" 100
+.In I "FR" 100
+.In I "N" 100
+.In I "NR" 100
+.In I "RETURN" 100
+.In I "dereference" 100
+.In I "eval" 100
+.In I "F" 100
+.In I "FR" 100
+.In I "N" 100
+.In I "NR" 100
+.In I "RETURN" 100
+.In I "dereference" 100
+.In I "eval" 100
+.In I "FR" 100
+.In I "FRETURN" 100
+.In I "a_undefined" 100
+.In I "FR" 100
+.In I "FRETURN" 100
+.In I "a_undefined" 100
+.In C "7.2.3.d. Examples" 100
+.In C "7.2.4. If expressions" 100
+.In C "7.2.4.a. Syntax" 101
+.In I "<if-expression>" 101
+.In I "<test>" 101
+.In C "7.2.4.b. Pragmatics" 101
+.In I "<test>" 101
+.In I "<if-expression>" 101
+.In I "<test>" 101
+.In I "<expression>" 101
+.In I "<test>" 101
+.In I "<if-expression>" 101
+.In I "<block>" 101
+.In I "<block>" 101
+.In I "<block>" 101
+.In C "7.2.4.c. Semantics" 101
+.In I "F" 101
+.In I "FAILS" 101
+.In I "FR" 101
+.In I "N" 101
+.In I "NR" 101
+.In I "SUCCEEDS" 101
+.In I "eval" 101
+.In I "F" 101
+.In I "FAILS" 101
+.In I "FR" 101
+.In I "N" 101
+.In I "NR" 101
+.In I "SUCCEEDS" 101
+.In I "eval" 101
+.In I "ELIF" 101
+.In I "ELSE" 101
+.In I "FI" 101
+.In I "FR" 101
+.In I "IF" 101
+.In I "N" 101
+.In I "NR" 101
+.In I "THEN" 101
+.In I "a_undefined" 101
+.In I "eval" 101
+.In I "ELIF" 102
+.In I "ELSE" 102
+.In I "FI" 102
+.In I "FR" 102
+.In I "IF" 102
+.In I "N" 102
+.In I "NR" 102
+.In I "THEN" 102
+.In I "a_undefined" 102
+.In I "eval" 102
+.In C "7.2.4.d. Examples" 102
+.In C "7.2.5. Case expressions" 103
+.In C "7.2.5.a. Syntax" 103
+.In I "<case-expression>" 103
+.In I "<case-entry>" 103
+.In I "<constant-expression>" 103
+.In C "7.2.5.b. Pragmatics" 103
+.In I "<case-expression>" 103
+.In C "7.2.5.c. Semantics" 103
+.In I "CASE" 103
+.In I "DEFAULT" 103
+.In I "ERROR" 103
+.In I "ESAC" 103
+.In I "N" 103
+.In I "OF" 103
+.In I "dereference" 103
+.In I "eval" 103
+.In I "require_constant_expression" 103
+.In I "CASE" 104
+.In I "DEFAULT" 104
+.In I "ERROR" 104
+.In I "ESAC" 104
+.In I "N" 104
+.In I "OF" 104
+.In I "dereference" 104
+.In I "eval" 104
+.In I "require_constant_expression" 104
+.In C "7.2.5.d. Examples" 104
+.In I "<case-entry>" 104
+.In I "<case-expression>" 104
+.In C "7.2.6. While expressions" 104
+.In C "7.2.6.a. Syntax" 104
+.In I "<while-expression>" 104
+.In I "<test>" 104
+.In C "7.2.6.b. Pragmatics" 105
+.In I "<while-expression>" 105
+.In I "<for-expression>" 105
+.In I "<test>" 105
+.In I "<while-expression>" 105
+.In I "<block>" 105
+.In C "7.2.6.c. Semantics" 105
+.In I "DO" 105
+.In I "F" 105
+.In I "FR" 105
+.In I "N" 105
+.In I "NR" 105
+.In I "OD" 105
+.In I "WHILE" 105
+.In I "eval" 105
+.In I "DO" 105
+.In I "F" 105
+.In I "FR" 105
+.In I "N" 105
+.In I "NR" 105
+.In I "OD" 105
+.In I "WHILE" 105
+.In I "eval" 105
+.In C "7.2.6.d. Examples" 105
+.In C "7.2.7. For expressions" 105
+.In C "7.2.7.a. Syntax" 105
+.In I "<for-expression>" 105
+.In C "7.2.7.b. Pragmatics" 105
+.In I "<while-expression>" 105
+.In I "next" 105
+.In I "<for-expression>" 106
+.In I "<for-expression>" 106
+.In C "7.2.7.c. Semantics" 106
+.In I "DO" 106
+.In I "ENV" 106
+.In I "ERROR" 106
+.In I "FOR" 106
+.In I "IN" 106
+.In I "N" 106
+.In I "OD" 106
+.In I "STATE" 106
+.In I "a_integer" 106
+.In I "a_undefined" 106
+.In I "binding" 106
+.In I "dereference" 106
+.In I "eval" 106
+.In I "eval_field_selection" 106
+.In I "is_loc" 106
+.In I "modify" 106
+.In I "DO" 106
+.In I "ENV" 106
+.In I "ERROR" 106
+.In I "FOR" 106
+.In I "IN" 106
+.In I "N" 106
+.In I "OD" 106
+.In I "STATE" 106
+.In I "a_integer" 106
+.In I "a_undefined" 106
+.In I "binding" 106
+.In I "dereference" 106
+.In I "eval" 106
+.In I "eval_field_selection" 106
+.In I "is_loc" 106
+.In I "modify" 106
+.In C "7.2.7.d. Examples" 106
+.In C "7.2.8. Try expressions" 107
+.In C "7.2.8.a. Syntax" 107
+.In I "<try-expression>" 107
+.In C "7.2.8.b. Pragmatics" 107
+.In I "<try-expression>" 107
+.In C "7.2.8.c. Semantics" 108
+.In I "ENV" 108
+.In I "F" 108
+.In I "FR" 108
+.In I "N" 108
+.In I "NR" 108
+.In I "TRY" 108
+.In I "UNTIL" 108
+.In I "YRT" 108
+.In I "a_undefined" 108
+.In I "eval" 108
+.In I "partial_state_copy" 108
+.In I "ENV" 108
+.In I "F" 108
+.In I "FR" 108
+.In I "N" 108
+.In I "NR" 108
+.In I "TRY" 108
+.In I "UNTIL" 108
+.In I "YRT" 108
+.In I "a_undefined" 108
+.In I "eval" 108
+.In I "partial_state_copy" 108
+.In I "<return-expression>" 108
+.In I "<try-expression>" 108
+.In C "7.2.8.d. Examples" 109
+.In C "7.2.9. Scan expressions" 109
+.In C "7.2.9.a. Syntax" 109
+.In I "<scan-expression>" 109
+.In C "7.2.9.b. Pragmatics" 109
+.In I "subject" 109
+.In I "scan_string" 109
+.In I "subject" 109
+.In I "subject" 109
+.In I "<scan-expression>" 109
+.In I "subject" 109
+.In C "7.2.9.c. Semantics" 110
+.In I "ENV" 110
+.In I "FOR" 110
+.In I "N" 110
+.In I "ROF" 110
+.In I "SCAN" 110
+.In I "bind" 110
+.In I "dereference" 110
+.In I "eval" 110
+.In I "eval_call" 110
+.In I "is_string" 110
+.In I "name_copy" 110
+.In I "new_inner_scope" 110
+.In I "scan_string" 110
+.In I "subject" 110
+.In I "ENV" 110
+.In I "FOR" 110
+.In I "N" 110
+.In I "ROF" 110
+.In I "SCAN" 110
+.In I "bind" 110
+.In I "dereference" 110
+.In I "eval" 110
+.In I "eval_call" 110
+.In I "is_string" 110
+.In I "name_copy" 110
+.In I "new_inner_scope" 110
+.In I "scan_string" 110
+.In I "subject" 110
+.In C "7.2.9.d. Examples" 110
+.In C "7.2.10. Assert expressions" 110
+.In C "7.2.10.a. Syntax" 110
+.In I "<assert-expression>" 110
+.In C "7.2.10.b. Pragmatics" 110
+.In I "<assert-expression>" 110
+.In C "7.2.10.c. Semantics" 111
+.In I "ASSERT" 111
+.In I "ERROR" 111
+.In I "N" 111
+.In I "eval" 111
+.In I "ASSERT" 111
+.In I "ERROR" 111
+.In I "N" 111
+.In I "eval" 111
+.In C "7.2.10.d. Examples" 111
+.In C "7.2.11. Parenthesized expressions and blocks" 111
+.In I "<parenthesized-expression>" 111
+.In I "<block>" 111
+.In I "<variable-declaration>" 111
+.In I "<constant-declaration>" 111
+.In C "7.2.11.a. Syntax" 111
+.In C "7.2.11.b. Pragmatics" 111
+.In C "7.2.11.c. Semantics" 111
+.In I "eval" 111
+.In I "eval" 111
+.In I "ENV" 111
+.In I "ERROR" 111
+.In I "F" 111
+.In I "FR" 111
+.In I "N" 111
+.In I "NR" 111
+.In I "a_undefined" 111
+.In I "eval" 111
+.In I "index" 111
+.In I "name_copy" 111
+.In I "new_inner_scope" 111
+.In I "size" 111
+.In I "ENV" 112
+.In I "ERROR" 112
+.In I "F" 112
+.In I "FR" 112
+.In I "N" 112
+.In I "NR" 112
+.In I "a_undefined" 112
+.In I "eval" 112
+.In I "index" 112
+.In I "name_copy" 112
+.In I "new_inner_scope" 112
+.In I "size" 112
+.In C "7.2.11.d. Examples" 112
+.In C "7.2.12. Array expressions" 112
+.In C "7.2.12.a. Syntax" 112
+.In I "<array-expression>" 112
+.In I "<size-and-default>" 112
+.In I "<array-initialization>" 112
+.In C "7.2.12.b. Pragmatics" 113
+.In C "7.2.12.c. Semantics" 113
+.In I "ARRAY" 113
+.In I "INIT" 113
+.In I "N" 113
+.In I "array" 113
+.In I "dereference" 113
+.In I "eval" 113
+.In I "eval_array_init" 113
+.In I "ARRAY" 113
+.In I "INIT" 113
+.In I "N" 113
+.In I "array" 113
+.In I "dereference" 113
+.In I "eval" 113
+.In I "eval_array_init" 113
+.In I "a_integer" 113
+.In I "a_undefined" 113
+.In I "eval_array_init" 113
+.In I "size" 113
+.In I "a_integer" 113
+.In I "a_undefined" 113
+.In I "eval_array_init" 113
+.In I "size" 113
+.In I "INIT" 114
+.In I "N" 114
+.In I "a_integer" 114
+.In I "array" 114
+.In I "dereference" 114
+.In I "eval" 114
+.In I "eval_array_init" 114
+.In I "eval_call" 114
+.In I "eval_field_selection" 114
+.In I "index" 114
+.In I "INIT" 114
+.In I "N" 114
+.In I "a_integer" 114
+.In I "array" 114
+.In I "dereference" 114
+.In I "eval" 114
+.In I "eval_array_init" 114
+.In I "eval_call" 114
+.In I "eval_field_selection" 114
+.In I "index" 114
+.In I "update" 114
+.In I "array" 114
+.In C "7.2.12.d. Examples" 114
+.In C "7.2.13. Table expressions" 115
+.In C "7.2.13.a. Syntax" 115
+.In I "<table-expression>" 115
+.In I "<size-and-default>" 115
+.In I "<table-initialization>" 115
+.In I "<table-element>" 115
+.In C "7.2.13.b. Pragmatics" 115
+.In I "table" 115
+.In C "7.2.13.c. Semantics" 116
+.In I "INIT" 116
+.In I "N" 116
+.In I "TABLE" 116
+.In I "dereference" 116
+.In I "eval" 116
+.In I "eval_table_init" 116
+.In I "INIT" 116
+.In I "N" 116
+.In I "TABLE" 116
+.In I "dereference" 116
+.In I "eval" 116
+.In I "eval_table_init" 116
+.In I "a_integer" 116
+.In I "a_undefined" 116
+.In I "eval_table_init" 116
+.In I "size" 116
+.In I "a_integer" 116
+.In I "a_undefined" 116
+.In I "eval_table_init" 116
+.In I "size" 116
+.In I "INIT" 116
+.In I "N" 116
+.In I "array" 116
+.In I "dereference" 116
+.In I "eval" 116
+.In I "eval_call" 116
+.In I "eval_field_selection" 116
+.In I "eval_table_init" 116
+.In I "index" 116
+.In I "size" 116
+.In I "INIT" 116
+.In I "N" 116
+.In I "array" 116
+.In I "dereference" 116
+.In I "eval" 116
+.In I "eval_call" 116
+.In I "eval_field_selection" 116
+.In I "eval_table_init" 116
+.In I "index" 116
+.In I "size" 116
+.In I "update" 117
+.In I "<class-declaration>" 117
+.In C "7.2.13.d. Examples" 117
+.In C "7.2.14. Field selection" 117
+.In I "<select>" 117
+.In I "field selection" 117
+.In I "<field-identifier>" 117
+.In C "7.2.14.a. Syntax" 117
+.In C "7.2.14.b. Pragmatics" 117
+.In I "<fetch-associations>" 117
+.In I "<store-associations>" 117
+.In I "<class-declaration>" 117
+.In I "<field-identifier>" 117
+.In C "7.2.14.c. Semantics" 118
+.In I "N" 118
+.In I "array" 118
+.In I "dereference" 118
+.In I "eval" 118
+.In I "eval_field_selection" 118
+.In I "index" 118
+.In I "size" 118
+.In I "N" 118
+.In I "array" 118
+.In I "dereference" 118
+.In I "eval" 118
+.In I "eval_field_selection" 118
+.In I "index" 118
+.In I "size" 118
+.In I "BEGIN" 118
+.In I "CLASS" 118
+.In I "END" 118
+.In I "ENV" 118
+.In I "ERROR" 118
+.In I "FETCH" 118
+.In I "INIT" 118
+.In I "N" 118
+.In I "STATE" 118
+.In I "STORE" 118
+.In I "binding" 118
+.In I "class_decl" 118
+.In I "dereference" 118
+.In I "eval_call" 118
+.In I "eval_field_selection" 118
+.In I "is_loc" 118
+.In I "modify" 118
+.In I "operation" 118
+.In I "size" 118
+.In I "string_equal" 118
+.In I "text" 118
+.In I "BEGIN" 119
+.In I "CLASS" 119
+.In I "END" 119
+.In I "ENV" 119
+.In I "ERROR" 119
+.In I "FETCH" 119
+.In I "INIT" 119
+.In I "N" 119
+.In I "STATE" 119
+.In I "STORE" 119
+.In I "binding" 119
+.In I "class_decl" 119
+.In I "dereference" 119
+.In I "eval_call" 119
+.In I "eval_field_selection" 119
+.In I "is_loc" 119
+.In I "modify" 119
+.In I "operation" 119
+.In I "size" 119
+.In I "string_equal" 119
+.In I "text" 119
+.In I "BEGIN" 119
+.In I "CLASS" 119
+.In I "END" 119
+.In I "FETCH" 119
+.In I "INIT" 119
+.In I "STORE" 119
+.In I "class_decl" 119
+.In I "has" 119
+.In I "has_field" 119
+.In I "string_equal" 119
+.In I "text" 119
+.In I "BEGIN" 120
+.In I "CLASS" 120
+.In I "END" 120
+.In I "FETCH" 120
+.In I "INIT" 120
+.In I "STORE" 120
+.In I "class_decl" 120
+.In I "has" 120
+.In I "has_field" 120
+.In I "string_equal" 120
+.In I "text" 120
+.In C "7.2.14.d. Examples" 120
+.In C "7.2.15. Subscription" 120
+.In I "<subscript>" 120
+.In I "subscription" 120
+.In C "7.2.15.a. Syntax" 120
+.In C "7.2.15.b. Pragmatics" 121
+.In I "retrieve" 121
+.In I "update" 121
+.In C "7.2.15.c. Semantics" 121
+.In I "N" 121
+.In I "dereference" 121
+.In I "eval" 121
+.In I "eval_field_selection" 121
+.In I "N" 121
+.In I "dereference" 121
+.In I "eval" 121
+.In I "eval_field_selection" 121
+.In C "7.2.15.d. Examples" 121
+.In C "7.2.16. Monadic expressions" 122
+.In C "7.2.16.a. Syntax" 122
+.In I "<monadic-expression>" 122
+.In I "<monadic-operator>" 122
+.In I "<operator-symbol>" 122
+.In C "7.2.16.b. Pragmatics" 122
+.In I "<monadic-expression>" 122
+.In I "<monadic-operator>" 122
+.In I "~" 122
+.In I "<monadic-expression>" 122
+.In I "<monadic-operator>" 122
+.In I "<monadic-operator>" 122
+.In I "<operator-declaration>" 122
+.In C "7.2.16.c. Semantics" 122
+.In I "ENV" 122
+.In I "ERROR" 122
+.In I "F" 122
+.In I "FR" 122
+.In I "N" 122
+.In I "NR" 122
+.In I "a_undefined" 122
+.In I "binding" 122
+.In I "dereference" 122
+.In I "eval" 122
+.In I "eval_call" 122
+.In I "eval_field_selection" 122
+.In I "has_binding" 122
+.In I "has_field" 122
+.In I "is_proc" 122
+.In I "string_equal" 122
+.In I "ENV" 123
+.In I "ERROR" 123
+.In I "F" 123
+.In I "FR" 123
+.In I "N" 123
+.In I "NR" 123
+.In I "a_undefined" 123
+.In I "binding" 123
+.In I "dereference" 123
+.In I "eval" 123
+.In I "eval_call" 123
+.In I "eval_field_selection" 123
+.In I "has_binding" 123
+.In I "has_field" 123
+.In I "is_proc" 123
+.In I "string_equal" 123
+.In C "7.2.16.d. Examples" 123
+.In C "7.2.17. Dyadic expressions" 123
+.In C "7.2.17.a. Syntax" 123
+.In I "<dyadic-expression>" 123
+.In I "<dyadic-operator>" 123
+.In I "<operator-symbol>" 123
+.In C "7.2.17.b. Pragmatics" 123
+.In I "priority (of operators)" 123
+.In I "<dyadic-expression>" 123
+.In I "<dyadic-operator>" 123
+.In I ":=" 123
+.In I "field selection" 123
+.In I "<unit>" 123
+.In I "<select>" 123
+.In I "subscription" 123
+.In I "<unit>" 123
+.In I "<subscript>" 123
+.In I "update" 123
+.In I "<subscript>" 123
+.In I "multiple assignment" 123
+.In I "<array-initialization>" 123
+.In I "<array-initialization>" 123
+.In I "assignment" 124
+.In I "<dyadic-operator>" 124
+.In I "<dyadic-operator>" 124
+.In I "| (or operator)" 124
+.In I "<dyadic-expression>" 124
+.In I "<dyadic-expression>" 124
+.In I "<dyadic-operator>" 124
+.In I "| (or operator)" 124
+.In I "&" 124
+.In I "<dyadic-expression>" 124
+.In I "<dyadic-operator>" 124
+.In I "<class-declaration>" 124
+.In I "<operator-declaration>" 124
+.In I "<dyadic-operator>" 124
+.In I "=" 124
+.In I "~=" 124
+.In C "7.2.17.c. Semantics" 124
+.In I "ENV" 124
+.In I "ERROR" 124
+.In I "F" 124
+.In I "N" 124
+.In I "STATE" 124
+.In I "a_integer" 124
+.In I "binding" 124
+.In I "dereference" 124
+.In I "eval" 124
+.In I "eval_call" 124
+.In I "eval_field_selection" 124
+.In I "has_binding" 124
+.In I "has_field" 124
+.In I "index" 124
+.In I "is_loc" 124
+.In I "is_proc" 124
+.In I "modify" 124
+.In I "string_equal" 124
+.In I "ENV" 126
+.In I "ERROR" 126
+.In I "F" 126
+.In I "N" 126
+.In I "STATE" 126
+.In I "a_integer" 126
+.In I "binding" 126
+.In I "dereference" 126
+.In I "eval" 126
+.In I "eval_call" 126
+.In I "eval_field_selection" 126
+.In I "has_binding" 126
+.In I "has_field" 126
+.In I "index" 126
+.In I "is_loc" 126
+.In I "is_proc" 126
+.In I "modify" 126
+.In I "string_equal" 126
+.In C "7.2.17.d. Examples" 126
+.In C "7.2.18. Constant expressions" 126
+.In C "7.2.18.a. Syntax" 126
+.In I "<constant-expression>" 126
+.In I "<simple-constant-expression>" 126
+.In I "<constant>" 126
+.In I "<constant-operator>" 126
+.In I "<constant-declaration>" 126
+.In C "7.2.18.b. Pragmatics" 127
+.In I "<case-entry>" 127
+.In I "<constant-initialization>" 127
+.In I "<constant-expression>" 127
+.In C "7.2.18.c. Semantics" 127
+.In I "ENV" 127
+.In I "ERROR" 127
+.In I "binding" 127
+.In I "is_integer" 127
+.In I "is_string" 127
+.In I "require_constant_expression" 127
+.In I "ENV" 127
+.In I "ERROR" 127
+.In I "binding" 127
+.In I "is_integer" 127
+.In I "is_string" 127
+.In I "require_constant_expression" 127
+.In C "7.2.18.d. Examples" 127
+.In C "7.3. Miscellaneous functions used in the formal definition" 128
+.In C "7.3.1. The function \fIdereference\fR" 128
+.In I "dereference" 128
+.In I "STATE" 128
+.In I "contents" 128
+.In I "dereference" 128
+.In I "is_loc" 128
+.In I "STATE" 128
+.In I "contents" 128
+.In I "dereference" 128
+.In I "is_loc" 128
+.In C "7.3.2. The function \fIequal\fR" 128
+.In I "equal" 128
+.In I "class_decl" 128
+.In I "intval" 128
+.In I "is_integer" 128
+.In I "is_string" 128
+.In I "same_as" 128
+.In I "string_equal" 128
+.In I "stringval" 128
+.In I "class_decl" 128
+.In I "intval" 128
+.In I "is_integer" 128
+.In I "is_string" 128
+.In I "same_as" 128
+.In I "string_equal" 128
+.In I "stringval" 128
+.In C "7.3.3. The functions \fIsubstring\fR \fBand\fP \fIstring\fR\h'-0.2m'\v'0.4m'\(mi\v'-0.4m'\h'-0.2m'\fIequal\fR" 129
+.In I "substring" 129
+.In I "string_equal" 129
+.In C "8 THE SUMMER LIBRARY  " 130
+.In C "8.1. Introduction" 130
+.In C "8.2. Class integer" 130
+.In I "integer" 130
+.In I "<integer-constant>" 131
+.In I "+" 131
+.In I "-" 131
+.In I "*" 131
+.In I "/" 131
+.In I "%" 131
+.In I "<" 132
+.In I "<=" 132
+.In I "=" 132
+.In I "~=" 132
+.In I ">=" 132
+.In I ">" 132
+.In C "8.3. Class real" 132
+.In I "real" 132
+.In I "<real-constant>" 133
+.In I "+" 133
+.In I "-" 133
+.In I "*" 133
+.In I "/" 133
+.In I "<" 133
+.In I "<=" 133
+.In I "=" 133
+.In I "~=" 133
+.In I ">" 133
+.In I ">=" 133
+.In C "8.4. Class string" 134
+.In I "string" 134
+.In I "<string-constant>" 134
+.In I "center" 134
+.In I "index" 135
+.In I "interval" 135
+.In I "left" 135
+.In I "next" 135
+.In I "<for-expression>" 135
+.In I "repl" 135
+.In I "replace" 136
+.In I "retrieve" 136
+.In I "reverse" 136
+.In I "right" 136
+.In I "size" 137
+.In I "substr" 137
+.In I "<" 137
+.In I "<=" 137
+.In I "=" 137
+.In I "~=" 137
+.In I ">=" 137
+.In I ">" 137
+.In I "||" 138
+.In C "8.5. Class array" 138
+.In I "array" 138
+.In I "<array-expression>" 138
+.In I "append" 138
+.In I "delete" 139
+.In I "index" 139
+.In I "<for-expression>" 139
+.In I "last" 139
+.In I "next" 139
+.In I "<for-expression>" 139
+.In I "retrieve" 140
+.In I "size" 140
+.In I "sort" 140
+.In I "update" 141
+.In C "8.6. Class interval" 141
+.In I "interval" 141
+.In I "<for-expression>" 141
+.In I "next" 141
+.In I "<for-expression>" 141
+.In C "8.7. Class table" 142
+.In I "table" 142
+.In I "index" 142
+.In I "next" 142
+.In I "<for-expression>" 143
+.In I "retrieve" 143
+.In I "size" 143
+.In I "update" 143
+.In C "8.8. Class scan\h'-0.2m'\v'0.4m'\(mi\v'-0.4m'\h'-0.2m'string" 143
+.In I "scan_string" 143
+.In I "any" 144
+.In I "bal" 144
+.In I "break" 145
+.In I "find" 145
+.In I "lit" 145
+.In I "move" 146
+.In I "pos" 146
+.In I "rpos" 146
+.In I "rtab" 147
+.In I "span" 147
+.In I "tab" 147
+.In C "8.9. Class file" 147
+.In I "file" 147
+.In I "close" 148
+.In I "<try-expression>" 148
+.In I "get" 148
+.In I "put" 148
+.In C "8.10. Class bits" 149
+.In I "bits" 149
+.In I "conj" 149
+.In I "disj" 149
+.In I "compl" 149
+.In I "index" 149
+.In I "interval" 149
+.In I "next" 149
+.In I "retrieve" 149
+.In I "size" 149
+.In I "update" 149
+.In C "8.11. Miscellaneous procedures" 150
+.In I "copy" 150
+.In I "get" 150
+.In I "put" 150
+.In I "stop" 150
+.In I "type" 150
+.In C "9 SOME ANNOTATED SUMMER PROGRAMS  " 151
+.In C "9.1. Introduction" 151
+.In C "9.2.1. Word tuples" 151
+.In C "9.2.1.a. Overall description" 151
+.In C "9.2.1.b. Source text" 151
+.In C "9.2.1.c. Input" 152
+.In C "9.2.1.d. Output" 152
+.In C "9.2.1.e. Detailed description" 153

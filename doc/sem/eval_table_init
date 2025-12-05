@@ -1,0 +1,48 @@
+.iy I INIT
+.iy I N
+.iy I array
+.iy I dereference
+.iy I eval
+.iy I eval_call
+.iy I eval_field_selection
+.iy I eval_table_init
+.iy I index
+.iy I size
+.{{
+\fBproc\fR \jg\fIeval\*_table\*_init\fR\^(\fIsz\fR, \fIdef\fR, \fIinitexpr\fR)
+\z(  \jh\fBvar\fR \ji\fItb\fR, \fIsig\fR, \fIv\fR, \fIexpr\fR, \fIexprlist\fR;
+.sp 0.5
+\h'|\nhu'[\fItb\fR, \fIsig\fR] := \fIeval\*_call\fR\^(\*`\fI\h'-0.1m'table\fR\^\*', [\fIsz\fR, \fIdef\fR\|\|]\^);
+\h'|\nhu'\fBif\fR \jg\fIsig\fR \(ap\h'-0.2m'= \fIN\fR \fBthen\fR \jj\fIreturn\fR\^(\^[\fItb\fR, \fIsig\fR]\^) \fBfi\fR;
+\h'|\nhu'{{ \fIinitexpr\fR =\h'-0.3m'= \jk\s-2INIT\s0 \jl\*`\fI[\fR\^\*' \fIexprlist\fR:{\*<table-element\*> \*`\fI,\fR\^\*' }\v'0.25m'*\v'-0.25m' \*`\fI]\fR\^\*' }};
+\h'|\nhu'\fBfor\fR \ji\fIexpr\fR \fBin\fR \jm\fIexprlist\fR
+\h'|\nhu'\fBdo\fR \jg\fBvar\fR \jn\fIar\fR, \fIk\fR, \fIkey\fR, \fIkeylist\fR, \fIexpr\fR1, \fIv\fR1;
+.sp 0.5
+\h'|\ngu'{{ \fIexpr\fR =\h'-0.3m'= \jo\fIkeylist\fR:{\*<expression\*> \*`\fI:\fR\^\*'}+ \*`\fI:\fR\^\*' \fIexpr\fR1:\*<expression\*> }};
+\h'|\ngu'\fIar\fR := \fIarray\fR\^(\fIkeylist\fR.\fIsize\fR, \fIundefined\fR\|);
+\h'|\ngu'\fBfor\fR \jn\fIk\fR \fBin\fR \jm\fIkeylist\fR.\fIindex\fR
+\h'|\ngu'\fBdo\fR \jp[\fIv\fR, \fIsig\fR] := \fIeval\fR\^(\fIkeylist\fR\^[\fIk\fR]\^);
+\h'|\npu'\fBif\fR \jq\fIsig\fR \(ap\h'-0.2m'= \fIN\fR \fBthen\fR \jr\fIreturn\fR\^(\^[\fIv\fR, \fIsig\fR]\^) \fBfi\fR;
+\h'|\npu'\fIar\fR\^[\fIk\fR] := \fIdereference\fR\^(\fIv\fR);
+\h'|\ngu'\fBod\fR;
+\h'|\ngu'[\fIv\fR1, \fIsig\fR] := \fIeval\fR\^(\fIexpr\fR1);
+\h'|\ngu'\fBif\fR \jp\fIsig\fR \(ap\h'-0.2m'= \fIN\fR \fBthen\fR \jl\fIreturn\fR\^(\^[\fIv\fR1, \fIsig\fR]\^) \fBfi\fR;
+\h'|\ngu'\fIv\fR1 := \fIdereference\fR\^(\fIv\fR1);
+\h'|\ngu'\fBfor\fR \jn\fIkey\fR \fBin\fR \jo\fIar\fR
+\h'|\ngu'\fBdo\fR \jp[\fIv\fR, \fIsig\fR] := \fIeval\*_field\*_selection\fR\^(\*`\fI\h'-0.1m'fetch\fR\^\*', \fItb\fR, \*`\fI\h'-0.1m'update\fR\^\*', [\fIkey\fR, \fIv\fR1]\^);
+\h'|\npu'\fBif\fR \jq\fIsig\fR \(ap\h'-0.2m'= \fIN\fR \fBthen\fR \jr\fIreturn\fR\^(\^[\fIv\fR, \fIsig\fR]\^) \fBfi\fR;
+\h'|\ngu'\fBod\fR
+\h'|\nhu'\fBod\fR;
+\h'|\nhu'\fIreturn\fR\^(\^[\fItb\fR, \fIN\fR\|]\^)
+);
+.}}
+.iy I INIT
+.iy I N
+.iy I array
+.iy I dereference
+.iy I eval
+.iy I eval_call
+.iy I eval_field_selection
+.iy I eval_table_init
+.iy I index
+.iy I size

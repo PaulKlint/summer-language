@@ -1,0 +1,5 @@
+pgen $1.syn
+mv $1.sm old
+../npgen $1.syn
+mv $1.sm new
+diff old new

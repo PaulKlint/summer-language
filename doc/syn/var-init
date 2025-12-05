@@ -1,0 +1,1 @@
+<variable-initialization> ::= <identifier> [ ':=' <expression> ] .

@@ -1,0 +1,45 @@
+.{{
+\*# tuples \(mi\h'-0.2m'\(mi count frequency of word pairs and triples \jg\*#
+.sp 0.5
+\fBconst\fR \jh\fIletter\fR :=
+\h'|\nhu'\*`\fI\h'-0.1m'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ\fR\^\*',
+\h'|\nhu'\fIinteresting\fR := 3;
+.sp 0.5
+\fBproc\fR \ji\fIcombine\fR\^(\fIa\fR, \fIb\fR)
+  \jj\fIreturn\fR\^(\fIa\fR || \*`\fI/\fR\^\*' || \fIb\fR);
+.sp 0.5
+\fBproc\fR \ji\fIword\fR\^(\fIdata\fR)
+\z(  \jj\fIbreak\fR\^(\fIletter\fR) & \fIreturn\fR\^(\fIspan\fR\^(\fIletter\fR))
+);
+.sp 0.5
+\fBprogram\fR \jk\fItuples\fR\^(\|\|\fIfile\*_names\fR)
+\z(  \jj\fBvar\fR \jh\fIf\fR, \fItuple\fR, \fItupletab\fR := \fItable\fR\^(1000, 0);
+.sp 0.5
+\h'|\nju'\fBfor\fR \jh\fIf\fR \fBin\fR \jl\fIfile\*_names\fR
+\h'|\nju'\fBdo\fR \ji\fBvar\fR \jm\fIdata\fR;
+\h'|\niu'\fBif\fR \jk\fIdata\fR := \fIfile\fR\^(\|\|\fIf\fR,\*`\fI\h'-0.1m'r\fR\^\*'\^) \fBfails\fR \jn\fBthen\fR
+\h'|\nku'\fIput\fR\^(\*`\fI\h'-0.1m'Can\fR\^\*'\*`\fI\h'-0.1m't open \fR\^\*', \fIf\fR, \*`\fI\v'-0.25m'\s-2\\\s0\v'0.25m'n\fR\^\*'\^)
+\h'|\niu'\fBelse\fR
+\h'|\nku'\fBscan\fR \jo\fIdata\fR
+\h'|\nku'\fBfor\fR \jp\fBvar\fR \jq\fIw\fR1 , \fIw\fR2 := \fIword\fR\^(\fIdata\fR), \fIw\fR3 := \fIword\fR\^(\fIdata\fR),
+\h'|\nqu'\fIpair\fR, \fItriple\fR;
+\h'|\npu'\fBwhile\fR \jr[\fIw\fR1, \fIw\fR2, \fIw\fR3] := [\fIw\fR2, \fIw\fR3, \fIword\fR\^(\fIdata\fR)]
+\h'|\npu'\fBdo\fR \js\fIpair\fR := \fIcombine\fR\^(\fIw\fR1, \fIw\fR2);
+\h'|\nsu'\fItupletab\fR\^[\^\fIpair\fR] := \fItupletab\fR\^[\^\fIpair\fR] + 1;
+\h'|\nsu'\fItriple\fR := \fIcombine\fR\^(\^\fIpair\fR, \fIw\fR3);
+\h'|\nsu'\fItupletab\fR\^[\fItriple\fR] := \fItupletab\fR\^[\fItriple\fR] + 1;
+\h'|\npu'\fBod\fR;
+\h'|\npu'\fIpair\fR := \fIcombine\fR\^(\fIw\fR2, \fIw\fR3);    \jt\*# the last pair \ju\*#
+\h'|\npu'\fItupletab\fR\^[\^\fIpair\fR] := \fItupletab\fR\^[\^\fIpair\fR] + 1
+\h'|\nku'\fBrof\fR;
+\h'|\nku'\fIdata\fR.\fIclose\fR 
+\h'|\niu'\fBfi\fR
+\h'|\nju'\fBod\fR;
+\h'|\nju'\fBfor\fR \jh\fItuple\fR \fBin\fR \js\fItupletab\fR.\fIindex\fR 
+\h'|\nju'\fBdo\fR \ji\fBvar\fR \jm\fIfreq\fR := \fItupletab\fR\^[\fItuple\fR];
+\h'|\niu'\fBif\fR \jk\fIfreq\fR > \fIinteresting\fR \fBthen\fR
+\h'|\nku'\fIput\fR\^(\fItuple\fR.\fIleft\fR\^(20,\*`\fI \fR\^\*'\^),\fIstring\fR\^(\|\|\fIfreq\fR).\fIright\fR\^(10,\*`\fI \fR\^\*'\^),\*`\fI\v'-0.25m'\s-2\\\s0\v'0.25m'n\fR\^\*'\^)
+\h'|\niu'\fBfi\fR
+\h'|\nju'\fBod\fR
+)
+.}}

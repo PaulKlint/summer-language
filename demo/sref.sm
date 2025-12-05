@@ -1,0 +1,73 @@
+# sref -- section references					#
+# This program resolves all section references of the form	#
+#	?{section-title}					#
+# and replaces them by the appropriate section number		#
+# sections are understood to be of the form:			#
+#	.SH							#
+#	section-number section-title				#
+
+const up := 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+      low:= 'abcdefghijklmnopqrstuvwxyz';
+
+var filename, lineno, reftab := table(300, '');
+
+proc error(s)
+  stand_er.put(filename, ', line ', lineno, ':\t', s, '\n');
+
+proc lcase(s)
+  return(s.replace(up, low));
+
+program sref(files)
+( var line, num, tit, data, pass;
+
+  for pass in interval(1,2,1)
+  do  for filename in files
+      do  if data := file(filename, 'r') fails
+          then
+	     error('can''t open ')
+          else
+	     lineno := 0;
+	     while line := data.get
+             do case pass of
+	        1: if line = '.SH'
+    	           then
+    	              line := data.get;
+    	              scan line
+    	              for num := break(' \t') & span(' \t') &
+    		          tit := rtab(0)
+    	              rof;
+    	              reftab[lcase(tit)] := num;
+	           fi,
+                2: lineno := lineno + 1;
+	 	   scan line
+	 	   for if break('?') fails
+                       then
+		          put(line, '\n')
+	               else
+		          tab(0);
+		          while put(break('?'))
+		          do if lit('?{')
+                             then
+		                if tit := break('}') & move(1) fails
+		                then error('Illegal ref: ' || line)
+		                else
+		                   num := reftab[lcase(tit)];
+		                   if num = '' then
+			              error('Unknown ref: ' || tit);
+		                   fi;
+		                   put(num)
+		                fi
+		             else
+		                put(move(1))
+		             fi
+		          od;
+		          put(rtab(0), '\n')
+	               fi
+                  rof
+                esac
+             od;
+             data.close
+          fi
+      od
+  od
+)

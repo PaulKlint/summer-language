@@ -1,0 +1,12 @@
+.iy I N
+.iy I UNDEFINED
+.iy I a_undefined
+.{{
+\fBif\fR \jg{{ \fIe\fR =\h'-0.3m'= \jh\s-2UNDEFINED\s0 \ji}}
+\fBthen\fR
+\h'|\ngu'\fIreturn\fR\^(\^[\fIa\*_undefined\fR, \fIN\fR\|]\^)
+\fBfi\fR;
+.}}
+.iy I N
+.iy I UNDEFINED
+.iy I a_undefined

@@ -1,0 +1,43 @@
+# next function on built-in datatypes		#
+
+proc error(n) put('ERROR: ', n, '\n');
+
+program nexts ()
+( var x, a, b, i;
+
+  a := [7, 5, 3, 1];
+  i := 0;
+  for x in a
+  do
+     if x ~= a[i] then error(0+i) fi;
+     i := i + 1
+  od;
+
+  a := ['a' : 0, 'b' : 1, 'c' : 2];
+  b := [0, 0, 0];
+  for x in a
+  do
+     if b[x] = 0 then b[x] := -1 else error(10) fi;
+  od;
+  for x in b
+  do
+     if x ~= -1 then error(11) fi;
+  od;
+
+  a := 'pqrst';
+  i := 0;
+  for x in a
+  do
+     if x ~= a[i] then error(20 + i) fi;
+     i := i + 1
+  od;
+
+  a := bits(5, 0);
+  a[0] := a[2] := a[4] := 1;
+  i := 0;
+  for x in a
+  do
+     if x ~= a[i] then error(30 + i) fi;
+     i := i + 1
+  od;
+)

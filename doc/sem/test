@@ -1,0 +1,32 @@
+.iy I F
+.iy I FAILS
+.iy I FR
+.iy I N
+.iy I NR
+.iy I SUCCEEDS
+.iy I eval
+.{{
+\fBif\fR \jg{{ \fIe\fR =\h'-0.3m'= \jh\fIexpr\fR:\*<expression\*> \fIsf\fR: (\s-2SUCCEEDS\s0 \ji| \s-2FAILS\s0) }}
+\fBthen\fR
+\h'|\ngu'\fBif\fR \jj{{ \fIsf\fR =\h'-0.3m'= \jk\s-2SUCCEEDS\s0 \jl}}
+\h'|\ngu'\fBthen\fR
+\h'|\nju'\fIreturn\fR\^(\fIeval\fR\^(\fIexpr\fR))
+\h'|\ngu'\fBelse\fR
+\h'|\nju'\fBvar\fR \jm\fIv\fR, \fIsig\fR;
+.sp 0.5
+\h'|\nju'[\fIv\fR, \fIsig\fR] := \fIeval\fR\^(\fIexpr\fR);
+\h'|\nju'\fBcase\fR \jh\fIsig\fR
+\h'|\nju'\fBof\fR \jn\fIF\fR:         \jo\fIreturn\fR\^(\^[\fIv\fR, \fIN\fR\|]\^),
+\h'|\nnu'\fIN\fR:\h'|\nou'\fIreturn\fR\^(\^[\fIv\fR, \fIF\fR\|]\^),
+\h'|\nnu'\fIFR\fR: \fINR\fR:\h'|\nou'\fIreturn\fR\^(\^[\fIv\fR, \fIsig\fR]\^)
+\h'|\nju'\fBesac\fR
+\h'|\ngu'\fBfi\fR
+\fBfi\fR;
+.}}
+.iy I F
+.iy I FAILS
+.iy I FR
+.iy I N
+.iy I NR
+.iy I SUCCEEDS
+.iy I eval

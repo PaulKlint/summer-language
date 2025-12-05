@@ -1,0 +1,106 @@
+# flexible_array #
+
+class flexible_array ()
+begin fetch update, retrieve, append, delete, size, next, 
+            index, top;
+      store size : change_size;
+
+      var mem, size;
+
+      proc extend(n)
+      (  var i, m1 := array(n, undefined);
+         for i in mem.index do m1[i] := mem[i] od;
+         mem := m1
+      );
+
+      proc retrieve(i)
+         if 0 <= i < size then return(mem[i]) else stop(-1) fi;
+
+      proc update(i, v)
+         if 0 <= i < size then return(mem[i] := v) else stop(-1) fi;
+
+      proc append(v)
+      (  if size >= mem.size then extend(size + 10) fi;
+         mem[size] := v;
+         size := size + 1;
+         return(v)
+      );
+
+      proc delete(n)
+         if n >= 0 then return(change_size(size - n)) else stop(-1) fi;
+
+      proc change_size(n)
+         if n < 0
+         then
+            freturn
+         else
+            if n > mem.size
+            then
+               extend(n)
+            else
+               var i;
+               for i in interval(n, size-1, 1)
+               do mem[i] := undefined od
+            fi;
+            return(size := n)
+         fi;
+
+      proc next(state)
+      (  if state = undefined then state := 0 fi;
+         if state < size
+         then
+            return([mem[state], state + 1])
+         else
+            freturn
+         fi
+      );
+
+      proc index()
+         return(interval(0, size - 1, 1));
+
+      proc top()
+         if size = 0 then freturn else return(mem[size-1]) fi;
+
+init:  mem := array(10, undefined);
+      size := 0;
+end flexible_array;
+
+
+proc p4(v) put(string(v).right(4, ' '));
+
+program demo_flex()
+( var f, i, k;
+  const N := 12;
+
+  f := flexible_array;
+  put('Initialize f:');
+  for i in interval(0, N-1, 1)
+  do f.append(i*i); p4(f[i]);
+     assert f.top = i*i & f[i] = i*i & f.size = i+1;
+  od;
+
+  put('\nIndices in f:');
+  i := 0;
+  for k in f.index
+  do p4(k);
+     assert k = i;
+     i := i + 1
+  od;
+  assert i = N;
+
+  put('\nValues in f: ');
+  i := 0;
+  for k in f
+  do p4(k);
+     assert k = f[i] & k = i*i;
+     i := i + 1
+  od;
+  assert i = N;
+
+  f.delete(2);
+  assert f.size = N-2;
+
+  f.size := 7;
+  assert f.size = 7;
+
+)

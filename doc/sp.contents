@@ -1,0 +1,241 @@
+
+.nr @C 0
+.de NC
+.LP
+.ps 36
+.sp 0.5i
+.ce 1
+\\fB\\$1
+.sp 0.5i
+.ps 16
+.ce 1
+\\$2
+.sp 0.5i
+.ce 1
+\\$3\\fP
+.sp 0.5i
+.ps \\n(PS
+.iy C  "\\$1 \\$2 \\$3"
+.nr @C 1
+..
+.de EC
+.rm LH
+.rm RH
+.nr @C 3
+.bp
+..
+.de PT
+.lt \\n(LLu
+.pc %
+.nr xX \\n%
+.af xX i
+.if \\n% .if e .tl '\\n(xX'\\*(LH''
+.if \\n% .if o .tl ''\\*(RH'\\n(xX'  
+.lt \\n(.lu
+..
+.de BT
+..
+.LP
+.bp 3
+.NC " " CONTENTS " "
+.ds LH CONTENTS
+.ds RH CONTENTS
+.LP
+CONTENTS   \fIiii\fP
+.sp 0.2
+PREFACE   \fIvii\fP
+.sp 2
+\fBPART I: String Processing Languages\fR
+.sp 1.5
+.Ib
+.In C "1.\0INTRODUCTION" 3 -
+.In C "1.1.\0Subject of this monograph" 3
+.In C "1.2.\0Basic operations on strings" 5
+.In C "1.3.\0Why are string processing languages special?" 8
+.sp 0.2
+.in +\w'1.3.\0'u
+.In C "1.3.1.\0Bookkeeping" 8
+.In C "1.3.2.\0Recognition strategy" 8
+.In C "1.3.3.\0Failure handling" 9
+.In C "1.3.4.\0Existing languages and string processing" 10
+.in -\w'1.3.\0'u
+.sp 0.2
+.In C "1.4.\0Problems in string processing languages" 11
+.sp 0.2
+.in +\w'1.4.\0'u
+.In C "1.4.1.\0A short introduction to \s-2SNOBOL\s04" 11
+.In C "1.4.2.\0Compound patterns" 12
+.In C "1.4.3.\0Side-effects during pattern matching" 13
+.In C "1.4.4.\0Problems with the \s-2SNOBOL\s04 approach" 14
+.in -\w'1.4.\0'u
+.sp 0.2
+.In C "1.5.\0A checklist for string processing languages" 15
+.sp 0.2
+.in +\w'1.5.\0'u
+.In C "1.5.1.\0Treatment of the subject" 15
+.In C "1.5.2.\0Recognition strategy" 15
+.in -\w'1.5.\0'u
+.sp 0.2
+.In C "1.6.\0References for Chapter 1" 16
+.In C "2.\0DESIGN CONSIDERATIONS FOR STRING PROCESSING LANGUAGES" 17 -
+.In C "2.1.\0Introduction" 17
+.In C "2.2.\0Some representative pattern matching functions and operators" 18
+.In C "2.3.\0Description methods for pattern matching" 18
+.sp 0.2
+.in +\w'2.3.\0'u
+.In C "2.3.1.\0Patterns defined by sets of strings" 19
+.In C "2.3.2.\0Patterns defined by algebraic transformations" 19
+.In C "2.3.3.\0Patterns defined by recursive coroutines" 20
+.In C "2.3.4.\0Patterns defined by operational semantics" 20
+.in -\w'2.3.\0'u
+.sp 0.2
+.In C "2.4.\0A comparison of two backtracking models" 21
+.sp 0.2
+.in +\w'2.4.\0'u
+.In C "2.4.1.\0Common definitions for the two models" 21
+.In C "2.4.2.\0The immediate/conditional model" 23
+.sp 0.2
+.in +\w'2.4.2.\0'u
+.In C "2.4.2.1.\0Overview" 23
+.In C "2.4.2.2.\0Formal description" 25
+.in -\w'2.4.2.\0'u
+.sp 0.2
+.In C "2.4.3.\0The recovery model" 31
+.sp 0.2
+.in +\w'2.4.3.\0'u
+.In C "2.4.3.1.\0Overview" 31
+.In C "2.4.3.2.\0Formal description" 33
+.in -\w'2.4.3.\0'u
+.in -\w'2.4.\0'u
+.sp 0.2
+.In C "2.5.\0Unification of pattern and expression language" 35
+.In C "2.6.\0References for Chapter 2" 36
+.In C "3.\0AN OVERVIEW OF THE SUMMER PROGRAMMING LANGUAGE" 38 -
+.In C "3.1.\0Introduction" 38
+.In C "3.2.\0Success-directed evaluation and control structures" 38
+.In C "3.3.\0Recovery of side-effects" 40
+.In C "3.4.\0Procedures, operators and classes" 42
+.In C "3.5.\0A pattern matching extension" 44
+.sp 0.2
+.in +\w'3.5.\0'u
+.In C "3.5.1.\0String Pattern Matching" 44
+.In C "3.5.2.\0Generalized pattern matching" 47
+.in -\w'3.5.\0'u
+.sp 0.2
+.In C "3.6.\0Related work" 48
+.In C "3.7.\0References for Chapter 3" 48
+.In C "4.\0FORMAL LANGUAGE DEFINITIONS CAN BE MADE PRACTICAL" 49 -
+.In C "4.1.\0The problem" 49
+.In C "4.2.\0The method" 50
+.sp 0.2
+.in +\w'4.2.\0'u
+.In C "4.2.1.\0Introduction" 50
+.In C "4.2.2.\0S\s-2UMMER\s0 as a metalanguage" 50
+.In C "4.2.3.\0Semantic domains" 52
+.In C "4.2.4.\0Evaluation process" 53
+.In C "4.2.5.\0Some examples" 56
+.sp 0.2
+.in +\w'4.2.5.\0'u
+.In C "4.2.5.1.\0If expressions" 56
+.In C "4.2.5.2.\0Variable declarations" 57
+.In C "4.2.5.3.\0Blocks" 58
+.in -\w'4.2.5.\0'u
+.in -\w'4.2.\0'u
+.sp 0.2
+.In C "4.3.\0Assessment" 59
+.In C "4.4.\0References for Chapter 4" 61
+.In C "5.\0ASSESSMENT" 62 -
+.In C "5.1.\0Looking backward" 62
+.sp 0.2
+.in +\w'5.1.\0'u
+.In C "5.1.1.\0S\s-2UMMER\s0 as a language" 62
+.In C "5.1.2.\0The \s-2SUMMER\s0 implementation" 63
+.In C "5.1.3.\0Use of a formal definition" 63
+.in -\w'5.1.\0'u
+.sp 0.2
+.In C "5.2.\0Looking forward" 64
+.In C "5.3.\0References for Chapter 5" 65
+.sp 2
+.in 0
+\fBPART II: Definition of SUMMER\fR
+.sp 1
+.In C "6.\0PRELIMINARIES TO THE DEFINITION OF SUMMER" 69 -
+.In C "6.1.\0Syntactic considerations" 69
+.In C "6.2.\0Lexical considerations" 70
+.In C "6.3.\0Semantic considerations" 71
+.sp 0.2
+.in +\w'6.3.\0'u
+.In C "6.3.1.\0Description method" 71
+.In C "6.3.2.\0S\s-2UMMER\s0 as a metalanguage" 72
+.In C "6.3.3.\0Semantic domains" 74
+.In C "6.3.4.\0Evaluation process" 78
+.in -\w'6.3.\0'u
+.sp 0.2
+.In C "6.4.\0Features not specified in the definition" 81
+.In C "6.5.\0References for chapter 6" 82
+.In C "7.\0A SEMI-FORMAL DEFINITION OF THE SUMMER KERNEL" 83 -
+.In C "7.1.\0Declarations" 83
+.sp 0.2
+.in +\w'7.1.\0'u
+.In C "7.1.1.\0Summer program" 83
+.In C "7.1.2.\0Variable declarations" 85
+.In C "7.1.3.\0Constant declarations" 86
+.In C "7.1.4.\0Procedure and operator declarations" 87
+.In C "7.1.5.\0Class declarations" 88
+.In C "7.1.6.\0Operator symbol declarations" 92
+.in -\w'7.1.\0'u
+.sp 0.2
+.ne 5
+.In C "7.2.\0Expressions" 93
+.sp 0.2
+.in +\w'7.2.\0'u
+.In C "7.2.1.\0\0Constants" 94
+.In C "7.2.2.\0\0Identifiers and procedure calls" 94
+.In C "7.2.3.\0\0Return expressions" 99
+.In C "7.2.4.\0\0If expressions" 100
+.In C "7.2.5.\0\0Case expressions" 103
+.In C "7.2.6.\0\0While expressions" 104
+.In C "7.2.7.\0\0For expressions" 105
+.In C "7.2.8.\0\0Try expressions" 107
+.In C "7.2.9.\0\0Scan expressions" 109
+.In C "7.2.10.\0Assert expressions" 110
+.In C "7.2.11.\0Parenthesized expressions and blocks" 111
+.In C "7.2.12.\0Array expressions" 112
+.In C "7.2.13.\0Table expressions" 115
+.In C "7.2.14.\0Field selection" 117
+.In C "7.2.15.\0Subscription" 120
+.In C "7.2.16.\0Monadic expressions" 122
+.In C "7.2.17.\0Dyadic expressions" 123
+.In C "7.2.18.\0Constant expressions" 126
+.in -\w'7.2.\0'u
+.sp 0.2
+.In C "7.3.\0Miscellaneous functions used in the formal definition" 128
+.sp 0.2
+.in +\w'7.3.\0'u
+.In C "7.3.1.\0The function \fIdereference\fR" 128
+.In C "7.3.2.\0The function \fIequal\fR" 128
+.In C "7.3.3.\0The functions \fIsubstring\fR and \fIstring\fR\h'-0.2m'\v'0.4m'\(mi\v'-0.4m'\h'-0.2m'\fIequal\fR" 129
+.in -\w'7.3.\0'u
+.In C "8.\0THE SUMMER LIBRARY" 130 -
+.In C "8.1.\0\0Introduction" 130
+.In C "8.2.\0\0Class integer" 130
+.In C "8.3.\0\0Class real" 132
+.In C "8.4.\0\0Class string" 134
+.In C "8.5.\0\0Class array" 138
+.In C "8.6.\0\0Class interval" 141
+.In C "8.7.\0\0Class table" 142
+.In C "8.8.\0\0Class scan\h'-0.2m'\v'0.4m'\(mi\v'-0.4m'\h'-0.2m'string" 143
+.In C "8.9.\0\0Class file" 147
+.In C "8.10.\0Class bits" 149
+.In C "8.11.\0Miscellaneous procedures" 150
+.In C "9.\0SOME ANNOTATED SUMMER PROGRAMS" 151 -
+.In C "9.1.\0Introduction" 151
+.sp 0.2
+.in +\w'9.1.\0'u
+.In C "9.2.1.\0Word tuples" 151
+.In C "9.2.2.\0Flexible arrays" 154
+.in -\w'9.1.\0'u
+.In C "10.\0SUMMARY OF SUMMER SYNTAX" 158 -
+.in -8
+INDEX FOR PART II  \fB161\fP
+.EC

@@ -1,0 +1,5 @@
+START whiledo
+TEST 0
+TEST 10
+TEST 20
+FINISH whiledo

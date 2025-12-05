@@ -1,0 +1,12 @@
+base=$HOME/sys/doc/syn
+echo ".SH #{SYNTAX SUMMARY=sn+}. \"SUMMARY OF SUMMER SYNTAX\""
+echo ".ds RH \"SUMMARY OF SUMMER SYNTAX"
+echo ".sp 1"
+echo .LP
+echo .nf
+for n in `cat $base/NOTIONS`
+do echo ".<<"
+   cat $base/$n
+   echo ".>>"
+   echo ".sp 0.5"
+done

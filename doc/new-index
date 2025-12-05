@@ -1,0 +1,493 @@
+.LT A
+.ti -4
+\*{<actuals>\*} 94
+.ti -4
+\*{any\*} 144
+.ti -4
+\*{append\*} 138
+.ti -4
+\*{array\*} 96
+.ti -4
+\*{ARRAY\*} 113
+.ti -4
+\*{array\*} 113, 114, 116, 118, 138
+.ti -4
+\*{<array-expression>\*} 112, 138
+.ti -4
+\*{<array-initialization>\*} 112, 123
+.ti -4
+\*{ASSERT\*} 111
+.ti -4
+\*{<assert-expression>\*} 110
+.ti -4
+\*{assignment\*} 124
+.ti -4
+\*{<association>\*} 88, 89
+.ti -4
+\*{<associations>\*} 88, 89
+.ti -4
+\*{a_class\*} 76, 89, 90
+.ti -4
+\*{a_composite_instance\*} 76
+.ti -4
+\*{a_integer\*} 74, 94, 98, 99, 106, 113, 114, 116, 124, 126
+.ti -4
+\*{a_proc\*} 76, 87
+.ti -4
+\*{a_string\*} 75, 94, 98, 99
+.ti -4
+\*{a_undefined\*} 75, 85, 86, 87, 89, 90, 96, 98, 99, 100, 101, 102, 106, 108, 111, 112, 113, 116, 122, 123
+.LT B
+.ti -4
+\*{bal\*} 144
+.ti -4
+basic values (\fIBASIC\fP-\fIINSTANCE\fP) 74
+.ti -4
+\*{BEGIN\*} 89, 90, 96, 98, 118, 119, 120
+.ti -4
+\*{bind\*} 77, 84, 85, 86, 87, 89, 90, 96, 98, 110
+.br
+.ne 3
+.ti -4
+\*{binding\*} 77, 84, 96, 98, 106, 118, 119, 122, 123, 124, 126, 127
+.ti -4
+\*{bits\*} 149
+.ti -4
+\*{<block>\*} 55, 79, 85, 95, 101, 105, 111
+.ti -4
+\*{break\*} 145
+.LT C
+.ti -4
+\*{CASE\*} 103, 104
+.ti -4
+\*{<case-entry>\*} 103, 104, 127
+.ti -4
+\*{<case-expression>\*} 103, 104
+.ti -4
+\*{center\*} 134
+.ti -4
+\*{CLASS\*} 53, 76, 89, 90, 96, 98, 118, 119, 120
+.ti -4
+\*{<class-declaration>\*} 52, 74, 88, 89, 95, 117, 124
+.ti -4
+\*{class_decl\*} 76, 98, 99, 118, 119, 120, 128
+.ti -4
+\*{close\*} 148
+.ti -4
+comment 70
+.ti -4
+comment symbol 70
+.ti -4
+\*{compl\*} 149
+.ti -4
+\fICOMPOSITE\fP-\fIINSTANCE\fP 53, 75
+.ti -4
+\*{conj\*} 149
+.ti -4
+\*{CONST\*} 86
+.ti -4
+\*{<constant>\*} 94, 126
+.ti -4
+\*{<constant-declaration>\*} 86, 111, 126
+.ti -4
+\*{<constant-expression>\*} 86, 103, 126, 127
+.ti -4
+\*{<constant-initialization>\*} 86, 127
+.ti -4
+\*{<constant-operator>\*} 126
+.ti -4
+\*{contents\*} 77, 128
+.ti -4
+\*{copy\*} 150
+.LT D
+.ti -4
+\*{declarations\*} 83
+.ti -4
+\*{DEFAULT\*} 103, 104
+.ti -4
+\*{delete\*} 139
+.ti -4
+\*{<delimiter>\*} 70
+.ti -4
+\fIDENOTABLE\fP-\fIVALUE\fP 74
+.ti -4
+denotational semantics 50, 71
+.ti -4
+\*{dereference\*} 96, 100, 103, 104, 106, 110, 113, 114, 116, 118, 119, 121, 122, 123, 124, 126, 128
+.ti -4
+\*{disj\*} 149
+.ti -4
+\*{DO\*} 105, 106
+.ti -4
+\*{<dyadic-expression>\*} 123, 124
+.ti -4
+\*{<dyadic-operator>\*} 92, 123, 124
+.LT E
+.ti -4
+\*{ELIF\*} 101, 102
+.ti -4
+\*{ELSE\*} 101, 102
+.ti -4
+\*{END\*} 89, 90, 96, 98, 118, 119, 120
+.ti -4
+\*{env\*} 76
+.ti -4
+\*{ENV\*} 84, 85, 86, 87, 89, 90, 96, 98, 106, 108, 110, 111, 112, 118, 119, 122, 123, 124, 126, 127
+.ti -4
+\*{ENVglobal\*} 84, 96, 98
+.ti -4
+\*{ENVIRONMENT\*} 53, 77
+.ti -4
+environment 71, 77
+.ti -4
+\*{equal\*} 128
+.ti -4
+\*{ERROR\*} 84, 86, 89, 90, 96, 98, 99, 103, 104, 106, 111, 112, 118, 119, 122, 123, 124, 126, 127
+.ti -4
+\*{ESAC\*} 103, 104
+.ti -4
+escape sequence 71
+.ti -4
+\*{eval\*} 84, 86, 96, 98, 100, 101, 102, 103, 104, 105, 106, 108, 110, 111, 112, 113, 114, 116, 118, 121, 122, 123, 124, 126
+.ti -4
+evaluation process 54, 71, 78, 79
+.ti -4
+\*{eval_array_init\*} 113, 114
+.ti -4
+\*{eval_call\*} 94, 96, 98, 110, 114, 116, 118, 119, 122, 123, 124, 126
+.ti -4
+\*{eval_field_selection\*} 96, 106, 114, 116, 118, 119, 121, 122, 123, 124, 126
+.ti -4
+\*{eval_standard_procedure\*} 96, 98, 99
+.ti -4
+\*{eval_table_init\*} 116
+.ti -4
+\*{expand_super_class\*} 89, 90
+.ti -4
+\*{<expression>\*} 84, 93, 95, 101
+.ti -4
+\*{extend\*} 77, 84, 85, 86, 96, 98
+.LT F
+.ti -4
+\*{F\*} 96, 98, 100, 101, 105, 108, 111, 112, 122, 123, 124, 126
+.ti -4
+\*{FAILS\*} 101
+.ti -4
+\*{FETCH\*} 118, 119, 120
+.ti -4
+\*{<fetch-associations>\*} 88, 89, 117
+.ti -4
+\*{FI\*} 101, 102
+.ti -4
+field selection 117, 123
+.ti -4
+\*{<field-identifier>\*} 88, 89, 117
+.ti -4
+\*{file\*} 147
+.ti -4
+\*{find\*} 145
+.ti -4
+\*{FOR\*} 106, 110
+.ti -4
+\*{<for-expression>\*} 105, 106, 135, 139, 141, 143
+.ti -4
+\*{<formals>\*} 92, 95
+.ti -4
+\*{FR\*} 96, 98, 100, 101, 102, 105, 108, 111, 112, 122, 123
+.ti -4
+\*{FRETURN\*} 100
+.LT G
+.ti -4
+\*{get\*} 148, 150
+.LT H
+.ti -4
+\*{has\*} 75, 119, 120
+.ti -4
+\*{has_binding\*} 77, 96, 122, 123, 124, 126
+.ti -4
+\*{has_field\*} 119, 120, 122, 123, 124, 126
+.LT I
+.ti -4
+\*{<identifier>\*} 52, 70, 74, 94, 95
+.ti -4
+\*{<identifier-or-call>\*} 94
+.ti -4
+\*{IF\*} 101, 102
+.ti -4
+\*{<if-expression>\*} 101
+.ti -4
+\*{IN\*} 106
+.ti -4
+\*{index\*} 96, 98, 111, 112, 114, 116, 118, 124, 126, 135, 139, 142, 149
+.ti -4
+\*{INIT\*} 89, 90, 96, 98, 113, 114, 116, 118, 119, 120
+.ti -4
+instance 88
+.ti -4
+instance (creation of) 96
+.ti -4
+\*{integer\*} 70
+.ti -4
+\*{INTEGER\*} 74
+.ti -4
+\*{integer\*} 130
+.ti -4
+\*{<integer-constant>\*} 70, 94, 131
+.ti -4
+\*{interval\*} 135, 141, 149
+.ti -4
+\*{intval\*} 74, 98, 99, 128
+.ti -4
+\*{is_class\*} 77, 96, 98
+.ti -4
+\*{is_composite_instance\*} 76
+.ti -4
+\*{is_instance\*} 96
+.ti -4
+\*{is_integer\*} 74, 98, 99, 127, 128
+.ti -4
+\*{is_loc\*} 77, 96, 106, 118, 119, 124, 126, 128
+.ti -4
+\*{is_proc\*} 76, 84, 96, 98, 122, 123, 124, 126
+.ti -4
+\*{is_string\*} 75, 98, 99, 110, 127, 128
+.ti -4
+\*{is_undefined\*} 75, 98, 99
+.LT K
+.ti -4
+keywords 70
+.LT L
+.ti -4
+\*{last\*} 139
+.ti -4
+layout symbols 70
+.ti -4
+\*{left\*} 135
+.ti -4
+lexical units 70
+.ti -4
+\*{lit\*} 145
+.ti -4
+\fILOCATION\fP 74
+.LT M
+.ti -4
+metalanguage 72
+.ti -4
+\*{modify\*} 77, 106, 118, 119, 124, 126
+.ti -4
+\*{<monadic-expression>\*} 122
+.ti -4
+\*{<monadic-operator>\*} 92, 122
+.ti -4
+\*{move\*} 146
+.ti -4
+multiple assignment 123
+.LT N
+.ti -4
+\*{N\*} 84, 85, 86, 87, 89, 90, 94, 96, 98, 100, 101, 102, 103, 104, 105, 106, 108, 110, 111, 112, 113, 114, 116, 118, 119, 121, 122, 123, 124, 126
+.ti -4
+\*{names\*} 78, 84, 96, 98
+.ti -4
+\*{name_copy\*} 78, 96, 98, 110, 111, 112
+.ti -4
+\*{new_inner_scope\*} 78, 96, 98, 110, 111, 112
+.ti -4
+\*{new_proc_scope\*} 78, 84, 96, 98
+.ti -4
+\*{next\*} 105, 135, 139, 141, 142, 149
+.ti -4
+non-printable characters 71
+.ti -4
+\*{NR\*} 96, 98, 100, 101, 102, 105, 108, 111, 112, 122, 123
+.LT O
+.ti -4
+\*{OD\*} 105, 106
+.ti -4
+\*{OF\*} 103, 104
+.ti -4
+\*{OP\*} 87
+.ti -4
+\*{operation\*} 75, 118, 119
+.ti -4
+\*{<operator-declaration>\*} 87, 92, 122, 124
+.ti -4
+\*{<operator-symbol>\*} 70, 71, 92, 122, 123
+.ti -4
+\*{<operator-symbol-declaration>\*} 92
+.LT P
+.ti -4
+\*{<parenthesized-expression>\*} 111
+.ti -4
+parse expression 78
+.ti -4
+\*{partial_state_copy\*} 78, 108
+.ti -4
+\*{pos\*} 146
+.ti -4
+priority (of operators) 123
+.ti -4
+\*{<primary>\*} 122
+.ti -4
+\*{PROC\*} 87, 96, 98
+.ti -4
+\fIPROCEDURE\fP 53, 76
+.ti -4
+\*{<procedure-declaration>\*} 52, 74, 87, 95
+.ti -4
+\*{PROGRAM\*} 84
+.ti -4
+\*{<program-declaration>\*} 84
+.ti -4
+\*{put\*} 148, 150
+.LT R
+.ti -4
+\*{real\*} 70, 132
+.ti -4
+\*{<real-constant>\*} 70, 94, 133
+.ti -4
+\*{repl\*} 135
+.ti -4
+\*{replace\*} 136
+.ti -4
+\*{require_constant_expression\*} 86, 103, 104, 127
+.ti -4
+\*{retrieve\*} 121, 136, 140, 143, 149
+.ti -4
+\*{RETURN\*} 100
+.ti -4
+\*{<return-expression>\*} 56, 81, 99, 108
+.ti -4
+\*{reverse\*} 136
+.ti -4
+\*{right\*} 136
+.ti -4
+\*{ROF\*} 110
+.ti -4
+\*{rpos\*} 146
+.ti -4
+\*{rtab\*} 147
+.LT S
+.ti -4
+\*{same_as\*} 76, 128
+.ti -4
+\*{SCAN\*} 110
+.ti -4
+\*{<scan-expression>\*} 109
+.ti -4
+\*{scan_string\*} 109, 110, 143
+.ti -4
+scope 83
+.ti -4
+\*{<select>\*} 117, 123
+.ti -4
+\*{self\*} 95, 96, 98
+.ti -4
+semantic domain 52, 74
+.ti -4
+\*{<simple-constant-expression>\*} 126
+.ti -4
+single quote character 71
+.ti -4
+\*{size\*} 94, 96, 98, 99, 111, 112, 113, 116, 118, 119, 137, 140, 143, 149
+.ti -4
+\*{<size-and-default>\*} 112, 115
+.ti -4
+\*{sort\*} 140
+.ti -4
+\*{span\*} 147
+.ti -4
+\fISTATE\fP 74, 84, 85, 86, 96, 98, 106, 118, 119, 124, 126, 128
+.ti -4
+\*{stop\*} 150
+.ti -4
+\fISTORABLE\fP-\fIVALUE\fP 74
+.ti -4
+\*{STORE\*} 118, 119, 120
+.ti -4
+\*{<store-associations>\*} 88, 89, 117
+.ti -4
+\*{string\*} 71
+.ti -4
+\fISTRING\fP 75
+.ti -4
+\*{string\*} 134
+.ti -4
+\*{<string-constant>\*} 70, 71, 94, 134
+.ti -4
+\*{stringval\*} 75, 98, 99, 128
+.ti -4
+\*{string_equal\*} 89, 90, 118, 119, 120, 122, 123, 124, 126, 128, 129
+.ti -4
+\*{<subclass-declaration>\*} 88, 89
+.ti -4
+\*{subject\*} 95, 96, 99, 109, 110
+.ti -4
+\*{<subscript>\*} 120, 123
+.ti -4
+subscription 120, 123
+.ti -4
+\*{substr\*} 137
+.ti -4
+\*{substring\*} 94, 129
+.ti -4
+\*{SUCCEEDS\*} 101
+.ti -4
+\*{<summer-program>\*} 83
+.ti -4
+syntax notation 69
+.LT T
+.ti -4
+\*{tab\*} 147
+.ti -4
+\*{table\*} 115
+.ti -4
+\*{TABLE\*} 116
+.ti -4
+\*{table\*} 142
+.ti -4
+\*{<table-element>\*} 115
+.ti -4
+\*{<table-expression>\*} 115
+.ti -4
+\*{<table-initialization>\*} 115
+.ti -4
+\*{<test>\*} 101, 104, 105
+.ti -4
+\*{text\*} 96, 98, 118, 119, 120
+.ti -4
+\*{THEN\*} 101, 102
+.ti -4
+\*{TRY\*} 108
+.ti -4
+\*{<try-expression>\*} 107, 108, 148
+.ti -4
+\*{type\*} 96, 98, 99, 150
+.LT U
+.ti -4
+\fIUNDEFINED\fP 75
+.ti -4
+\*{<unit>\*} 123
+.ti -4
+\*{UNTIL\*} 108
+.ti -4
+\*{update\*} 114, 117, 121, 123, 141, 143, 149
+.LT V
+.ti -4
+\*{VAR\*} 85, 86
+.ti -4
+\*{<variable-declaration>\*} 83, 85, 111
+.ti -4
+\*{<variable-initialization>\*} 55, 79, 83, 85
+.ti -4
+\*{varinit\*} 79, 83, 85
+.ti -4
+Vienna Definition Language 50, 71
+.LT W
+.ti -4
+\*{WHILE\*} 105
+.ti -4
+\*{<while-expression>\*} 104, 105
+.LT Y
+.ti -4
+\*{YRT\*} 108
+.EC

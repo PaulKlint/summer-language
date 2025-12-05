@@ -1,0 +1,114 @@
+#****************************************************************
+*								*
+* calls -- scan interpreter sources for procedure calls		*
+*								*
+* This program does a (very simple minded, not full proof)	*
+* analysis of the calling structure of the SUMMER interpreter	*
+*								*
+* The output has the format:					*
+*								*
+* >procname1							*
+* calledproc1							*
+* calledproc2							*
+* ...								*
+* >procname2							*
+* ...								*
+*								*
+* This is the same format as expected by the program closure	*
+*								*
+****************************************************************#
+var let := 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_',
+    digit := '0123456789',
+    letgit := let || digit,
+    empty := '';
+
+proc blanks ()
+( span(' \t\n') | empty );
+
+proc iden ()
+( return(any(let) || (span(letgit) | empty))
+);
+
+proc call ()
+( var c;
+  while break(let)
+  do
+     if c := iden() & blanks() & lit('(') then
+        return(c)
+     fi
+  od;
+  freturn;
+);
+
+proc special (name)
+( if name = 'for' | name = 'if' | name = 'while' | name = 'return' |
+     name = 'printf' | name = 'switch'
+  then
+     return
+  else
+     freturn
+  fi
+);
+
+proc endfun () lit('}');
+
+proc subr () lit('SUBR(') & return(iden());
+
+proc search(inname, outfile)
+( var line, start := '>', name, infile;
+
+  if infile := open(inname, 'r', 512) then else
+     put('can''t open ', inname, '\n');
+     return;
+  fi;
+
+  while line := get(infile)
+  do
+     scan line for
+          if endfun() then start := '>'
+          elif name := subr() then
+             put(outfile, '>', name, '\n');
+             start := ''
+          else
+             while name := call()
+             do
+                if ~special(name) then
+                   put(outfile, start, name, '\n');
+                   start := ''
+                fi
+             od
+          fi
+      rof
+  od;
+  close(infile)
+);
+
+program calls (args)
+( var outfile, prefix := '../int/', files, f;
+  files := [
+	'alloc.c',
+	'collect.c',
+	'eval.c',
+	'icname.c',
+	'io.c',
+	'print.c',
+	'prof.c',
+	'scan.c',
+	'string.c',
+	'subr.c',
+	'tables.c',
+	'tracer.c',
+	'util.c'
+      ];
+
+  if outfile := open('standout', 'w', 512) then else
+     put('Can''t create calls.outp\n');
+     stop(1)
+  fi;
+  if size(args) > 0 then files := args fi;
+  for f in files
+  do
+     search(prefix || f, outfile);
+  od;
+  close(outfile);
+);

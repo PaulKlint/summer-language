@@ -1,0 +1,25 @@
+program p()
+(var f, a;
+   f := file('xxx', 'wb');
+   f.put('');
+   f.put(1054);
+   f.put('abcdef');
+   f.put(3.147);
+   f.put(['abc', 'def']);
+   f.put(['xyz123456789', [203, 1.765], 'pqr']);
+   f.put([undefined]);
+   f.put(undefined);
+   f.close;
+   f := file('xxx', 'rb');
+   put(f.get, '\n');
+   put(f.get, '\n');
+   put(f.get, '\n');
+   put(f.get, '\n');
+   a := f.get;
+   put(a[0], ' ', a[1], '\n');
+   a := f.get;
+   put(a[0], ' ', a[1][0], ' ', a[1][1], ' ', a[2], '\n');
+   a := f.get;
+   assert a[0] = undefined;
+   assert f.get = undefined;
+)

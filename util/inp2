@@ -1,0 +1,7 @@
+#{counter,fn,roman(1)}
+x1 wordt #{x1}
+x2 wordt #{x2}
+x3 wordt #{x3}
+x1 : #{x1:=fn!}
+#{x2:=fn>A+$!}
+#{x3:=fn>roman(5)+>d--!}

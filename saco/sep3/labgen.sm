@@ -1,0 +1,6 @@
+class labelgenerator(lab)
+begin fetch next;
+      var current := -1;
+      proc next() return(lab || string(current := current + 1));
+
+end labelgenerator;

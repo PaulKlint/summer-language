@@ -1,0 +1,13 @@
+echo ------ $1 ------
+echo old parser:
+time $HOME/summer/comp/genpars/nparser $1
+sort -t, +1n $1.st >$1.ss
+echo old codgen: >cprof
+time $HOME/summer/comp/ncodgen $HOME/summer/bin/prefix $1 2>>cprof
+echo new parser:
+time $HOME/summer/comp/genpars/fparser $1
+sort -t, +1n $1.st >$1.ss
+cat cprof
+echo new codgen:
+time $HOME/summer/comp/fcodgen $HOME/summer/bin/prefix $1
+rm cprof

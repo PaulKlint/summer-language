@@ -1,0 +1,711 @@
+#******************* Symbol table routines *****************************#
+
+class VARIABLE(name, kind)
+begin fetch kind, name, seq, code, can_call, can_assign, isglobal, tag;
+
+      var seq;
+
+      proc isglobal()
+        if kind = GlobalVar then return(True) else freturn fi;
+
+      proc tag()
+	if kind = GlobalVar then return('G' || string(seq)) else freturn fi;
+
+      proc code(lab, rval)
+      ( case kind of
+	LocalVar:	if rval = Assign then
+			   exp_op1('asloc', seq)
+			elif rval = Value then
+			   exp_op1('loc', seq)
+			fi,
+	GlobalVar:	if rval = Assign then
+			   exp_op1('asglob', seq)
+			elif rval = Value then
+			   exp_op1('glob', seq)
+			fi,
+	ClassVar:	if rval = Assign then
+			   if fieldtab[name].is_unique_field then
+			      exp_op1('ascloc', seq)
+			   else
+			      exp_op0('self');
+			      exp_op2('iasfld', fieldtab[name].seq, 1)
+			   fi
+			elif rval = Value then
+			   if fieldtab[name].is_unique_field then
+			      exp_op1('cloc', seq)
+			   else
+			      exp_op0('self');
+			      exp_op2('ifld', fieldtab[name].seq, 1)
+			   fi
+			fi,
+	esac;
+	return(rval);
+      );
+
+      proc can_call() freturn;
+
+      proc can_assign() return(True);
+
+init: case kind of
+      LocalVar:		seq := loccnt; loccnt := loccnt + 1;
+			if name = '' then name := '_' || string(loccnt) fi,
+      GlobalVar:	seq := glcnt; glcnt := glcnt + 1;
+			if name = ''
+			then
+			  name := '_' || string(glcnt);
+			  envdescr.append(VAR_SUM(name, lnr));
+			fi,
+      ClassVar:		seq := offset
+      esac
+end VARIABLE;
+
+class FORWARD(name, lino)
+begin fetch lino, kind, code, can_call, can_assign, isglobal, tag, resolved,
+	    name, seq, nformals, complete, generate_body, retcnt, procs,
+	    src_node;
+      store resolved : asg_resolved;
+      var resolved, src_node := src;
+
+      proc kind()
+        return(if resolved = undefined then Forward else resolved.kind fi);
+
+      proc can_call()
+        return(if resolved = undefined then True else resolved.can_call fi);
+
+      proc can_assign()
+	return(if resolved = undefined then True else resolved.can_assign fi);
+
+      proc isglobal()
+      ( assert resolved ~= undefined;
+	return(resolved.isglobal)
+      );
+
+      proc tag()
+      ( assert resolved ~= undefined;
+	return(resolved.tag)
+      );
+
+      proc code(lab, rval)
+      ( if resolved ~= undefined then
+	   return(resolved.code(lab,rval))
+	elif symtab[name] ~= undefined then
+	   resolved := symtab[name][S_VALUE];
+	   return(resolved.code(lab, rval))
+	else
+	   assert fieldtab[name] ~= undefined;
+	   return(FIELDSEL(SUBJECT, name, []).code(lab, rval))
+	fi
+      );
+
+      proc asg_resolved(val)
+      ( if type(val) = 'FORWARD' then
+	   if val.lino < lino then lino := val.lino fi;
+	   resolved := val.resolved;
+	else
+	   resolved := val
+	fi;
+	return(val)
+      );
+
+      proc nformals() return(resolved.nformals);
+
+      proc seq() return(resolved.seq);
+
+
+      proc complete() resolved.complete;
+
+      proc generate_body() resolved.generate_body;
+
+      proc retcnt() return(resolved.retcnt);
+
+      proc procs() return(resolved.procs);
+
+end FORWARD;
+
+class CONSTANT(val)
+begin fetch val, kind, code, can_call, can_assign;
+
+      proc code(lab, rval)
+      ( if rval = Value then
+	   case type(val) of
+	   'integer':	exp_op1('int', val),
+	   'string':	if val.size = 0 then
+			   exp_op0('nullstr')
+			else
+			   exp_opw1('load', declstring(val, src.stringtab))
+			fi,
+	   'real':	exp_real(val),
+	   'undefined':	exp_op0('undef')
+	   esac
+	elif rval = Assign then
+	   ermsg('illegal assignment to ' || type(val), lnr)
+	fi;
+	return(rval);
+      );
+
+      proc can_call() freturn;
+
+      proc can_assign() freturn;
+
+      proc kind() return(Constant);
+
+end CONSTANT;
+
+class FIELD(fieldname, classname, ftype, intern, ffetch, fstore)
+begin fetch fieldname, classname, ftype, intern, ffetch, fstore;
+      store fieldname, classname, ftype, intern, ffetch, fstore;
+end FIELD;
+
+class FIELD_DECL(fieldname, builtin_tag)
+begin fetch fieldname, builtin_tag, generate, seq, last, add, locate_fld,
+            redeffld, addglobf, is_unique_field, kind, name, can_call,
+	    can_assign,code;
+
+      var seq, global_alias, singlefields := [];
+
+      proc kind() return(Field);
+
+      proc name() return(fieldname);
+
+      proc can_call() return(True);
+
+      proc can_assign() return(True);
+
+      proc code(lab, rval)
+        return(CALL(self, []).code(lab, rval));
+
+      proc last()
+	if singlefields.size > 0 then
+	   return(singlefields.last)
+	else
+	   freturn
+	fi;
+
+      proc add(field_descr)
+        singlefields.append(field_descr);
+
+      proc redeffld(fdes)
+      (	var old := singlefields.last;
+
+	if old.ftype = VAR
+	then	if fdes.ftype ~= VAR
+		then	ermsg('inherited variable redefined as procedure', lnr)
+		else	fdes.intern := old.intern;
+			offset := offset-1
+		fi
+	else	if fdes.ftype ~= PROC
+		then	ermsg('inherited procedure redefined as variable', lnr)
+		fi
+	fi;
+	singlefields[singlefields.size-1] := fdes;
+      );
+	# redeffld is called when a field inherited from a superclass is #
+	# redefined in the subclass. The old entry is removed. Allowing  #
+	# variables to be redefined as procedures and vice versa requires#
+	# the following additions: if x was a var and becomes a proc, it #
+	# must be removed from data_flds and added to proc_flds. All     #
+	# offsets of data-fields > offset(x) must be decremented.     	 #
+	# In the reverse case, x must be transferred from proc_flds to	 #
+	# data_flds.							 #
+
+       proc addglobf(proc_decl)
+       ( assert global_alias = undefined;
+
+	 global_alias := proc_decl;
+
+       );
+	# 'addglobf' makes an additional entry with class name '~global'#
+	# for user defined operators which are declared both globally	#
+	# and within a class.						#
+
+
+       proc locate_fld(cl)
+       ( var e ;
+
+	for e in singlefields do if e.classname = cl then return(e) fi od;
+	freturn;
+       );
+	# locate_fld finds the fieldtable entry created for field 'fld' #
+	# in class 'cl'.						#
+
+       proc is_unique_field() return(singlefields.size = 1);
+
+       proc generate()
+       ( var n, sep, x, switch := array(nclasses, -1);
+
+	 for n in singlefields.index
+	 do 
+	    switch[classtab[singlefields[n].classname][5]] := n;
+	 od;
+	 f_s.put('FLDSW', seq, ': ');
+	 sep := '.byte ';
+	 for n in switch do f_s.put(sep, n); sep := sc od;
+	 f_s.put(newl);
+
+	 if builtin_tag ~= '' then
+	    f_s.put('.globl _f_', builtin_tag, '; _f_', builtin_tag, ':\n');
+	 fi;
+
+	 glob('FLD' || string(seq));
+	 f_s.put('FLD', seq, ':\n');
+	 f_s.put(long, declstring(fieldname,fld_stringtab), newl);	# fdesc_name #
+	 f_s.put(long, 'FLDSW', seq, newl);		# fdesc_switch #
+	 f_s.put(long,					# fdesc_alias #
+		 if global_alias=undefined then 'nil' else global_alias.tag fi,
+		 newl);
+
+	 for x in singlefields
+	 do var fetch_assoc := x.ffetch, store_assoc := x.fstore;
+
+	    if x.ftype = VAR then
+              f_s.put(long, dec(0), ';',		# fld_type #
+		      long, dec(x.intern), ';');	# fld_offset #
+	    else  
+	      f_s.put(long, if type(x.intern) = 'string' &
+			       x.intern = fieldname then
+	         	       '_' || typetag[x.classname] || fieldname
+	      		    else
+	         	       x.intern.tag
+	      		    fi, ';',			# fld_type #
+		      long, dec(-1), ';');		# fld_offset #
+	    fi;
+
+	    f_s.put(long, if type(fetch_assoc) = 'string' then
+				if fetch_assoc = fieldname then
+			   	   '_' || typetag[x.classname] || fieldname;
+		  		else
+		     	   	   fetch_assoc
+	          		fi
+	    	    	  else
+	    			fetch_assoc.tag
+	    	    	  fi, ';');
+
+	    f_s.put(long, if type(store_assoc) = 'string' then
+	          		if store_assoc = fieldname then
+		     	   	   '_' || typetag[x.classname] || fieldname
+	   	  		else store_assoc
+				fi
+	       	    	  else
+	          		store_assoc.tag
+	       	    	  fi, newl);
+         od;
+      );
+
+init: if (seq := field_indices[fieldname]) = undefined
+      then
+        seq := field_indices[fieldname] := field_indices.size
+      fi;
+      nfields := nfields + 1;
+
+end FIELD_DECL;
+
+class BUILT_IN_PROC_DECL(name, kind, nformals)
+begin fetch name, kind, nformals, code, isglobal, can_call, can_assign, seq, tag;
+      var seq;
+
+      proc isglobal() return(True);
+
+      proc can_call() return(True);
+
+      proc can_assign() freturn;
+
+      proc tag()
+	return(
+	case kind of
+	BuiltinProc: 'BP',
+	BuiltinClass: 'BC'
+	esac || string(seq));
+
+      proc code(lab, rval)
+      ( var nf;
+	nf := if kind = BuiltinClass then 1 else 0 fi;
+	if nformals > 0 & nformals ~= nf then
+	   ermsg(name || ': argument list missing', lnr)
+	else
+	   CALL(self, []).code(empty, rval);
+	   if rval = Assign then
+	      ermsg('assignment to procedure not allowed', lnr);
+	      rval := Value
+	   fi
+	fi;
+	return(rval);
+      );
+init: seq := glcnt; glcnt := glcnt + 1;
+
+end BUILT_IN_PROC_DECL;
+
+class PROC_DECL(kind)
+begin fetch kind, complete, generate_body, code, body, retcnt, isglobal,
+	    name, can_call, can_assign, seq, tag, nformals, procs;
+      store body, retcnt, seq;
+      var name, fnms, stlnr, elnr, body, retcnt, lnames, procs,
+	  the_classcnt, seq;
+
+      proc isglobal() return(True);
+
+      proc tag()
+        return(
+	case kind of
+	Program:
+	GlobalProc:	'P',
+	ClassProc:	'FLDP',
+	Class:		'C'
+	esac || string(seq));
+
+      proc nformals() return(fnms.size);
+
+      proc code(lab, rval)
+      ( var nf;
+	nf := if kind = Class | kind = ClassProc then 1 else 0 fi;
+	if nformals > 0 & nformals ~= nf then
+	   ermsg(name || ': argument list missing', lnr)
+	else
+	   CALL(self, []).code(empty, rval);
+	   if rval = Assign then
+	      ermsg('assignment to procedure not allowed', lnr);
+	      rval := Value
+	   fi
+	fi;
+	return(rval);
+      );
+
+      proc can_call() return(True);
+
+      proc can_assign() freturn;
+
+      proc complete(aname, afnms, abody)
+      ( name := aname;
+	fnms := afnms;
+	if src.code_for_this = True
+	then
+	  remove(fnms);
+	  body := abody;
+	  elnr := lnr;
+	  lnames := loclist;
+	  if retcnt = undefined then retcnt := 0 fi;
+	  if kind = Class then
+	     procs := classprocs;
+	     classvarinit.append(body);
+	     body := SEMI(classvarinit);
+	     the_classcnt := nclasses;
+	  fi
+	fi;
+	inproc := 0;
+	level := level-1
+      );
+	
+      proc convlocs(list)
+      if list.size = 0 then
+         return('nil')
+      else
+	var l, s := '';
+	for l in list do s := s || l || sc od;
+	return(declstring(s,src.stringtab));
+      fi;
+
+      proc generate_body()
+      ( var nf, nloc;
+        if errcnt = 0
+	then	var fldlab;
+		if kind = Class then
+		   var p;
+		   curclassname := name;
+		   for p in procs do p.generate_body od;
+		   curclassname := undefined;
+		   fldlab := dec(-1);		# class creation proc #
+		else
+		   var fld := fieldtab[name];
+		   if fld = undefined then
+		   	fldlab := 'nil'		# global proc #
+		   else
+			fldlab := 'FLD' || string(fld.seq);
+						# field proc #
+		   fi;
+		fi;
+		nf := fnms.size;
+		nloc := lnames.size;
+		lnr := stlnr;
+		lineflush();
+		if kind = Program
+		then
+		  glob('_program');
+		  label('_program')
+		fi;
+		glob(tag);
+		f_s.put(tag, ':', '\t# proc ', name, newl);
+		f_s.put(long, 'dt_proc', newl,
+			long, fldlab, newl,
+			long, dec(nf), newl,
+			long, dec(nloc-nf), newl,
+			long, dec(nloc), newl,
+			long, dec(stlnr), newl,
+			long, dec(elnr), newl,
+			long, convlocs(lnames), newl,
+			long, dec(0), newl,		# freq #
+			long, dec(0), newl);		# prof #
+		if kind = Class then
+		   newfl('nil');
+		   exp_op1('newclass', classtab[name][5]);
+		   exp_op1('asloc', 0);
+		   exp_op0('void');
+		   oldfl()
+		fi;
+		body.code(empty, Novalue);
+		if kind = Class then
+		   exp_op1('loc', 0);
+		   retu(1)
+		fi;
+		if kind = Program
+		then exp_op0('ihalt')
+		else
+		    if retcnt = 0 then retu(0) else ercode('ret') fi;
+		fi;
+		lineflush();
+	fi;
+      );
+
+init:  	seq := glcnt; glcnt := glcnt + 1;
+	stlnr := lastlnr := lnr;
+	retcnt := undefined;
+	inproc := 1;
+	level := level+1;
+	loccnt := 0;
+	if src.code_for_this = True & (kind = Class | kind = ClassProc) then
+	   symentry('self', level, VARIABLE('self', LocalVar));
+	   loclist := ['self']
+ 	else
+	   loclist := []
+	fi;
+end PROC_DECL;
+
+class SOURCE(name, previous, code_for_this)
+begin fetch name, previous, decls, get, back_to_previous,
+	generate_body, errors, code_for_this, globinit, caseinit,
+	stringtab;
+      store errors, globinit, caseinit, stringtab;
+
+      var decls := [], save, f, errors := 0, prev_f_s,
+        globinit := [],
+	# array of VARINITs for global initialisations in this source	#
+	caseinit := [],
+	# array of VARINITs for case table initialisations in this
+	  source
+	#
+	stringtab := table(500, undefined);
+	# table for strings in this source				#
+
+	proc get()
+	(
+	  if code_for_this = True
+	  then
+	    if line := scan_string(f.get) fails
+	    then
+	      line := scan_string('');
+	      freturn
+	    fi;
+	    lnr := lnr + 1
+	  else
+	    var x;
+	    line := scan_string('');
+	    while [x, envdescr[1]] := envdescr[0].next(envdescr[1])
+	    do
+	      x.activate;
+	      if type(x) = 'SOURCE_SUM'
+	      then
+	        return
+	      fi
+	    od;
+	    freturn
+	  fi
+	); # get #
+	
+	proc generate_body()
+	( if code_for_this = True
+  	  then
+	    var d;
+	    prev_f_s := f_s;
+	    if f_s := file(name || '.s','w') fails
+	    then
+	      cant(name || '.s')
+	    fi;
+	    f_s.put('.data', newl);
+	    save := [lnr, lastlnr];
+	    lnr := lastlnr := 1;
+	    src := self;
+	    errors := 0;
+	    for d in decls do d.generate_body od;
+	    declstrings(stringtab);
+	    [lnr, lastlnr] := save;
+	    if errors  = 1 then previous.errors := 0 fi;
+	    src := previous;
+	    f_s.close();
+	    f_s := prev_f_s;
+	    removestring := removestring || name || '.s ';
+	    system('$AS -o ' || name || '.o  $PREFIX ' || name || '.s');
+	  else
+	    var d;
+	    for d in decls
+	    do
+	      d.generate_body
+	    od
+	  fi;
+          linkstring := linkstring || name || '.o ';	  
+	);
+
+	proc back_to_previous()
+	(
+	  var
+	    globinitproc := PROC_DECL(GlobalProc),
+	    globinitprocname := '_V' || name,
+	    caseinitproc := PROC_DECL(GlobalProc),
+	    caseinitprocname := '_C' || name;
+	  symentry(globinitprocname, level - 2, globinitproc);
+	  symentry(caseinitprocname, level - 2, caseinitproc);
+	  globinit.append(UNDEFINED);
+	  globinitproc.complete(globinitprocname, [],
+	    SEMI(globinit));
+	  caseinit.append(UNDEFINED);
+	  caseinitproc.complete(caseinitprocname, [],
+	    SEMI(caseinit));
+	  if code_for_this = True
+	  then
+	    decls.append(globinitproc);
+	    decls.append(caseinitproc);
+	    f.close
+	  fi;
+	  [line, lnr, lastlnr, envdescr] := save;
+	  save := undefined;
+	  if previous ~= undefined
+	  then
+	    src := previous
+	  fi;
+	);
+
+init:	if code_for_this = True
+	then
+	  if f := file(name || '.sm', 'r') fails
+	  then
+	    freturn
+	  fi;
+	  save := [line, lnr, lastlnr, envdescr];
+	  if always_compile = True
+	  then
+	    envdescr := [];
+	    env_descrs[0].append(envdescr);
+	    env_descrs[1] := env_descrs[1] + 1;
+	  else
+	    envdescr := [[], undefined];
+	    [envdescr[0], env_descrs[1]] := env_descrs[0].next(env_descrs[1])
+	  fi;
+	  line := scan_string(f.get | '');
+	  lnr := lastlnr := 1;
+	else
+	  var f_envdescr;
+	  save := [line, lnr, lastlnr, envdescr];
+	  envdescr := [[], undefined];
+	  [envdescr[0], env_descrs[1]] := env_descrs[0].next(env_descrs[1])
+	fi
+
+end SOURCE;
+
+proc symentry(name, lev, val)
+(	var oldentry;
+
+	oldentry := symtab[name];
+	if oldentry = undefined | oldentry[S_LEVEL] ~= lev then
+	   symtab[name] := [lev, oldentry, val];
+	   return(True)
+	elif oldentry[S_VALUE].kind = Forward then
+	     if type(val) = 'CONSTANT' then
+		ermsg('illegal forward reference(s) to constant "' ||
+		name || '" ; first in line ' ||
+		string(oldentry[S_VALUE].lino), lnr)
+	     else
+		oldentry[S_VALUE].resolved := val;
+	     fi;
+	     return(True)
+	else
+	   ermsg('"' || name || '" redeclared', lnr);
+	   return(False)
+	fi
+);
+	# Enters 'name' in symtab with value 'entry'. If an entry with	#
+	# the same level already exists which is not a forward declara-	#
+	# tion, a 'redeclared' error is issued. See also 'level' and	#
+	# 'symtab'. 							#
+
+proc fieldentry(fieldname, classname, ftype, intern, ffetch, fstore)
+(	var s := symtab[fieldname],
+	    f := fieldtab[fieldname],
+            fdes := FIELD(fieldname,classname,ftype,intern,ffetch,fstore);
+
+	if f = undefined
+	then	f := FIELD_DECL(fieldname, '');
+		fieldtab[fieldname] := f
+	fi;
+	if s ~= undefined
+	then	if s[S_VALUE].kind = Forward
+		then	symtab[fieldname] := undefined;
+			s[S_VALUE].resolved := f;
+		else	while s[S_NEXT] ~= undefined
+			do	if (s[S_NEXT][S_VALUE]).kind = Forward
+				then	s[S_NEXT][S_VALUE].resolved := f;
+					s[S_NEXT] := undefined;
+				else	s := s[S_NEXT]
+				fi
+			od;
+			s := symtab[fieldname]
+		fi
+	fi;
+	if f.last.classname = clname #! last may not exist#
+	then	if inhertab[fieldname] ~= undefined
+		then	f.redeffld(fdes);
+			inhertab[fieldname] := undefined;
+		else	ermsg('"' || fieldname || '" redeclared', lnr)
+		fi;
+		return(False)
+	else	f.add(fdes);
+		return(True)
+	fi
+);
+	# Enters 'name' into 'fieldtab' with given initial values. If a #
+	# forward declaration for this name is found in symtab it is	#
+	# removed. See also FIELD_DECL.					#
+
+proc concat(a, b)
+( var x;
+  for x in b do a.append(x) od;
+  return(a)
+);
+	# Destructively concatenate two arrays				#
+
+proc remove(names)
+(	var nm;
+
+	for nm in names do symtab[nm] := symtab[nm][S_NEXT] od;
+);
+
+	# 'remove' resets the symbol table entries for the names in	#
+	# its argument to their previous values. The names declared at	#
+	# each level are explicitly remembered and passed as an argu-	#
+	# ment instead of simply resetting all entries on the current	#
+	# level, as this would require constructing the set of keys and	#
+	# scanning the complete symbol table on each block exit; both	#
+	# are expensive operations.					#
+
+proc checktype(ident)
+(	var entry := symtab[ident], r;
+
+	if entry = undefined
+	then	if (r := fieldtab[ident]) = undefined
+		then	symentry(ident, 0, r := FORWARD(ident, lnr))
+		fi;
+		return(r)
+	else	return(entry[S_VALUE])
+	fi
+);
+	# Ensure that, if an identifier is neither entered		#
+	# neither in 'symtab' nor in 'fieldtab', it is put in 'symtab'	#
+	# with type indication 'forward' followed by the current line	#
+	# number. If the same identifier is encountered later on without#
+	# intermediate declaration, its entry in symtab matches lit('f')#

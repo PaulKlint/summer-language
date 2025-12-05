@@ -1,0 +1,22 @@
+#{counter,sn,A}
+#{x=sn} #{y=sn+} (#{x} followed by #{y})
+#{xx=sn>;} #{yy=sn+;} #{xx},#{yy}
+#{xxx=sn>z}#{yyy=sn+}#{xxx} ... #{yyy}
+#{xxxx=sn>5}#{yyyy=sn+}{#{xxxx} #{yyyy}}
+#{sn<} wordt #{sn+}
+{#{sn<} #{sn+}}
+#{sn>roman(12)} #{sn+}
+#{sn----} #{sn<<} #{sn>ROMAN(27)}
+#{sn<>}
+#{counter,fn,roman(1)}
+x1 wordt #{x1}
+x2 wordt #{x2}
+x3 wordt #{x3}
+x1 : #{x1=fn}
+#{x2=fn>A+$}
+#{x3=fn>roman(5)+>d--}
+----------
+#{counter,T,0}
+#{T+>+>+>+<<<<>A}
+#{z1=T},#{z2=T>a},#{z3=T+>}
+#{z1}#{z2}#{z3}

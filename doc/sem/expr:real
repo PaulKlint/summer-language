@@ -1,0 +1,10 @@
+.iy I a_string
+.iy I eval_call
+.{{
+\fBif\fR \jg{{ \fIe\fR =\h'-0.3m'= \jh\fIexpr\fR:\*<real-constant\*> }}
+\fBthen\fR
+\h'|\ngu'\fIreturn\fR\^(\fIeval\*_call\fR\^(\*`\fI\h'-0.1m'real\^\fR\^\*', \fIa\*_string\fR\^(\fIexpr\fR)))
+\fBfi\fR;
+.}}
+.iy I a_string
+.iy I eval_call

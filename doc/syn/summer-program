@@ -1,0 +1,6 @@
+<summer-program> ::=
+        (  <variable-declaration> | <constant-declaration> |
+           <procedure-declaration> | <operator-declaration> |
+           <class-declaration> | <operator-symbol-declaration>
+        )*
+        <program-declaration> .

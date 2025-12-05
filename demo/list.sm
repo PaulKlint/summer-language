@@ -1,0 +1,86 @@
+#***********************************************************************
+*									*
+*	This program converts lineair list descriptions into		*
+*	a two-dimensional representation.				*
+*	Output is produced for an HP2640 terminal. The program can	*
+*	easily be adapted to any terminal with cursor addressing.	*
+*									*
+************************************************************************#
+
+proc hor(deltax)
+( var c;
+  if deltax >= 0 then
+     c := '\033C'; #cursor right#
+  else
+     deltax := -deltax;
+     c := '\033D'; #cursor left#
+  fi;
+  put(c.repl(deltax) );
+);
+
+proc vert(deltay)
+( var c;
+  if deltay >= 0 then
+     c := '\033B'; #cursor down#
+  else
+     deltay := -deltay;
+     c := '\033A'; #cursor up#
+  fi;
+  put(c.repl(deltay) );
+);
+
+proc nextpage ()
+  put('\033U');
+proc layout ()
+  span(' \t') | '';
+
+proc list ()
+( var atom;
+
+  if atom := span('abcdefghijklmnopqrstuvwxyz') then
+     put(atom);
+     layout;
+     return(atom.size )
+  elif lit('(') then
+     var n := 0, h;
+
+     vert(2);
+     while n := n + list
+     do if lit(')') then
+           vert(-2);
+	   h := (n+1) % 2;
+	   hor(-h);
+	   put('|');
+	   hor(-n + h - 1);
+	   vert(1);
+	   put('-'.repl(n) );
+	   vert(-1);
+	   layout;
+	   return(n)
+	else
+	   hor(1);
+	   n := n + 1
+	fi
+     od;
+     freturn
+  else
+     freturn
+  fi
+);
+
+program lists ()
+( var line, data;
+
+  data := file('list.data','r');
+  while line := data.get 
+  do
+     put('\n');
+     nextpage;
+     put(line, '\n');
+     scan line
+     for
+         (list & rpos(0)) |
+         put('\n', line, '\n', ' '.repl(cursor) , '^\n')
+     rof;
+  od
+)

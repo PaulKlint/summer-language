@@ -1,0 +1,2236 @@
+#*************************************************************************#
+#*************************************************************************#
+#**									**#
+#**	SUMMER COMPILER PART III: parse tree -> code			**#
+#**									**#
+#** This file contains procedures for symtable management, building of  **#
+#** parse trees and code generation.					**#
+#**									**#
+#** Variables/procedures used here which are (pre)defined by the	**#
+#** parsergenerator:							**#
+#** 	ermsg:		issues error messages,				**#
+#**	errcnt:		number of errors in source,			**#
+#**	lnr:		current source line number.			**#
+#**									**#
+#*************************************************************************#
+#*************************************************************************#
+
+const	lpar		:= '(',
+	sc		:= ',',
+	newl		:= '\n',
+	NIL		:= '~nil',
+
+	NOFETCH		:= '_fetcher',
+	NOSTORE		:= '_storeer',
+	SIMPLE		:= '0',
+	PROC		:= '~proc',
+	VAR		:= '~var',
+	fetch_type	:= 'fetch',
+	store_type	:= 'store',
+	empty		:= '',
+
+	o_lpar		:= '(',
+	S_LEVEL		:= 0,
+	S_NEXT		:= 1,
+	S_VALUE		:= 2,
+
+	O_NAME		:= 0,
+	O_ADIC		:= 1,
+	O_STATUS	:= 2,
+	O_PRIOF		:= 3,
+	O_PRIOG		:= 4,
+	O_CODE		:= 5,
+
+	False		:= 0,
+	True		:= 1;
+
+const	LocalVar	:= 0,
+	GlobalVar	:= 1,
+	ClassVar	:= 2,
+	BuiltinProc	:= 3,
+	GlobalProc	:= 4,
+	ClassProc	:= 5,
+	BuiltinClass	:= 6,
+	Class		:= 7,
+	Constant	:= 8,
+	Forward		:= 9,
+	Field		:= 10,
+	Program		:= 11;
+	
+const	Assign		:= -1,
+	Novalue		:= 0,
+	Value		:= 1;
+
+#*************************** GENERAL GLOBAL VARIABLES *********************#
+
+
+var	f_er,
+		# error message file					#
+	src,	# a SOURCE object representing the current source file.	#
+		# Handles the tree structure of nested include files.	#
+	opstack := [],
+		# The operator stack.					#
+		# The stack is pushed by 'opush', popped by 'opush'	#
+		# Elements on opstack are entries from montab and dytab.#
+
+	ndstack := [],
+		# The operand stack.					#
+		# Pushed by 'ndpush', popped by 'ndpop'			#
+		# Entries on the stack are operands.        		#
+	glcnt := 0,
+		# Determines the next global index			#
+	symtab,
+		# global symbol table (see init_tables)			#
+	fieldtab,
+		# global field table (see init_tables)			#
+
+        # classtab (real declaration occurs in 'prefix', see below)	#
+		# Class table. Keys are classnames, entries are arrays	#
+		# of six elements defined as follows:			#
+		# 0:	number of datafields declared in the class	#
+		#	(= size of an class instance)			#
+		# 1:	parameter fields				#
+		# 2:	(remaining) var fields				#
+		# 3:	procedure fields				#
+		# 4:	operator fields					#
+		# 5:	sequence number of this class.			#
+		# These elements are used by 'do_subclass' when a new	#
+		# subclass is declared.					#
+	inhertab := table(10, undefined),
+		# During the parse of a subclass, inhertab contains	#
+		# entries for fields which are inherited from the super-#
+		# class and may still be redefined.			#
+
+        fetchtab := table(5, undefined),
+	storetab := table(5, undefined),
+		# Keys are fieldnames occurring in respectively the	#
+		# 'fetch' and the 'store' declaration of the current	#
+		# class. Values are the associations ('_s' for simple,	#
+		# or a name).						#
+
+	assoctab := table(5, undefined),
+		# keys are procedure names declared as associations,	#
+		# values are fetch_ or store_type. Used to check whether#
+		# number of arguments and return values are correct.	#
+
+	loclist := [],
+		# Names of locals of the current procedure. Used to	#
+		# produce string representing symbolic names (convlocs).#
+		# Names of constants of the current block		#
+
+	par_flds := [],
+	data_flds := [],
+	proc_flds := [],
+	op_flds := [],
+		# parameters, data fields and procedure and operator	#
+		# fields of current class.				#
+		# Names of fields of current class. Used by 'undefine'	#
+		# to remove them from symtab on class exit.		#
+
+	level := 0,
+		# Current depth of name-nesting. Incremented on proce-	#
+		# dure entry, on class entry and on block entry. Decre-	#
+		# Used by 'symentry' to check for illegal redefinitions.#
+	loccnt := 0,
+		# Determines the offset of the next local variable to	#
+		# be declared. For global procedures and operators, the	#
+		# offset is initially 0; for classes and their associa-	#
+		# ted procedures it is 1, as 0 is reserved for the class#
+		# object passes as additional argument.			#
+		# Because the tracer needs a unique mapping from local	#
+		# numbers to associated names, the offset is not reset	#
+		# on block exit. This does however cause an inefficient	#
+		# use of space in the interpreter.			#
+
+	# nclasses  (declared in "prefix"				#
+		# To determine class sequence number. Incremented on 	#
+		# entry of a new class.					#
+
+	nfields := 0,
+		# Determines field sequence number.			#
+	curproc,
+		# The PROC_DECL corresponding to the current procedure	#
+	curclassname,
+		# The name of the current class; used during code generation #
+		# by PROC_DECL and CALL to treat FORWARD nodes.	#
+
+	globinit := [],
+		# array of VARINITs for global initializations		#
+	caseinit := [],
+		# array of VARINITs for case table initialazations	#
+	classvarinit,
+		# array of VARINITs for data field initializations in	#
+		# class declarations.					#
+	classprocs,
+		# array of PROC_DECLs for field and operator procs	#
+		# used by PROC_DECL.complete				#
+	offset,
+		# The current class offset. Set to 0 on class entry,	#
+		# incremented for each new data field.			#
+	clname,
+		# The name of the current class. Used to make field-	#
+		# entries ('procedure', 'vars', 'operator', 'params')	#
+		# and to check whether a field is not redefined within	#
+		# the same class ('fieldentry').			#
+	inproc := 0,
+		# Flag which signals whether the current program point	#
+		# lies within a procedure, an operator, a class init	#
+		# statement or the main program. Used by 'locvars' to	#
+		# detect illegal local declarations (allowed only when	#
+		# inproc = 1), and by 'forloop' to recognize whether it	#
+		# must invent global or local variables.		#
+	inloop := 0,
+		# Indicator for nesting level inside while, for or try	#
+		# expressions; used to determine whether explicit	#
+		# variable initialization should be generated for	#
+		# declaration without initializing expression.		#
+		# See <local_initialization>.				#
+
+	lastlnr := 1,
+		# The source line number on which the most recent line	#
+		# increment was generated. (Such an instruction enables	#
+		# the interpreter and the tracer to compute source line	#
+		# numbers from the ic-code). 'lastlnr' is set to lnr by #
+		# 'LINE' and each time an absolute linenumber is	#
+		# generated in the code.				#
+
+	may_sel := False,
+	may_sub := False,
+		# Indicate whether the last <unit> may be selected or	#
+		# subscribed. See parser.syn				#
+
+	montab := table (20, undefined) init
+		[	'-' :		['-', 1,0,13,14,'neg'],
+			'~' :		['~',  1,0,13,14,'*error*']
+                ],
+
+
+        dytab := table(20, undefined) init
+                [       ':=':           [':=', 2, 0,  7, 8,'*error*'],
+                        '+' :           [ '+', 2, 0, 11,11,'add'],
+                        '-' :           ['-', 2, 0, 11,11,'sub'],
+                        '*' :           [ '*', 2, 0, 12,12,'mul'],
+                        '/' :           [ '/', 2, 0, 12,12,'div'],
+                        '%' :           [ '%', 2, 0, 12,12,'idiv'],
+                        '||':           ['||', 2, 0, 13,13,'conc'],
+                        '&' :           [ '&', 2, 0,  6, 6,'*error*'],
+                        '|' :           [ '|', 2, 0,  4, 5,'*error*'],
+                        '<' :           [ '<', 2, 0, 10,10,'lt'],
+                        '<=':           ['<=', 2, 0, 10,10,'le'],
+                        '>' :           [ '>', 2, 0, 10,10,'gt'],
+                        '>=':           ['>=', 2, 0, 10,10,'ge'],
+                        '=' :           [ '=', 2, 0, 10,10,'eq'],
+                        '~=':           ['~=', 2, 0, 10,10,'ne'],
+                        '(' :           [ '(', 2, 0,  1, 2,'*error*']
+		],
+		# 'montab' and 'dytab' map operator names to a 5-tuple,	#
+		# consisting of the following items:			#
+		# - An internal name (without class suffix). For user	#
+		#   defined operators, this is their external name	#
+		#   followed by a dot followed by 1 or 2 according to	#
+		#   their adicity.					#
+		# - A 1 for monadic and a 2 for dyadic operators.	#
+		#   Entries from montab and dytab are stacked on the	#
+		#   operator stack, and unstacked (by 'treatop' and	#
+		#   'emptystack') without knowing from which table they #
+		#   originally came. Hence the necessity to include the #
+		#   adicity.						#
+		# - A declaration status indicator:			#
+		#   - 0 for build in, global operators.			#
+		#   - 1 for user defined, global operators as yet 	#
+		#     without a namesake within a class.		#
+		#   - 2 for user defined, global operators with a name-	#
+		#     sake within a class. User defined operators which #
+		#     occur both globally and within a class, get an    #
+                #     additional entry in 'fieldtab'. The 1 and 2 serve #
+		#     to see whether this entry has been made already.	#
+		#     (see also 'operator' and 'addglobf').		#
+		#   - 3 for operators defined as yet only within a class#
+		#     Built-in class operators don't occur as yet, but  #
+		#     should get the same treatment as user defined	#
+		#     ones, i.e. when a global namesake is defined, an  #
+		#     additional entry must be amde in the fieldtable.  #
+		#   - -lnr for operator names occurring in 'monadic' and#
+		#     'dyadic' declarations, but not yet defined. lnr	#
+		#     is the source line number on which the declaration#
+		#     occurred, rememberd here in order to be able to	#
+		#     issue an error message at the correct line when	#
+		#     the operator remains undefined.			#
+		#   - The f-priority.					#
+		#   - The g-priority.					#
+		#   All user defined operators get the same priority.   #
+
+	stringtab := table(500, undefined),
+		# table of string constants #
+
+	slab      := labelgenerator('S'),
+
+	UNDEFINED := CONSTANT(undefined),
+
+	typetag	:= table(10, '') init [
+		'integer':	'I',
+		'real':		'R',
+		'string':	'S',
+		'array':	'A',
+		'table':	'T',
+		'file':		'F',
+		'bits':		'B',
+		'scan_string':	'SC',
+		'interval':	'IV'
+		];
+
+	# table with standard type tags for builtin class procedures	#
+	# Example: the procedure "update" for tables is "T_update"	#
+	# This convention has to be respected in the interpreter	#
+
+include 'prefix';
+
+	# prefix has the following duties:				#
+	# - declare proc "prefix" (prints assembler prefix)		#
+	# - declare and initialize "classtab"				#
+	# - declare constant "long"					#
+	# - declare and initialize var "nclasses"			#
+
+
+proc decl_built_in_proc(name, kind, nformals)
+	symentry(name, 0, BUILT_IN_PROC_DECL(name, kind, nformals));
+
+proc built_in_fieldentry(fieldname, classname, ftype, intern, ffetch, fstore)
+( var f := fieldtab[fieldname];
+  if f = undefined then
+     f := FIELD_DECL(fieldname, fieldname);
+     fieldtab[fieldname] := f;
+  fi;
+  f.add(FIELD(fieldname, classname, ftype, intern, ffetch, fstore));
+);
+
+proc init_tables()
+(
+	symtab := table (100, undefined);
+	decl_built_in_proc('string',BuiltinClass,2);
+	decl_built_in_proc('real',BuiltinClass,2);
+	decl_built_in_proc('integer',BuiltinClass,2);
+	decl_built_in_proc('scan_string',BuiltinClass,2);
+	decl_built_in_proc('file',BuiltinClass,3);
+	decl_built_in_proc('bits',BuiltinClass,3);
+	decl_built_in_proc('interval',BuiltinClass,4);
+	decl_built_in_proc('copy',BuiltinProc, 1);
+	decl_built_in_proc('stop',BuiltinProc, 1);
+	decl_built_in_proc('system',BuiltinProc, 1);
+	decl_built_in_proc('type',BuiltinProc, 1);
+	decl_built_in_proc('put',BuiltinProc, -1);
+	decl_built_in_proc('get',BuiltinProc, -1);
+	symentry('stand_in',  0, VARIABLE('stand_in',GlobalVar));
+	symentry('stand_out', 0, VARIABLE('stand_in',GlobalVar));
+ 	symentry('stand_er',  0, VARIABLE('stand_in',GlobalVar));
+
+	fieldtab := table(50, undefined);
+	built_in_fieldentry('any','scan_string',PROC,'any','any',NOSTORE);
+	built_in_fieldentry('append','array',PROC,'append','append',NOSTORE);
+	built_in_fieldentry('break','scan_string',PROC,'break','break',NOSTORE);
+	built_in_fieldentry('center','string',PROC,'center','center',NOSTORE);
+	built_in_fieldentry('close','file',PROC,'close','close',NOSTORE);
+	built_in_fieldentry('compl','bits',PROC,'compl','compl',NOSTORE);
+	built_in_fieldentry('conj','bits',PROC,'conj','conj',NOSTORE);
+	built_in_fieldentry('delete','array',PROC,'delete','delete',NOSTORE);
+	built_in_fieldentry('disj','bits',PROC,'disj','disj',NOSTORE);
+	built_in_fieldentry('find','scan_string',PROC,'find','find',NOSTORE);
+	built_in_fieldentry('get','file',PROC,'get','get',NOSTORE);
+	built_in_fieldentry('index','array',PROC,'index','index',NOSTORE);
+		built_in_fieldentry('index','table',PROC,'index','index',NOSTORE);
+		built_in_fieldentry('index','string',PROC,'index','index',NOSTORE);
+		built_in_fieldentry('index','bits',PROC,'index','index',NOSTORE);
+	built_in_fieldentry('last','array',PROC,'last','last',NOSTORE);
+	built_in_fieldentry('left','string',PROC,'left','left',NOSTORE);
+	built_in_fieldentry('lit','scan_string',PROC,'lit','lit',NOSTORE);
+	built_in_fieldentry('move','scan_string',PROC,'move','move',NOSTORE);
+	built_in_fieldentry('next','string',PROC,'next','next',NOSTORE);
+		built_in_fieldentry('next','array',PROC,'next','next',NOSTORE);
+		built_in_fieldentry('next','table',PROC,'next','next',NOSTORE);
+		built_in_fieldentry('next','interval',PROC,'next','next',NOSTORE);
+		built_in_fieldentry('next','bits',PROC,'next','next',NOSTORE);
+	built_in_fieldentry('pos','scan_string',PROC,'pos','pos',NOSTORE);
+	built_in_fieldentry('put','file',PROC,'put','put',NOSTORE);
+	built_in_fieldentry('repl','string',PROC,'repl','repl',NOSTORE);
+	built_in_fieldentry('replace','string',PROC,'replace','replace',NOSTORE);
+	built_in_fieldentry('retrieve','array',PROC,'retrieve','retrieve',NOSTORE);
+		built_in_fieldentry('retrieve','table',PROC,'retrieve','retrieve',NOSTORE);
+		built_in_fieldentry('retrieve','string',PROC,'retrieve','retrieve',NOSTORE);
+		built_in_fieldentry('retrieve','bits',PROC,'retrieve','retrieve',NOSTORE);
+	built_in_fieldentry('reverse','string',PROC,'reverse','reverse',NOSTORE);
+	built_in_fieldentry('right','string',PROC,'right','right',NOSTORE);
+	built_in_fieldentry('rpos','scan_string',PROC,'rpos','rpos',NOSTORE);
+	built_in_fieldentry('rtab','scan_string',PROC,'rtab','rtab',NOSTORE);
+	built_in_fieldentry('size','array',PROC,'size','size',NOSTORE);
+		built_in_fieldentry('size','bits',PROC,'size','size',NOSTORE);
+		built_in_fieldentry('size','string',PROC,'size','size',NOSTORE);
+		built_in_fieldentry('size','table',PROC,'size','size',NOSTORE);
+	built_in_fieldentry('sort','array',PROC,'sort','sort',NOSTORE);
+	built_in_fieldentry('span','scan_string',PROC,'span','span',NOSTORE);
+	built_in_fieldentry('substr','string',PROC,'substr','substr',NOSTORE);
+	built_in_fieldentry('tab','scan_string',PROC,'tab','tab',NOSTORE);
+	built_in_fieldentry('update','array',PROC,'update','update',NOSTORE);
+		built_in_fieldentry('update','table',PROC,'update','update',NOSTORE);
+		built_in_fieldentry('update','bits',PROC,'update','update',NOSTORE);
+	built_in_fieldentry('bal','scan_string',PROC,'bal','bal',NOSTORE);
+	built_in_fieldentry('text','scan_string',VAR,0,SIMPLE,NOSTORE);
+	built_in_fieldentry('cursor','scan_string',VAR,1,SIMPLE,NOSTORE);
+
+
+	fieldtab['+.2']  := FIELD_DECL('+.2', 'add');
+	fieldtab['-.2']  := FIELD_DECL('-.2', 'sub');
+	fieldtab['-.1']  := FIELD_DECL('-.1', 'neg');
+	fieldtab['*.2']  := FIELD_DECL('*.2', 'mul');
+	fieldtab['/.2']  := FIELD_DECL('/.2', 'div');
+	fieldtab['%.2']  := FIELD_DECL('%.2', 'idiv');
+	fieldtab['||.2'] := FIELD_DECL('||.2', 'conc');
+	fieldtab['=.2']  := FIELD_DECL('=.2', 'eq');
+	fieldtab['~=.2'] := FIELD_DECL('~=.2', 'ne');
+	fieldtab['>.2']  := FIELD_DECL('>.2', 'gt');
+	fieldtab['>=.2'] := FIELD_DECL('>=.2', 'ge');
+	fieldtab['<.2']  := FIELD_DECL('<.2', 'lt');
+	fieldtab['<=.2'] := FIELD_DECL('<=.2', 'le');
+	   	# Fieldtable. Keys are all field names defined up to the#
+		# current program point. Entries consist of classname,	#
+		# PROC or VAR, the internal name (for procedures) or the#
+		# offset (for data-fields), the fetch association, the  #
+                # store association, and a successor.			#
+		# For operator fields, the key is the internal operator	#
+		# name (without class suffix): for a monadic (dyadic)	#
+		# operator @, '@.1' ('@.2').				#
+);
+
+class labelgenerator(lab)
+begin fetch next;
+      var current := -1;
+      proc next() return(lab || string(current := current + 1));
+
+end labelgenerator;
+
+#********* Class declarations for parse tree nodes *********************#
+
+class ASSIGN(left, right)
+begin fetch left, right, code;
+      proc code(lab, rval)
+      ( right.code(empty, Value);
+	if left.code(empty, Assign) ~= Assign then
+	   ermsg('illegal left hand side of assignment', lnr)
+	fi;
+	return(Value);
+      );
+end ASSIGN;
+
+class SUP_CALL(super, args)
+begin fetch super, args, code;
+      proc code(lab, rval)
+      ( var a;
+        assert super.kind = Class;
+        assert args.size = super.nformals;
+        for a in args do a.code(empty, Value) od;
+        exp_op2('call', super.seq, args.size);
+        voidcall(rval);
+        return(abs(rval))
+      );
+end SUP_CALL;
+
+class CALL(left, args)
+begin fetch left, args, code;
+      proc treat(args)
+      ( var a;
+	for a in args do a.code(empty, Value) od
+      );
+      proc code(lab, rval)
+      ( var nactuals := args.size;
+        case left.kind of
+	GlobalProc:
+	BuiltinProc:
+	   treat(args);
+	   # note: left.nformals < 0 => variable number of arguments #
+	   if nactuals ~= left.nformals & left.nformals >= 0 then
+	      ermsg(left.name || ' called with wrong number of arguments', lnr);
+	      return(abs(rval))
+	   fi;
+	   exp_op2('call', left.seq, nactuals),
+	Class:
+	BuiltinClass:
+	   exp_op0('undef');
+	   treat(args);
+	   if nactuals + 1 ~= left.nformals & left.nformals >= 0 then
+	      ermsg(left.name || ' called with wrong number of arguments', lnr);
+	      return(abs(rval))
+	   fi;
+	   exp_op2('call', left.seq, nactuals + 1),
+	ClassProc:
+	   exp_op0('self');
+	   treat(args);
+	   if fieldtab[left.name].is_unique_field &
+	      fieldtab[left.name].last.classname = curclassname
+	   then
+	      exp_op2('call', left.seq, nactuals + 1)
+	   else
+	      exp_op2('ifld', fieldtab[left.name].seq, nactuals + 1)
+	   fi,
+	Field:
+	Forward:
+	   assert fieldtab[left.name] ~= undefined;
+	   if fieldtab[left.name].locate_fld(curclassname) then
+	      exp_op0('self');
+	      treat(args);
+	      exp_op2('ifld', fieldtab[left.name].seq, nactuals + 1)
+	   elif symtab[left.name] ~= undefined then
+		return(CALL(symtab[left.name][S_VALUE], args).code(lab, rval))
+	   else
+	      return(FIELDSEL(SUBJECT, left.name, args).code(lab, rval))
+	   fi
+	esac;
+	voidcall(rval);
+	return(abs(rval))
+      );
+end CALL;
+
+class OPCALL(optab, args)
+begin fetch optab, args, code;
+      proc code(lab, rval)
+      ( var nactuals := args.size, a, oper := optab[O_NAME];
+
+	for a in args do a.code(empty, Value) od;
+	if fieldtab[oper] = undefined then
+	   exp_op2('call', symtab[oper][S_VALUE].seq, nactuals);
+	else
+	   exp_op2('fld', fieldtab[oper].seq, nactuals)
+	fi;
+	voidcall(rval);
+	return(abs(rval));
+      );
+      
+init: assert optab[O_ADIC] = args.size;
+end OPCALL;
+
+class SEMI(exprs)
+begin fetch exprs, code;
+      proc code(lab, rval)
+      ( var i;
+	newfl('nil');
+	for i in interval(0, exprs.size-2, 1)
+	do void(exprs[i].code(empty, Novalue)) od;
+	oldfl();
+	return(exprs[exprs.size-1].code(lab, rval))
+     );
+init:
+     if exprs.size = 0 then
+	return(UNDEFINED)
+     elif exprs.size = 1 then
+	return(exprs[0])
+     fi;
+end SEMI;
+
+class IFTHEN(line, test, ethen)
+begin fetch line, test, ethen, code;
+      proc code(lab, rval)
+      ( var f := flab.next;
+	newfl(f);
+	line.code(empty, Novalue);
+	void(test.code(empty, Novalue));
+	oldfl();
+	void(ethen.code(empty, Novalue));
+	label(f);
+	inspect(rval, 'ifthen');
+	return(Novalue);
+      );
+end IFTHEN;
+
+class IFELSE(line, test, ethen, eelse)
+begin fetch line, test, ethen, eelse, code;
+      proc code(lab, rval)
+      ( var f := flab.next, l, aval;
+	line.code(empty, Novalue);
+	newfl(f);
+	void(test.code(empty, Novalue));
+	oldfl();
+	if lab = empty then l := llab.next else l := lab fi;
+	aval := ethen.code(l, rval);
+	if rval = Novalue then void(aval)
+	elif rval = Assign then rval := aval
+	fi;
+	go(l);
+	label(f);
+	aval := eelse.code(l, rval);
+	if rval = Novalue then void(aval) fi;
+	if lab = empty then label(l) fi;
+	return(rval);
+      );
+end IFELSE;
+
+class WHILEDO(line, test, body)
+begin fetch line, test, body, code;
+      proc code(lab, rval)
+      ( var f, l1, l2;
+	line.code(empty, Novalue);
+	label(l1 := llab.next);
+	if type(test) ~= 'CONSTANT' then
+		newfl(f := flab.next);
+		void(test.code(empty, Novalue));
+		oldfl();
+		void(body.code(l1, Novalue));
+		go(l1);
+		label(f);
+	else	# optimize "infinite" loops #
+		void(body.code(l1, Novalue));
+		go(l1)
+	fi;
+	inspect(rval, 'whiledo');
+	return(Novalue);
+      );
+end WHILEDO;
+
+class CASE(line, name, iexpr, deflab, defexpr, caselabs, caseexprs)
+begin fetch line, name, iexpr, deflab, defexpr, caselabs, caseexprs, code;
+      proc code(lab, rval)
+      ( var nm, n, lout, aval, l, i;
+	line.code(empty, Novalue);
+	iexpr.code(empty, Value);
+	exp_opw1('gocase', name.seq);
+	lout := llab.next;
+	for i in caselabs.index
+	do label(caselabs[i]);
+	   aval := caseexprs[i].code(empty, rval);
+	   if rval = Novalue then void(aval)
+	   elif rval = Assign then rval := aval
+	   fi;
+	   go(lout);
+	od;
+	label(deflab);
+	if defexpr = undefined then
+	   ercode('case');
+	else
+	   aval := defexpr.code(empty, rval);
+	   if rval = Novalue then void(rval)
+	   elif rval = Assign then rval := aval
+	   fi;
+	fi;
+	label(lout);
+	return(rval);
+      );
+end CASE;
+
+#----------------------------try-expr----------------------------------
+|	TRY e1, e2, ... UNTIL e0 YRT
+| generates:
+|	newrc
+|	newfl	F1
+|	(code for e1)
+|	go	L
+| F1:	resrc
+|	newfl	F2
+|	(code for e2)
+|	go	L
+| F2:	resrc
+|	...
+| Fn:	resrc
+|	oldrc
+|	gofl
+| L:	(code for e0)
+|	oldfl
+|	oldrc
+----------------------------------------------------------------------#
+
+class TRY(line, exprs, uexpr)
+begin fetch line, exprs, uexpr, code;
+      proc code(lab, rval)
+      ( var f, l, aval, e, rv;
+	rv := if uexpr = undefined then rval else Novalue fi;
+	line.code(empty, Novalue);
+	newrc();
+	nrc := nrc + 1;
+	l := llab.next;
+	for e in exprs
+	do newfl(f := flab.next);
+	   aval := e.code(empty, rv);
+	   if rv = Novalue then void(aval)
+	   elif rv = Assign then ermsg('illegal assignment to try', lnr)
+	   fi;
+	   go(l);
+	   label(f);
+	   resrc();
+	od;
+	oldrc();
+	gofl();
+	label(l);
+	if uexpr ~= undefined then
+	   aval := uexpr.code(empty, rval);
+	   if rval = Novalue then void(aval)
+	   elif rval = Assign then ermsg('illegal assignment to try', lnr)
+	   fi
+	fi;
+	oldfl();
+	oldrc();
+	nrc := nrc - 1;
+	return(rval)
+      );
+end TRY;
+
+class ASSERT(expr)
+begin fetch expr, code;
+      proc code(lab, rval)
+      ( var aval, l, f;
+	newfl(f := flab.next);
+	l := llab.next;
+	aval := expr.code(empty, rval);
+	oldfl();
+	go(l);
+	label(f); ercode('assert');
+	label(l);
+	return(aval)
+      );
+end ASSERT;
+
+class RETURN(expr)
+begin fetch expr, code;
+      proc code(lab, rval)
+      ( var f, t := type(expr);
+         if t = 'CONSTANT' |
+            t = 'VARIABLE' & (expr.kind = LocalVar | expr.kind = GlobalVar)
+        then				# expr cannot fail #
+	   expr.code(empty, Value);
+	   retu(1)
+        elif t = 'undefined' then	# no value return #
+	   retu(0)
+	else				# general case #
+	   newfl(f := flab.next);
+	   expr.code(empty, Value);
+	   # oldfl() is not necessary, but flstack must be popped #
+	   popfl();
+	   retu(1);
+	   label(f);
+	   fretu();
+	fi;
+	inspect(rval, 'return');
+	return(Novalue)
+      );
+end RETURN;
+
+class FRETURN()
+begin fetch code;
+      proc code(lab, rval)
+      ( fretu();
+	inspect(rval, 'freturn');
+	return(rval);
+      );
+end FRETURN;
+
+class SELF()
+begin fetch code;
+      proc code(lab, rval)
+      ( if rval = Value then
+	   exp_op0('self');
+	else
+	   inspect(rval, 'self')
+	fi;
+	return(rval);
+      );
+end SELF;
+
+class SUBJECT()
+begin fetch code;
+      proc code (lab, rval)
+      ( if rval = Value then
+	   exp_op0('subject')
+	else
+	   inspect(rval, 'self')
+	fi;
+	return(rval);
+      );
+end SUBJECT;
+
+class LINE()
+begin fetch delta, code;
+      var delta := lnr - lastlnr;
+
+      proc code(lab, rval)
+      ( lnr := lnr + delta;
+	exp_op1('line', delta);
+	return(Novalue)
+      );
+init:
+      lastlnr := lnr;
+end LINE;
+
+#----------------------------scan-expr---------------------------------
+|	SCAN s FOR e ROF
+| generates:
+|	(code for s)
+|	newsubj
+|	newfl	F
+|	(code for e)
+|	oldfl
+|	go	L
+| F:	oldsubj
+|	gofl
+| L:	oldsubj
+----------------------------------------------------------------------#
+
+class SCAN(subj, expr)
+begin fetch subj, expr, code;
+      proc code(lab, rval)
+      ( var f, l, aval;
+	subj.code(empty, Value);
+	newsubj();
+	nsubj := nsubj + 1;
+	newfl(f := flab.next);
+	aval := expr.code(empty, rval);
+	oldfl();
+	go(l := llab.next);
+	label(f);
+		oldsubj();
+		gofl();
+	label(l);
+		oldsubj();
+	nsubj := nsubj - 1;
+	return(aval);
+      );
+end SCAN;
+
+class FIELDSEL(instance, name, args)
+begin fetch instance, name, args, code;
+
+      proc code(lab, rval)
+      ( var a, seq;
+	if fieldtab[name] = undefined then
+	   ermsg('non existing field "' || name || '" selected', lnr);
+	   seq := 0
+	else
+	   seq := fieldtab[name].seq
+	fi;
+	instance.code(empty, Value);
+	for a in args do a.code(empty, Value) od;
+	if rval = Assign then
+	   exp_op2('asfld', seq, args.size + 1)
+	else
+	   exp_op2('fld', seq, args.size + 1);
+	   voidcall(rval);
+	fi;
+	return(rval);
+      );
+
+end FIELDSEL;
+
+class ARIND(arr, ind)
+begin fetch arr, ind, code;
+      proc code(lab, rval)
+      ( arr.code(empty, Value);
+	ind.code(empty, Value);
+	if rval = Assign then
+	   exp_op0('asind');
+	else 
+	   exp_op0('ind')
+	fi;
+	return(rval);
+      );
+end ARIND;
+      
+class ARINIT(size, def, exprs)
+begin fetch size, def, exprs, code;
+      proc code(lab, rval)
+      ( var e, i;
+	if rval = Value | rval = Novalue then
+	   for e in exprs do e.code(empty, Value) od;
+	   def.code(empty, Value);
+	   size.code(empty, Value);
+	   exp_opw1('arinit', exprs.size);
+	else
+	   exp_op1('xar', exprs.size);
+	   for i in exprs.index
+	   do var aval := exprs[i].code(empty, Assign);
+	      if aval ~= Assign then
+		 ermsg('illegal element in multiple assignment', lnr)
+	      fi;
+	      if i ~= exprs.size - 1 then void(aval) fi
+	   od;
+	   if (type(def) = 'CONSTANT' & def.val = undefined &
+	      type(size) = 'CONSTANT' & size.val = exprs.size) fails
+	   then
+	      ermsg('illegal multiple assignment', lnr)
+	   fi
+	fi;
+	return(rval);
+      );
+	      
+end ARINIT;
+
+class TABINIT(size, def, actsize, keys)
+begin fetch size, def, actsize, keys, code;
+      proc code(lab, rval)
+      ( var k;
+	if type(def) = 'string' then
+	   exp_opw1('load', def);
+	else
+	   def.code(empty, Value);
+	fi;
+	size.code(empty, Value);
+	exp_op0('tabinit');
+	for k in keys do k.code(empty, Value) od;
+	return(Value);
+      );
+end TABINIT;
+
+class KEY(keys, expr)
+begin fetch keys, expr, code;
+      proc code(lab, rval)
+      ( var k;
+	if type(expr) = 'string' then
+	   exp_opw1('load', expr)
+	else
+	   expr.code(empty, Value);
+	fi;
+	for k in keys do k.code(empty, Value) od;
+	exp_opw1('tabelem', keys.size);
+	return(Value)
+      );
+end KEY;
+
+class VARINIT(line1, name, expr, line2)
+begin fetch line1, name, expr, line2, code;
+      proc code(lab, rval)
+      ( #! generate line numbers in some cases #
+	return(ASSIGN(name, expr).code(lab, rval))
+      );
+end VARINIT;
+
+class DYOP(oper, left, right)
+begin fetch oper, left, right, code;
+      proc code(lab, rval)
+      ( if oper = '&' then
+	   void(left.code(empty, Novalue));
+	   return(right.code(lab, rval))
+	elif oper = '|' then
+	   var f, l, aval;
+
+	   newfl(f := flab.next);
+	   if lab = empty then l := llab.next else l := lab fi;
+	   aval := left.code(empty, rval);
+	   if rval = Novalue then void(aval)
+	   elif rval = Assign then rval := aval
+	   fi;
+	   oldfl(); go(l); label(f);
+	   aval := right.code(l, rval);
+	   if rval = Novalue then void(aval)
+	   elif rval = Assign then rval := aval
+	   fi;
+	   if lab = empty then label(l) fi;
+	   return(rval)
+	else
+	   left.code(empty, Value);
+	   right.code(empty, Value);
+	   exp_op0(dytab[oper][O_CODE]);
+	   return(Value)
+	fi;
+      );
+      proc ir_ir(a, b)
+      (var ta := type(a), tb := type(b);
+           if (ta = 'integer' | ta = 'real') & (tb = 'integer' | tb ='real')
+	   then
+	      return(True)
+	   else
+	      ermsg('dyadic operator requires integer or real arguments', lnr);
+	      freturn
+	   fi
+      );
+      proc i_i(a, b)
+           if (type(a) = 'integer') & (type(b) = 'integer') then
+              return(True)
+           else
+              ermsg('dyadic operator requires integer operands', lnr);
+              freturn
+	   fi;
+      proc s_s(a, b)
+           if (type(a) = 'string') & (type(b) = 'string') then
+              return(True)
+           else
+              ermsg('dyadic operator requires string operands', lnr);
+              freturn
+	   fi;
+
+init: if type(left) = 'CONSTANT' & type(right) = 'CONSTANT' then
+         var vleft := left.val, vright:= right.val, res;
+
+          case oper of
+          '+':	if ir_ir(vleft, vright) then res := vleft + vright fi,
+          '-':	if ir_ir(vleft, vright) then res := vleft - vright fi,
+          '*':	if ir_ir(vleft, vright) then res := vleft * vright fi,
+          '/':	if ir_ir(vleft, vright) then
+		   if vright = 0 then
+                      ermsg('division by 0', lnr)
+                    else
+                      res := vleft / vright
+		    fi
+                fi,
+          '%':	if i_i(vleft, vright) then
+		   if vright = 0 then
+		      ermsg('division by 0', lnr)
+		   else
+		      res := vleft % vright
+		   fi
+		fi,
+          '||':	if s_s(vleft, vright) then res := vleft || vright fi,
+          default:
+          esac;
+          if res ~= undefined then return(CONSTANT(res)) fi
+      fi;
+      if oper = ':=' then
+	 return(ASSIGN(left, right))
+      fi;
+end DYOP;
+
+class MONOP(oper, and)
+begin fetch oper, and, code;
+      proc code(lab, rval)
+      ( if oper = '~' then
+	   var f, l;
+
+	   if lab = empty then f := flab.next else f := lab fi;
+	   newfl(f);
+	   l := llab.next;
+	   void(and.code(l, Novalue));
+	   inspect(rval, 'not');
+	   label(l);
+	   oldfl();
+	   gofl();
+	   if lab = empty then label(f) fi;
+	   return(Novalue);
+	else
+	   and.code(lab, Value);
+	   exp_op0(montab[oper][O_CODE]);
+	   return(Value);
+	fi;
+      );
+
+init: if type(and) = 'CONSTANT' then
+         var v := and.val, tv := type(v);
+         if oper = '-' then
+            if tv = 'integer' | tv = 'real' then
+               return(CONSTANT(-v))
+            else
+               ermsg('monadic - has argument of illegal type', lnr)
+            fi
+         fi
+      fi;
+end MONOP;
+
+#************ Procedures for the treatment of operators ****************#
+
+proc check_monop(symbol)
+if montab[symbol] = undefined
+then	if dytab[symbol] = undefined
+	then	ermsg('"' || symbol || '" undefined', lnr)
+	else	ermsg('dyadic operator "' || symbol
+		      || '" used in monadic position', lnr)
+	fi
+fi;
+
+
+proc check_dyop(symbol)
+if dytab[symbol] = undefined
+then	if montab[symbol] = undefined
+	then	ermsg('"' || symbol || '" undefined', lnr)
+	else	ermsg('monadic operator "' || symbol
+		      || '" used in dyadic position', lnr)
+	fi
+fi;
+
+
+
+proc opush(opr)
+if errcnt = 0 then opstack.append(opr); fi;
+
+proc opop()
+if errcnt = 0 then return(opstack.delete) fi;
+	# Pushing and popping the operator stack.			#
+
+proc ndpush(and)
+if errcnt = 0 then ndstack.append(and) fi;
+
+proc ndpop()
+if errcnt = 0 then return(ndstack.delete) fi;
+
+	# Pushing and popping the operand stack				#
+
+proc priofdef(nf)
+	return(if nf = 1 then 13 else 9 fi);
+	# The standard f-priorities (monadic: 13, dyadic: 9) for user	#
+	# defined operators.						#
+
+proc priogdef(nf)
+	return(if nf = 1 then 14 else 9 fi);
+	# The standard g-priorities for user defined operators.		#
+
+proc treatop(newop)
+(	var prg, oldop;
+
+	if errcnt = 0 then prg := newop[O_PRIOG] fi;
+	while  errcnt = 0 & opstack.last[O_PRIOF] >= prg
+	do	oldop := opop();
+		if oldop[O_STATUS] = 0
+		then	if oldop[O_ADIC] = 1 then
+			   ndpush(MONOP(oldop[O_NAME], ndpop()))
+		        else
+		   	   var right := ndpop(), left := ndpop();
+			   ndpush(DYOP(oldop[O_NAME], left, right))
+			fi;
+		else	if oldop[O_ADIC] = 1 then
+			   ndpush(OPCALL(oldop, [ndpop()]))
+			else
+			   var right := ndpop(), left := ndpop();
+			   ndpush(OPCALL(oldop, [left, right]))
+			fi
+		fi
+	od;
+	opush(newop)
+);
+	# The argument is an operator (or, more accurately, an entry	#
+	# from 'montab' or 'dytab') to be pushed on the operator stack.	#
+	# Before this is done, operators are popped from opstack and	#
+	# handed to MONOP or DYADOP until one is found with an		#
+	# f-priority lower than the g-priority of the new operator. 	#
+	# A left parenthesis has an f-priority lower than the g-priority#
+	# of any operator and is hence never popped.			#
+	# 'treatop' has to distinguish built-in from user defined	#
+	# operators; the latter are operands of the operator 'o_opcall'.#
+
+proc emptystack()
+( var oldop, osp := opstack.size;
+
+	while osp > 0 & errcnt = 0
+	do	oldop := opop(); osp := osp - 1;
+		if oldop[O_NAME] = lpar
+		then return(ndpop());
+		elif oldop[O_STATUS] = 0
+		then	if oldop[O_ADIC] = 1 then
+			   ndpush(MONOP(oldop[O_NAME], ndpop()))
+			else
+			   var right := ndpop(), left := ndpop();
+			   ndpush(DYOP(oldop[O_NAME], left, right))
+			fi;
+		else	if oldop[O_ADIC] = 1 then
+				ndpush(OPCALL(oldop, [ndpop()]))
+			else
+			   var right := ndpop(), left := ndpop();
+			   ndpush(OPCALL(oldop, [left, right]))
+			fi
+		fi
+	od;
+	return(UNDEFINED)
+);
+	# Resembles 'treatop', but pops operators until either the	#
+	# stack is empty or a left parenthesis (which is also popped)	#
+	# is found.							#
+
+#******************* Symbol table routines *****************************#
+
+class VARIABLE(name, kind)
+begin fetch kind, name, seq, code, can_call, can_assign, isglobal, tag;
+      var seq;
+
+      proc isglobal()
+        if kind = GlobalVar then return(True) else freturn fi;
+
+      proc tag()
+	if kind = GlobalVar then return('G' || string(seq)) else freturn fi;
+
+      proc code(lab, rval)
+      ( case kind of
+	LocalVar:	if rval = Assign then
+			   exp_op1('asloc', seq)
+			elif rval = Value then
+			   exp_op1('loc', seq)
+			fi,
+	GlobalVar:	if rval = Assign then
+			   exp_op1('asglob', seq)
+			elif rval = Value then
+			   exp_op1('glob', seq)
+			fi,
+	ClassVar:	if rval = Assign then
+			   if fieldtab[name].is_unique_field then
+			      exp_op1('ascloc', seq)
+			   else
+			      exp_op0('self');
+			      exp_op2('iasfld', fieldtab[name].seq, 1)
+			   fi
+			elif rval = Value then
+			   if fieldtab[name].is_unique_field then
+			      exp_op1('cloc', seq)
+			   else
+			      exp_op0('self');
+			      exp_op2('ifld', fieldtab[name].seq, 1)
+			   fi
+			fi,
+	esac;
+	return(rval);
+      );
+
+      proc can_call() freturn;
+
+      proc can_assign() return(True);
+
+init: case kind of
+      LocalVar:		seq := loccnt; loccnt := loccnt + 1;
+			if name = '' then name := '_' || string(loccnt) fi,
+      GlobalVar:	seq := glcnt; glcnt := glcnt + 1;
+			if name = '' then name := '_' || string(glcnt) fi,
+      ClassVar:		seq := offset
+      esac
+end VARIABLE;
+
+class FORWARD(name, lino)
+begin fetch lino, kind, code, can_call, can_assign, isglobal, tag, resolved,
+	    name, seq, nformals, complete, generate_body, retcnt, procs,
+	    src_file;
+      store resolved : asg_resolved;
+      var resolved, src_file := src.name;
+
+      proc kind()
+        return(if resolved = undefined then Forward else resolved.kind fi);
+
+      proc can_call()
+        return(if resolved = undefined then True else resolved.can_call fi);
+
+      proc can_assign()
+	return(if resolved = undefined then True else resolved.can_assign fi);
+
+      proc isglobal()
+      ( assert resolved ~= undefined;
+	return(resolved.isglobal)
+      );
+
+      proc tag()
+      ( assert resolved ~= undefined;
+	return(resolved.tag)
+      );
+
+      proc code(lab, rval)
+      ( if resolved ~= undefined then
+	   return(resolved.code(lab,rval))
+	elif symtab[name] ~= undefined then
+	   resolved := symtab[name][S_VALUE];
+	   return(resolved.code(lab, rval))
+	else
+	   assert fieldtab[name] ~= undefined;
+	   return(FIELDSEL(SUBJECT, name, []).code(lab, rval))
+	fi
+      );
+
+      proc asg_resolved(val)
+      ( if type(val) = 'FORWARD' then
+	   if val.lino < lino then lino := val.lino fi;
+	   resolved := val.resolved;
+	else
+	   resolved := val
+	fi;
+	return(val)
+      );
+
+      proc nformals() return(resolved.nformals);
+
+      proc seq() return(resolved.seq);
+
+
+      proc complete() resolved.complete;
+
+      proc generate_body() resolved.generate_body;
+
+      proc retcnt() return(resolved.retcnt);
+
+      proc procs() return(resolved.procs);
+
+end FORWARD;
+
+class CONSTANT(val)
+begin fetch val, kind, code, can_call, can_assign;
+
+      proc code(lab, rval)
+      ( if rval = Value then
+	   case type(val) of
+	   'integer':	exp_op1('int', val),
+	   'string':	if val.size = 0 then
+			   exp_op0('nullstr')
+			else
+			   exp_opw1('load', stringtab[val])
+			fi,
+	   'real':	exp_real(val),
+	   'undefined':	exp_op0('undef')
+	   esac
+	elif rval = Assign then
+	   ermsg('illegal assignment to ' || type(val), lnr)
+	fi;
+	return(rval);
+      );
+
+      proc can_call() freturn;
+
+      proc can_assign() freturn;
+
+      proc kind() return(Constant);
+
+init: if type(val) = 'string' then
+	declstring(val);
+      fi;
+end CONSTANT;
+
+class FIELD(fieldname, classname, ftype, intern, ffetch, fstore)
+begin fetch fieldname, classname, ftype, intern, ffetch, fstore;
+      store fieldname, classname, ftype, intern, ffetch, fstore;
+end FIELD;
+
+class FIELD_DECL(fieldname, builtin_tag)
+begin fetch fieldname, builtin_tag, generate, seq, last, add, locate_fld,
+            redeffld, addglobf, is_unique_field, kind, name, can_call,
+	    can_assign,code;
+
+      var seq, global_alias, singlefields := [];
+
+      proc kind() return(Field);
+
+      proc name() return(fieldname);
+
+      proc can_call() return(True);
+
+      proc can_assign() return(True);
+
+      proc code(lab, rval)
+        return(CALL(self, []).code(lab, rval));
+
+      proc last()
+	if singlefields.size > 0 then
+	   return(singlefields.last)
+	else
+	   freturn
+	fi;
+
+      proc add(field_descr)
+        singlefields.append(field_descr);
+
+      proc redeffld(fdes)
+      (	var old := singlefields.last;
+
+	if old.ftype = VAR
+	then	if fdes.ftype ~= VAR
+		then	ermsg('inherited variable redefined as procedure', lnr)
+		else	fdes.intern := old.intern;
+			offset := offset-1
+		fi
+	else	if fdes.ftype ~= PROC
+		then	ermsg('inherited procedure redefined as variable', lnr)
+		fi
+	fi;
+	singlefields[singlefields.size-1] := fdes;
+      );
+	# redeffld is called when a field inherited from a superclass is #
+	# redefined in the subclass. The old entry is removed. Allowing  #
+	# variables to be redefined as procedures and vice versa requires#
+	# the following additions: if x was a var and becomes a proc, it #
+	# must be removed from data_flds and added to proc_flds. All     #
+	# offsets of data-fields > offset(x) must be decremented.     	 #
+	# In the reverse case, x must be transferred from proc_flds to	 #
+	# data_flds.							 #
+
+       proc addglobf(proc_decl)
+       ( assert global_alias = undefined;
+
+	 global_alias := proc_decl;
+
+       );
+	# 'addglobf' makes an additional entry with class name '~global'#
+	# for user defined operators which are declared both globally	#
+	# and within a class.						#
+
+
+       proc locate_fld(cl)
+       ( var e ;
+
+	for e in singlefields do if e.classname = cl then return(e) fi od;
+	freturn;
+       );
+	# locate_fld finds the fieldtable entry created for field 'fld' #
+	# in class 'cl'.						#
+
+       proc is_unique_field() return(singlefields.size = 1);
+
+       proc generate()
+       ( var n, sep, x, switch := array(nclasses, -1);
+
+	 for n in singlefields.index
+	 do 
+	    switch[classtab[singlefields[n].classname][5]] := n;
+	 od;
+	 f_s.put('FLDSW', seq, ': ');
+	 sep := '.byte ';
+	 for n in switch do f_s.put(sep, n); sep := sc od;
+	 f_s.put(newl);
+
+	 if builtin_tag ~= '' then
+	    f_s.put('.globl _f_', builtin_tag, '; _f_', builtin_tag, ':\n');
+	 fi;
+
+	 f_s.put('FLD', seq, ':\n');
+	 f_s.put(long, declstring(fieldname), newl);	# fdesc_name #
+	 f_s.put(long, 'FLDSW', seq, newl);		# fdesc_switch #
+	 f_s.put(long,					# fdesc_alias #
+		 if global_alias=undefined then 'nil' else global_alias.tag fi,
+		 newl);
+
+	 for x in singlefields
+	 do var fetch_assoc := x.ffetch, store_assoc := x.fstore;
+
+	    if x.ftype = VAR then
+              f_s.put(long, dec(0), ';',		# fld_type #
+		      long, dec(x.intern), ';');	# fld_offset #
+	    else  
+	      f_s.put(long, if type(x.intern) = 'string' &
+			       x.intern = fieldname then
+	         	       '_' || typetag[x.classname] || fieldname
+	      		    else
+	         	       x.intern.tag
+	      		    fi, ';',			# fld_type #
+		      long, dec(-1), ';');		# fld_offset #
+	    fi;
+
+	    f_s.put(long, if type(fetch_assoc) = 'string' then
+				if fetch_assoc = fieldname then
+			   	   '_' || typetag[x.classname] || fieldname;
+		  		else
+		     	   	   fetch_assoc
+	          		fi
+	    	    	  else
+	    			fetch_assoc.tag
+	    	    	  fi, ';');
+
+	    f_s.put(long, if type(store_assoc) = 'string' then
+	          		if store_assoc = fieldname then
+		     	   	   '_' || typetag[x.classname] || fieldname
+	   	  		else store_assoc
+				fi
+	       	    	  else
+	          		store_assoc.tag
+	       	    	  fi, newl);
+         od;
+      );
+
+init: seq := nfields;
+      nfields := nfields + 1;
+
+end FIELD_DECL;
+
+class BUILT_IN_PROC_DECL(name, kind, nformals)
+begin fetch name, kind, nformals, code, isglobal, can_call, can_assign, seq, tag;
+      var seq;
+
+      proc isglobal() return(True);
+
+      proc can_call() return(True);
+
+      proc can_assign() freturn;
+
+      proc tag()
+	return(
+	case kind of
+	BuiltinProc: 'BP',
+	BuiltinClass: 'BC'
+	esac || string(seq));
+
+      proc code(lab, rval)
+      ( var nf;
+	nf := if kind = BuiltinClass then 1 else 0 fi;
+	if nformals > 0 & nformals ~= nf then
+	   ermsg(name || ': argument list missing', lnr)
+	else
+	   CALL(self, []).code(empty, rval);
+	   if rval = Assign then
+	      ermsg('assignment to procedure not allowed', lnr);
+	      rval := Value
+	   fi
+	fi;
+	return(rval);
+      );
+init: seq := glcnt; glcnt := glcnt + 1;
+
+end BUILT_IN_PROC_DECL;
+
+class PROC_DECL(kind)
+begin fetch kind, complete, generate_body, code, body, retcnt, isglobal,
+	    name, can_call, can_assign, seq, tag, nformals, procs;
+      store body, retcnt, seq;
+      var name, fnms, stlnr, elnr, body, retcnt, lnames, procs,
+	  the_classcnt, seq;
+
+      proc isglobal() return(True);
+
+      proc tag()
+        return(
+	case kind of
+	Program:
+	GlobalProc:	'P',
+	ClassProc:	'FLDP',
+	Class:		'C'
+	esac || string(seq));
+
+      proc nformals() return(fnms.size);
+
+      proc code(lab, rval)
+      ( var nf;
+	nf := if kind = Class | kind = ClassProc then 1 else 0 fi;
+	if nformals > 0 & nformals ~= nf then
+	   ermsg(name || ': argument list missing', lnr)
+	else
+	   CALL(self, []).code(empty, rval);
+	   if rval = Assign then
+	      ermsg('assignment to procedure not allowed', lnr);
+	      rval := Value
+	   fi
+	fi;
+	return(rval);
+      );
+
+      proc can_call() return(True);
+
+      proc can_assign() freturn;
+
+      proc complete(aname, afnms, abody)
+      ( name := aname;
+	fnms := afnms;
+	remove(fnms);
+	body := abody;
+	elnr := lnr;
+	lnames := loclist;
+	if retcnt = undefined then retcnt := 0 fi;
+	if kind = Class then
+	   procs := classprocs;
+	   classvarinit.append(body);
+	   body := SEMI(classvarinit);
+	   the_classcnt := nclasses;
+	fi;
+	inproc := 0;
+	level := level-1
+      );
+	
+      proc convlocs(list)
+      if list.size = 0 then
+         return('nil')
+      else
+	var l, s := '';
+	for l in list do s := s || l || sc od;
+	return(declstring(s));
+      fi;
+
+      proc generate_body()
+      ( var nf, nloc;
+        if errcnt = 0
+	then	var fldlab;
+		if kind = Class then
+		   var p;
+		   curclassname := name;
+		   for p in procs do p.generate_body od;
+		   curclassname := undefined;
+		   fldlab := dec(-1);		# class creation proc #
+		else
+		   var fld := fieldtab[name];
+		   if fld = undefined then
+		   	fldlab := 'nil'		# global proc #
+		   else
+			fldlab := 'FLD' || string(fld.seq);
+						# field proc #
+		   fi;
+		fi;
+		nf := fnms.size;
+		nloc := lnames.size;
+		lnr := stlnr;
+		lineflush();
+		if kind = Program then
+		   f_s.put('.globl _program', newl);
+		   f_s.put('_program:', newl);
+		fi;
+		f_s.put(tag, ':', '\t# proc ', name, newl);
+		f_s.put(long, 'dt_proc', newl,
+			long, fldlab, newl,
+			long, dec(nf), newl,
+			long, dec(nloc-nf), newl,
+			long, dec(nloc), newl,
+			long, dec(stlnr), newl,
+			long, dec(elnr), newl,
+			long, convlocs(lnames), newl,
+			long, dec(0), newl,		# freq #
+			long, dec(0), newl);		# prof #
+		if kind = Class then
+		   newfl('nil');
+		   exp_op1('newclass', classtab[name][5]);
+		   exp_op1('asloc', 0);
+		   exp_op0('void');
+		   oldfl()
+		fi;
+		body.code(empty, Novalue);
+		if kind = Class then
+		   exp_op1('loc', 0);
+		   retu(1)
+		fi;
+		if kind = Program
+		then exp_op0('ihalt')
+		else
+		    if retcnt = 0 then retu(0) else ercode('ret') fi;
+		fi;
+		lineflush();
+	fi;
+      );
+
+init:  	seq := glcnt; glcnt := glcnt + 1;
+	stlnr := lastlnr := lnr;
+	retcnt := undefined;
+	inproc := 1;
+	level := level+1;
+	loccnt := 0;
+	if kind = Class | kind = ClassProc then
+	   symentry('self', level, VARIABLE('self', LocalVar));
+	   loclist := ['self']
+ 	else
+	   loclist := []
+	fi;
+end PROC_DECL;
+
+class SOURCE(name, previous)
+begin fetch name, previous, decls, get, back_to_previous, generate_body, errors;
+      store errors;
+      var decls := [], save, f, errors := 0;
+	proc get()
+	( if line := scan_string(f.get) fails
+	  then line := scan_string('');
+	       freturn
+	  fi;
+	  lnr := lnr + 1
+	);
+
+	proc generate_body()
+	( var d;
+	  save := [lnr, lastlnr];
+	  lnr := lastlnr := 1;
+	  src := self;
+	  errors := 0;
+	  for d in decls do d.generate_body od;
+	  [lnr, lastlnr] := save;
+	  if errors  = 1 then previous.errors := 0 fi;
+	  src := previous;
+	);
+
+	proc back_to_previous()
+	( if previous = undefined then freturn fi;
+	  f.close;
+	  [line, lnr, lastlnr] := save;
+	  if errors = 1 then previous.errors := 0 fi;
+	  src := previous;
+	);
+
+init:	if f := file(name, 'r') fails then freturn fi;
+	save := [line, lnr, lastlnr];
+	line := scan_string(f.get | '');
+	lnr := lastlnr := 1;
+end SOURCE;
+
+proc symentry(name, lev, val)
+(	var oldentry;
+
+	oldentry := symtab[name];
+	if oldentry = undefined | oldentry[S_LEVEL] ~= lev then
+	   symtab[name] := [lev, oldentry, val];
+	   return(True)
+	elif oldentry[S_VALUE].kind = Forward then
+	     if type(val) = 'CONSTANT' then
+		ermsg('illegal forward reference(s) to constant "' ||
+		name || '" ; first in line ' ||
+		string(oldentry[S_VALUE].lino), lnr)
+	     else
+		oldentry[S_VALUE].resolved := val;
+	     fi;
+	     return(True)
+	else
+	   ermsg('"' || name || '" redeclared', lnr);
+	   return(False)
+	fi
+);
+	# Enters 'name' in symtab with value 'entry'. If an entry with	#
+	# the same level already exists which is not a forward declara-	#
+	# tion, a 'redeclared' error is issued. See also 'level' and	#
+	# 'symtab'. 							#
+
+proc fieldentry(fieldname, classname, ftype, intern, ffetch, fstore)
+(	var s := symtab[fieldname],
+	    f := fieldtab[fieldname],
+            fdes := FIELD(fieldname,classname,ftype,intern,ffetch,fstore);
+
+	if f = undefined
+	then	f := FIELD_DECL(fieldname, '');
+		fieldtab[fieldname] := f
+	fi;
+	if s ~= undefined
+	then	if s[S_VALUE].kind = Forward
+		then	symtab[fieldname] := undefined;
+			s[S_VALUE].resolved := f;
+		else	while s[S_NEXT] ~= undefined
+			do	if (s[S_NEXT][S_VALUE]).kind = Forward
+				then	s[S_NEXT][S_VALUE].resolved := f;
+					s[S_NEXT] := undefined;
+				else	s := s[S_NEXT]
+				fi
+			od;
+			s := symtab[fieldname]
+		fi
+	fi;
+	if f.last.classname = clname #! last may not exist#
+	then	if inhertab[fieldname] ~= undefined
+		then	f.redeffld(fdes);
+			inhertab[fieldname] := undefined;
+		else	ermsg('"' || fieldname || '" redeclared', lnr)
+		fi;
+		return(False)
+	else	f.add(fdes);
+		return(True)
+	fi
+);
+	# Enters 'name' into 'fieldtab' with given initial values. If a #
+	# forward declaration for this name is found in symtab it is	#
+	# removed. See also FIELD_DECL.					#
+
+proc concat(a, b)
+( var x;
+  for x in b do a.append(x) od;
+  return(a)
+);
+	# Destructively concatenate two arrays				#
+
+proc remove(names)
+(	var nm;
+
+	for nm in names do symtab[nm] := symtab[nm][S_NEXT] od;
+);
+
+	# 'remove' resets the symbol table entries for the names in	#
+	# its argument to their previous values. The names declared at	#
+	# each level are explicitly remembered and passed as an argu-	#
+	# ment instead of simply resetting all entries on the current	#
+	# level, as this would require constructing the set of keys and	#
+	# scanning the complete symbol table on each block exit; both	#
+	# are expensive operations.					#
+
+proc checktype(ident)
+(	var entry := symtab[ident], r;
+
+	if entry = undefined
+	then	if (r := fieldtab[ident]) = undefined
+		then	symentry(ident, 0, r := FORWARD(ident, lnr))
+		fi;
+		return(r)
+	else	return(entry[S_VALUE])
+	fi
+);
+	# Ensure that, if an identifier is neither entered		#
+	# neither in 'symtab' nor in 'fieldtab', it is put in 'symtab'	#
+	# with type indication 'forward' followed by the current line	#
+	# number. If the same identifier is encountered later on without#
+	# intermediate declaration, its entry in symtab matches lit('f')#
+
+#********** Procedures associated with the treatment of classes *********#
+
+proc putopassoc(opname)
+(	var mon := opname || '.1',
+	    dy  := opname || '.2',
+	    monentry := fieldtab[mon],
+	    dyentry  := fieldtab[dy],
+	    undef := 0;
+
+	if monentry ~= undefined & monentry.last.classname = clname
+	then	monentry.last.ffetch := monentry.last.intern
+	else	undef := undef+1
+	fi;
+	if dyentry ~= undefined & dyentry.last.classname = clname
+	then	dyentry.last.ffetch := dyentry.last.intern
+	else	undef := undef+1
+	fi;
+	if undef = 2
+	then	ermsg('field "' || opname || '" undefined', lnr)
+	fi
+);
+	# Puts fetch associations for an operator field in 'fieldtab'.	#
+	# When, say, a declaration 'fetch @' is encountered, an entry	#
+	# in 'fetchtab' is made with key '@' and value '_s'. A monadic	#
+	# (dyadic) operator '@' declared within that class is entered	#
+	# in 'fieldtab' with key '@.1' ('@.2'). 'Putopassoc' checks	#
+	# whether the fetch association is indeed '_s' (the only one	#
+	# allowed) and whether at least one version of @ is defined 	#
+	# within the class, and adds the fetch association(s).	 	#
+
+proc putassocs(type)
+(	var field, fld, fstab, fetching, assoc;
+
+	if type = fetch_type
+	then	fstab := fetchtab; fetching := True
+	else	fstab := storetab; fetching := False
+	fi;
+	for field in fstab.index
+	do assoc := fstab[field];
+	   if assoc ~= '_s'
+	   then	fld := fieldtab[assoc];
+		if fld = undefined | fld.last.classname ~= clname
+	        then	ermsg('fetch/store association "'
+			      || assoc || '" undeclared', lnr)
+		elif fld.last.ftype ~= PROC
+		then	ermsg('fetch/store association "'
+			      || assoc || '" is not a procedure', lnr)
+		fi
+	   fi;
+	   if montab[field] ~= undefined | dytab[field] ~= undefined
+	   then if type = fetch_type & assoc = '_s'
+		then putopassoc(field)
+		else ermsg('illegal ' || type ||
+			   ' association for "' || field || '"', lnr)
+		fi
+	   else	var entry;
+
+		entry := fieldtab[field];
+		if entry = undefined | entry.last.classname ~= clname
+		then ermsg('field "' || field || '" undeclared', lnr)
+		elif entry.last.ftype = PROC
+		then if type = fetch_type & assoc = '_s'
+		     then entry.last.ffetch := entry.last.intern
+		     else ermsg('illegal ' || type ||
+				' association for "' || field || '"', lnr)
+		     fi
+		else	if fetching = True then
+			   entry.last.ffetch
+			else
+			   entry.last.fstore
+			fi :=
+			  if assoc = '_s'
+			  then SIMPLE else fieldtab[assoc].last.intern
+			  fi
+		fi
+	   fi
+	od
+);
+	# Sets fetch or store associations for fields of the current	#
+	# class, using the entries from 'fetchtab' or 'storetab'	#
+	# (depending on the value of 'type').				#
+	# 'putassocs' has to distinguish between operators, procedures	#
+	# and data fields. For operators 'putopassoc' is called.	#
+	# Procedures cannot have a store association. The only value	#
+	# allowed for the fetch association in 'fetchtab' is '_s', but	#
+	# the entry in 'fieldtab' will be the name of the procedure with#
+	# the class suffix appended. Data fields can have both a fetch	#
+	# and a store association; both can have value '~simple' or an	#
+	# name of an associated procedure. 'putassocs' also check	#
+	# whether all fields mentioned in 'fetch' and 'store' declara-	#
+	# tions are indeed declared in the current class.		#
+	# 'putopassoc' is called), procedures (which cannot have a store#
+	# association and for which the only fetch association allowed	#
+
+
+proc do_subclass(super)
+(	var cl_super;
+
+	if (cl_super := classtab[super]) = undefined
+	then ermsg('"' || super || '" not (yet) defined as class', lnr)
+	else var i, fldlist, fld, sub_entry, super_entry, nosubset := False;
+
+	     fldlist := cl_super[1];		# parameters #
+	     for i in fldlist.index
+	     do	if i >= par_flds.size | par_flds[i] ~= fldlist[i]
+		 then nosubset := True
+		 fi;
+	     od;
+	     if nosubset = True
+	     then ermsg('parameters of "' || clname ||
+			'" should include those of "' || super || '"', lnr)
+	     else for fld in fldlist
+		  do sub_entry := fieldtab[fld].last;
+		     super_entry := fieldtab[fld].locate_fld(super);
+		     sub_entry.ffetch := super_entry.ffetch;
+		     sub_entry.fstore := super_entry.fstore;
+		  od
+	     fi;
+	     for fld in cl_super[2]		# data fields #
+	     do super_entry := fieldtab[fld].locate_fld(super);
+	        fieldentry(fld, clname, VAR, offset := offset + 1,
+			   super_entry.ffetch, super_entry.fstore);
+		data_flds.append(fld);
+		symentry(fld, level, VARIABLE(fld, ClassVar));
+		inhertab[fld] := 1;
+	     od;
+	     for fld in cl_super[3]		# procedures #
+	     do super_entry := fieldtab[fld].locate_fld(super);
+	        fieldentry(fld, clname, PROC, super_entry.intern,
+			   super_entry.ffetch, NOSTORE);
+		proc_flds.append(fld);
+		symentry(fld, level, super_entry.intern);
+		inhertab[fld] := 1;
+	     od;
+	     for fld in cl_super[4]		# operators #
+	     do super_entry := fieldtab[fld].locate_fld(super);
+	        fieldentry(fld, clname, PROC, super_entry.intern,
+			   super_entry.ffetch, NOSTORE);
+	        op_flds.append(fld);
+		inhertab[fld] := 1
+	     od
+	fi
+);
+	# All fieldtable entries of the superclass are copied. Parameters #
+	# have been entered already; only the fetch and store associations#
+	# are changed. They may not be redefined. For all other fields a  # 
+	# new entry is created; and they are entered in inhertab to       #
+	# denote that they may be redefined.				  #
+	# Offsets: if A(a) with datafields x and y is the superclass of	  #
+	# B(a,b,c) then after 'do_subclass' B has five datafields:	  #
+	# 'a' (offset 0), 'b' (1), 'c' (2), 'x' (3) and 'y' (4).	  #
+
+
+
+#****************** Miscellaneous procedures *****************************#
+
+
+proc check_forward_references()
+( var nm, e, ent;
+
+  for nm in montab.index
+  do if (e := montab[nm][O_STATUS]) < 0 then
+	ermsg('undeclared monadic operator "' || nm || '"', -e)
+     fi
+  od;
+  for nm in dytab.index
+  do if (e := dytab[nm][O_STATUS]) < 0 then
+	ermsg('undeclared dyadic operator "' || nm || '"', -e)
+     fi
+  od;
+  for ent in symtab
+  do var x := ent[S_VALUE];
+     if x.kind = Forward then
+	var f := x.src_file;
+	f := if f ~= src.name then '(on file: "' || f || '") ' else '' fi;
+	ermsg(f || '"' || x.name || '" undeclared', x.lino)
+     fi
+  od;
+);
+
+proc comermsg(m)
+(	put(string(lnr).right(5, ' '), ': compiler error; ', m, newl);
+	stop(-1)
+);
+
+proc ermsg(message, lnr)
+(	if src.errors = 0
+	then	f_er.put(newl, 'errors in ', src.name, ':', newl);
+		src.errors := 1;
+	fi;
+	f_er.put(string(lnr).right(5, ' ') , ': ', message, newl);
+	errcnt := errcnt + 1;
+);
+
+proc cant(name)
+(	put('Cannot open ', name, '\n');
+	stop(1);
+);
+
+#********** low-level assembly language generation procedures *************#
+
+var	clab	:= labelgenerator('CS'),
+		# labels generated in case statements #
+	f_s,	# assembler output file #
+	nrc	:= 0,
+		# try statement (recovery cache) nesting level #
+	nsubj	:= 0,
+		# scan statement (subject) nesting level #
+	flstack := array(30,''),
+	flstp	:= -1;
+		# fail label stack and stackpointer #
+
+		# Following vars and constants determine the dimensions	#
+		# of assembler output.					#
+var	linesize:= 0,
+	opsep	:= '.byte ',
+	n256	:= 256;
+const	opsize0 := 5,
+	opsize1 := 9,
+	opsize2 := 13,
+	linemax := 100;
+
+proc lineflush()
+( if linesize > 0 then
+     f_s.put(newl);
+     opsep := '.byte ';
+     linesize := 0
+  fi
+);
+
+proc dec(n) return(string(n));
+
+proc exp_op0(opc)
+( if linesize > linemax then lineflush() fi;
+  f_s.put(opsep, opc);
+  linesize := linesize + opsize1;
+  opsep := sc
+);
+
+proc exp_op1(opc, arg)
+  if 0 <= arg < n256 then
+     if linesize > linemax then lineflush() fi;
+     f_s.put(opsep, opc, sc, dec(arg));
+     linesize := linesize + opsize2;
+     opsep := sc
+  else
+     f_s.put(opsep, 'x' || opc);
+     linesize := linesize + opsize1;
+     lineflush();
+     f_s.put('.long ', dec(arg), newl)
+  fi;
+
+proc exp_op2(opc, arg1, arg2)
+  if 0 <= arg1 < n256 then
+     if linesize > linemax then lineflush() fi;
+     f_s.put(opsep, opc, sc, dec(arg1), sc, dec(arg2));
+     linesize := linesize + opsize2;
+     opsep := sc
+  else
+     f_s.put(opsep,  'x' || opc);
+     linesize := linesize + opsize0;
+     lineflush();
+     f_s.put('.long ', dec (arg1), newl);
+     f_s.put(opsep, arg2);
+     linesize := linesize + opsize0;
+     opsep := sc;
+  fi;
+
+proc exp_opw1(opc, arg)
+( f_s.put(opsep, opc);
+  linesize := linesize + opsize1;
+  lineflush();
+  f_s.put('.long ', arg, newl)
+);
+
+proc declstring(s)
+( if s.size > 0 & stringtab[s] = undefined then
+     stringtab[s] := slab.next
+  fi;
+  return(stringtab[s])
+);
+
+proc declstrings()
+(	var lab, str, i, sep;
+	const linemax := 40;
+
+	if errcnt ~= 0 then return fi;
+	for str in stringtab.index
+	do lab := stringtab[str];
+	   f_s.put(lab, ':\n',
+	   	   long, 'dt_string', newl,
+          	   long, dec(str.size));
+	   if str.size < 80 & ~scan str for break(NON_STANDARD_CHARS) rof
+	   then
+	      f_s.put(newl, '.ascii "', str, '"')
+	   else
+	      for i in str.index
+	      do if i % linemax * linemax = i then
+           	    f_s.put(newl, '.byte ');
+	   	    sep := ''
+        	 fi;
+                 f_s.put(sep, char_to_int[str[i]]);
+        	 sep := sc
+     	      od;
+   	   fi;
+   	   f_s.put(newl)
+	od;
+);
+
+proc exp_real(realval)
+( exp_op0('undef'); exp_op0('load');
+  lineflush();
+  f_s.put('.long ', declstring(string(realval)), newl);
+  exp_op2('call', symtab['real'][S_VALUE].seq, 2);
+);
+
+proc exp_classes()
+( var cname, s, sizes := array(nclasses, 0), names := array(nclasses, '');
+
+  f_s.put('.globl _class_sizes\n',
+          '_class_sizes:\n');
+  for cname in classtab.index
+  do var descr := classtab[cname];
+     sizes[descr[5]] := descr[0];
+     names[descr[5]] := cname;
+  od;
+  for s in sizes do f_s.put(long, s, newl) od;
+  f_s.put('.globl _class_names\n',
+          '_class_names:\n');
+  for cname in names
+  do f_s.put(long, '\t', declstring(cname), newl);
+  od;
+);
+
+
+proc exp_fields()
+( var fld, n;
+
+  for fld in fieldtab do fld.generate od;
+
+  f_s.put('.globl _fields', newl);
+  f_s.put('_fields:', newl);
+  for n in interval(0, nfields - 1, 1) do f_s.put(long, '\tFLD', n, newl) od;
+);
+
+proc exp_terminate()
+( var i, nm,
+      globval := array(glcnt, 0),
+      globname:= array(glcnt, 0);
+  if errcnt ~= 0 then return fi;
+  f_s.put('.globl _nclasses; _nclasses:', newl,
+	long, dec(nclasses), newl,
+	'.globl _nfields; _nfields:', long, dec(nfields), newl,
+	'.globl _globals', newl,
+	'.globl _eglobals', newl,
+	'.globl _globnames', newl,
+	'.globl _stand_in', newl,
+	'.globl _stand_out', newl,
+	'.globl _stand_er', newl);
+  for nm in symtab.index
+  do var entry := symtab[nm][S_VALUE], pre;
+     if entry.isglobal then
+	case nm of
+	'stand_in':
+	'stand_out':
+	'stand_er':
+		pre := '_' || nm || ':'
+	default:
+		pre := ''
+	esac;
+        globval[entry.seq] := pre || long ||
+	   if entry.kind = GlobalVar then 'nil' else entry.tag fi;
+	globname[entry.seq] := nm;
+	if entry.kind = Class then
+	   var p;
+	   for p in entry.procs
+	   do globval[p.seq] := long || p.tag;
+	      globname[p.seq] := p.name;
+	   od;
+	elif entry.kind = BuiltinProc | entry.kind = BuiltinClass then
+	   var refname := '__' || entry.name;
+	   f_s.put(entry.tag, ':', newl);
+	   f_s.put(long, 'dt_subr', newl);
+	   f_s.put(long, if entry.kind = BuiltinClass then -1 else 'nil' fi, newl);
+	   f_s.put('\t.globl\t', refname, newl,
+		   long, refname, newl,
+		   long, dec(0), newl,		# freq #
+		   long, dec(0), newl);		# prof #
+	fi
+     fi;
+  od;
+  f_s.put('_globals:\n');
+  for i in globval do f_s.put(i, newl) od;
+  f_s.put('_eglobals:\n',
+          '_globnames:\n');
+  for i in globname.index
+  do 
+     f_s.put(long, declstring(globname[i]), newl)
+  od;
+  declstrings();
+);
+
+proc inspect(rval, expr)
+(	if rval = Value
+	then	ermsg(expr || ': value required', lnr)
+	elif rval = Assign
+	then	ermsg('illegal assignment to ' || expr, lnr)
+	fi
+);
+
+proc void(aval)
+(	if aval ~= Novalue
+	then	exp_op0('void')
+	fi
+);
+
+proc voidcall(rval)
+(	if rval = Novalue
+	then	exp_op0('void')
+	fi
+);
+
+proc abs(rval)
+	return(if rval < 0 then -rval else rval fi);
+
+var flab	:= labelgenerator('F');
+
+var llab	:= labelgenerator('L');
+
+proc label(l)	(lineflush(); f_s.put(l, ':'));
+
+proc gofl()	exp_op0('gofl');
+
+proc newrc()	exp_op0('newrc');
+
+proc oldrc()	exp_op0('oldrc');
+
+proc resrc()	exp_op0('resrc');
+
+proc close_rc()
+( var i;
+  for i in interval(1, nrc, 1) do exp_op0('oldrc') od;
+);
+
+proc newsubj()	exp_op0('newsubj');
+
+proc oldsubj()	exp_op0('oldsubj');
+
+proc close_subj()
+( var i;
+  for i in interval(1, nsubj, 1) do exp_op0('oldsubj') od;
+);
+
+proc go(l)	exp_opw1('go', l);
+
+proc retu(n)
+( close_rc();
+  close_subj();
+  exp_op1('return', n);
+);
+
+proc fretu()
+( close_rc();
+  close_subj();
+  exp_op0('freturn');
+);
+
+proc ercode(c)
+( exp_op0('error');
+  exp_op0('er_' || c)
+);
+
+proc pushfl(f)
+if errcnt = 0
+then	flstack[flstp := flstp + 1] := f
+fi;
+
+proc popfl()
+if errcnt = 0
+then	if flstp < 0
+	then	comermsg('pop tried from empty flstack')
+	else	flstack[flstp] := '';
+		flstp := flstp - 1
+	fi
+fi;
+
+proc newfl(f)
+if errcnt = 0
+then	if flstp = -1 | ~(flstack[flstp] = f = NIL)
+	then	exp_opw1('newfl', f)
+	fi;
+	pushfl(f)
+fi;
+
+proc oldfl()
+if errcnt = 0
+then	if flstp <= 0 | ~(flstack[flstp] = flstack[flstp-1] = NIL)
+	then	exp_op0('oldfl')
+	fi;
+	popfl()
+fi;

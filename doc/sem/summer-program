@@ -1,0 +1,59 @@
+.iy I ENV
+.iy I ENVglobal
+.iy I ERROR
+.iy I N
+.iy I PROGRAM
+.iy I STATE
+.iy I bind
+.iy I binding
+.iy I eval
+.iy I extend
+.iy I is_proc
+.iy I names
+.iy I new_proc_scope
+.{{
+\fBif\fR \jg{{ \fIe\fR =\h'-0.3m'= \jh\fIdecllist\fR:  \ji(  \jj\*<variable-declaration\*> | \*<constant-declaration\*> |
+\h'|\nju'\*<procedure-declaration\*> | \*<operator-declaration\*> |
+\h'|\nju'\*<class-declaration\*> | \*<operator-symbol-declaration\*>
+\h'|\niu')\v'0.25m'*\v'-0.25m'
+\h'|\nhu'\fIprogdecl\fR:\h'|\niu'\*<program-declaration\*> }}
+\fBthen\fR
+\h'|\ngu'\fBvar\fR \jk\fIbody\fR, \fIdecl\fR, \fIname\fR, \fIprogargs\fR, \fIv\fR, \fIsig\fR;
+.sp 0.5
+\h'|\ngu'\fIvarinit\fR := \*`\fI\fR\^\*';
+\h'|\ngu'\fBfor\fR \jk\fIdecl\fR \fBin\fR \jl\fIdecllist\fR
+\h'|\ngu'\fBdo\fR \jm[\fIv\fR, \fIsig\fR] := \fIeval\fR\^(\fIdecl\fR\|);
+\h'|\nmu'\fBif\fR \jn\fIsig\fR \(ap\h'-0.2m'= \fIN\fR \fBthen\fR \jo\fIERROR\fR \fBfi\fR
+\h'|\ngu'\fBod\fR;
+\h'|\ngu'\fBfor\fR \jk\fIname\fR \fBin\fR \jl\fIENV\fR.\fInames\fR
+\h'|\ngu'\fBdo\fR \jm\fBvar\fR \jp\fIb\fR := \fIENV\fR.\fIbinding\fR\^(\fIname\fR);
+\h'|\nmu'\fBif\fR \jn\fIis\*_proc\fR\^(\fIb\fR) \fBthen\fR \jj\fIb\fR.\fIenv\fR := \fIENV\fR \fBfi\fR
+\h'|\ngu'\fBod\fR;
+\h'|\ngu'\fIENVglobal\fR := \fIENV\fR;
+\h'|\ngu'[\fIv\fR, \fIsig\fR] := \fIeval\fR\^(\fIvarinit\fR);
+\h'|\ngu'\fBif\fR \jm\fIsig\fR \(ap\h'-0.2m'= \fIN\fR \fBthen\fR \jq\fIERROR\fR \fBfi\fR;
+\h'|\ngu'{{ \fIprogdecl\fR =\h'-0.3m'= \jr\s-2PROGRAM\s0 \js\*<identifier\*> \*`\fI\z( \jt\fR\^\*' \fIprogargs\fR:[\*<identifier\*>] \*`\fI)\fR\^\*'
+\h'|\nru'\fIbody\fR:[\*<expression\*>]
+\h'|\ngu'}};
+\h'|\ngu'\fIENV\fR.\fInew\*_proc\*_scope\fR;
+\h'|\ngu'\fBif\fR \jm{{ \fIprogargs\fR =\h'-0.3m'= \ju\*<identifier\*> }}
+\h'|\ngu'\fBthen\fR
+\h'|\nmu'\fIENV\fR.\fIbind\fR\^(\^\fIprogargs\fR, \fISTATE\fR.\fIextend\fR\^(\^\fIget\*_program\*_arguments\fR))
+\h'|\ngu'\fBfi\fR;
+\h'|\ngu'[\fIv\fR, \fIsig\fR] := \fIeval\fR\^(\fIbody\fR);
+\h'|\ngu'\fIreturn\fR\^(\^[\fIv\fR, \fIsig\fR]\^);
+\fBfi\fR;
+.}}
+.iy I ENV
+.iy I ENVglobal
+.iy I ERROR
+.iy I N
+.iy I PROGRAM
+.iy I STATE
+.iy I bind
+.iy I binding
+.iy I eval
+.iy I extend
+.iy I is_proc
+.iy I names
+.iy I new_proc_scope

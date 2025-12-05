@@ -1,0 +1,70 @@
+.TH SUMC 1
+.SH NAME
+sumc \- SUMMER compiler
+.SH SYNOPSIS
+.B sumc
+.I file
+.SH DESCRIPTION
+.I Sumc
+compiles the SUMMER program residing on
+.I file
+and produces an executable
+.I a.out
+file, provided that the source program does not contain any syntax errors.
+.I File
+may end on the filename extension
+.I .sm
+or not.
+In the latter case that extension is appended to
+.I file.
+.PP
+The resulting
+.I a.out
+file recognizes the following options:
+.TP
+.B \-p
+Produces an execution time profile of the program.
+.TP
+.B \-c
+Produces a symbolic procedure call trace of the program.
+.TP
+.B \-t
+Invokes an interactive program tracer, which allows setting of breakpoints
+in the program, inspecting values of program variables and the like.
+Note that the interactive tracer is
+.I also
+invoked if the SUMMER program is interrupt during execution.
+As a consequence, the use of the tracer need not be planned in advance.
+.TP
+.BI \-m N
+Set the initial memory size to
+.I N
+words.
+(The SUMMER system requests memory automatically, but this option may increase
+the execution speed of some programs).
+.TP
+.BI \-s N
+Set the size of the SUMMER runtime stack to
+.I N
+words. The default size of the stack is 1000 words.
+.LP
+.SH FILES
+file.sm		source file
+.br
+file.s		intermediate file
+.br
+file.o		intermediate file
+.br
+a.out		object program
+.SH SEE ALSO
+P. Klint, An overview of the SUMMER programming language,
+Conference Record of the 7th ACM Symposium on Principles of Programming Languages,
+Las Vegas, january, 1980.
+.sp 1
+Summer reference manual (in preparation)
+.sp 1
+The SUMMER interactive tracer.
+.SH BUGS
+The interactive tracer is still weak.
+.sp 1
+Linenumbers in error messages and tracer output be inaccurate.

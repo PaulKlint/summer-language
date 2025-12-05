@@ -1,0 +1,10 @@
+.iy I N
+.iy I a_undefined
+.{{
+\fBif\fR \jg{{ \fIe\fR =\h'-0.3m'= \jh\*<empty\*> }}
+\fBthen\fR
+\h'|\ngu'\fIreturn\fR\^(\^[\fIa\*_undefined\fR, \fIN\fR\|]\^)
+\fBfi\fR;
+.}}
+.iy I N
+.iy I a_undefined

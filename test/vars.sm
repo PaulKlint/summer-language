@@ -1,0 +1,48 @@
+#						#
+# vars -- operations on local and global vars	#
+#						#
+
+include 'heading.sm';
+
+var g1 := 100, g2;
+
+proc p(x, y, z, a, b)
+  if x ~= 1 | y ~= 2 | z ~= 3 | a ~= 'A' | b ~= 'B' then error('in proc p') fi;
+
+program variables()
+( var x, y := 10, z := 13, a, b := 'XYZ', n;
+
+  start('vars');
+  test(n := 0);
+  if y ~= 10 | z ~= 13 | b ~= 'XYZ' then error(n+0) fi;
+  x := 10;
+  if x ~= 10 | x ~= y then error(n+1) fi;
+  x := y := z;
+  if x ~= y | y ~= z | x ~= z | z ~= 13 then error(n+2) fi;
+
+  test(n := 10);
+  x := 1; y := 2; z := 3; a := 'A'; b := 'B';
+  p(x, y, z, a, b);
+  if x ~= 1 | y ~= 2 | z ~= 3 | a ~= 'A' | b ~= 'B' then error(n+1) fi;
+
+  test(n := 20);
+  if g1 ~= 100 then error(n+0) fi;
+  g2 := g1;
+  if g1 ~= 100 | g2 ~= 100 then error(n+1) fi;
+  p(x, y, z, a, b);
+  if g1 ~= 100 | g2 ~= 100 then error(n+2) fi;
+
+  test(n := 30);
+  ( var a := 1, b := 2;
+
+    if a ~= 1 | b ~= 2 then error(n+0) fi;
+    ( var a := 10, b := 20;
+      if a ~= 10 | b ~= 20 then error(n+1) fi;
+      a := 11; b := 21;
+      if a ~= 11 | b ~= 21 then error(n+1) fi;
+    );
+    if a ~= 1 | b ~= 2 then error(n+2) fi;
+  );
+
+  finish('vars');
+)

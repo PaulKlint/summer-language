@@ -1,0 +1,108 @@
+
+#************ Procedures for the treatment of operators ****************#
+
+proc check_monop(symbol)
+if montab[symbol] = undefined
+then	if dytab[symbol] = undefined
+	then	ermsg('"' || symbol || '" undefined', lnr)
+	else	ermsg('dyadic operator "' || symbol
+		      || '" used in monadic position', lnr)
+	fi
+fi;
+
+
+proc check_dyop(symbol)
+if dytab[symbol] = undefined
+then	if montab[symbol] = undefined
+	then	ermsg('"' || symbol || '" undefined', lnr)
+	else	ermsg('monadic operator "' || symbol
+		      || '" used in dyadic position', lnr)
+	fi
+fi;
+
+
+
+proc opush(opr)
+if errcnt = 0 then opstack.append(opr); fi;
+
+proc opop()
+if errcnt = 0 then return(opstack.delete) fi;
+	# Pushing and popping the operator stack.			#
+
+proc ndpush(and)
+if errcnt = 0 then ndstack.append(and) fi;
+
+proc ndpop()
+if errcnt = 0 then return(ndstack.delete) fi;
+
+	# Pushing and popping the operand stack				#
+
+proc priofdef(nf)
+	return(if nf = 1 then 13 else 9 fi);
+	# The standard f-priorities (monadic: 13, dyadic: 9) for user	#
+	# defined operators.						#
+
+proc priogdef(nf)
+	return(if nf = 1 then 14 else 9 fi);
+	# The standard g-priorities for user defined operators.		#
+
+proc treatop(newop)
+(	var prg, oldop;
+
+	if errcnt = 0 then prg := newop[O_PRIOG] fi;
+	while  errcnt = 0 & opstack.last[O_PRIOF] >= prg
+	do	oldop := opop();
+		if oldop[O_STATUS] = 0
+		then	if oldop[O_ADIC] = 1 then
+			   ndpush(MONOP(oldop[O_NAME], ndpop()))
+		        else
+		   	   var right := ndpop(), left := ndpop();
+			   ndpush(DYOP(oldop[O_NAME], left, right))
+			fi;
+		else	if oldop[O_ADIC] = 1 then
+			   ndpush(OPCALL(oldop, [ndpop()]))
+			else
+			   var right := ndpop(), left := ndpop();
+			   ndpush(OPCALL(oldop, [left, right]))
+			fi
+		fi
+	od;
+	opush(newop)
+);
+	# The argument is an operator (or, more accurately, an entry	#
+	# from 'montab' or 'dytab') to be pushed on the operator stack.	#
+	# Before this is done, operators are popped from opstack and	#
+	# handed to MONOP or DYADOP until one is found with an		#
+	# f-priority lower than the g-priority of the new operator. 	#
+	# A left parenthesis has an f-priority lower than the g-priority#
+	# of any operator and is hence never popped.			#
+	# 'treatop' has to distinguish built-in from user defined	#
+	# operators; the latter are operands of the operator 'o_opcall'.#
+
+proc emptystack()
+( var oldop, osp := opstack.size;
+
+	while osp > 0 & errcnt = 0
+	do	oldop := opop(); osp := osp - 1;
+		if oldop[O_NAME] = lpar
+		then return(ndpop());
+		elif oldop[O_STATUS] = 0
+		then	if oldop[O_ADIC] = 1 then
+			   ndpush(MONOP(oldop[O_NAME], ndpop()))
+			else
+			   var right := ndpop(), left := ndpop();
+			   ndpush(DYOP(oldop[O_NAME], left, right))
+			fi;
+		else	if oldop[O_ADIC] = 1 then
+				ndpush(OPCALL(oldop, [ndpop()]))
+			else
+			   var right := ndpop(), left := ndpop();
+			   ndpush(OPCALL(oldop, [left, right]))
+			fi
+		fi
+	od;
+	return(UNDEFINED)
+);
+	# Resembles 'treatop', but pops operators until either the	#
+	# stack is empty or a left parenthesis (which is also popped)	#
+	# is found.							#

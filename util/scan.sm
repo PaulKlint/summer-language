@@ -1,0 +1,118 @@
+proc error(n) put('ERROR: ', n, '\n');
+
+proc substring(s, from, sz)
+( scan s for tab(from) & return(move(sz)) rof );
+
+class my_scan_string(text)
+begin	fetch text, cursor, lit, break, span;
+	var cursor;
+
+	proc lit(s)
+	( if cursor + s.size > text.size |
+	     substring(text, cursor, s.size ) ~= s
+	  then
+	     freturn
+	  else
+	     cursor := cursor + s.size ;
+	     return(s)
+	  fi
+	);
+
+	proc break(s)
+	( var newcursor := cursor;
+
+	  while newcursor < text.size 
+	  do if contains(s, text[newcursor])
+             then
+	        var result := substring(text, cursor, newcursor - cursor);
+
+	        cursor := newcursor;
+		return(result)
+             fi;
+	     newcursor := newcursor + 1
+	  od;
+	  freturn
+	);
+
+        proc span(s)
+        ( var newcursor := cursor;
+
+          while newcursor < text.size & contains(s, text[newcursor])
+          do
+             newcursor := newcursor + 1
+          od;
+          if newcursor > cursor
+          then
+             var result := substring(text, cursor, newcursor - cursor);
+
+             cursor := newcursor;
+             return(result)
+          else
+             freturn
+          fi
+        );
+
+        proc contains(s, c)
+        ( var c1;
+
+          for c1 in s
+          do
+             if c1 = c then return fi;
+          od;
+          freturn;
+        );
+init:
+	cursor := 0;
+end my_scan_string;
+
+proc check(S1, S2)
+( var s1, s2, n;
+
+  s1 := my_scan_string(S1);
+  s2 := my_scan_string(S2);
+  scan s1 for
+     while (n := break(';')) & lit(';')
+     do
+        if ~ scan s2 for lit(n) | lit(n.reverse ) rof
+        then
+	     return(0)
+	fi;
+     od
+  rof;
+  if s1.cursor ~= S1.size | s2.cursor ~= S2.size then
+     return(1)
+  else
+     return(2)
+  fi
+);
+
+program scan_str1 ()
+( var s;
+
+  s := my_scan_string('abcde9');
+  if s.break('0123456789') ~= 'abcde' then error(1) fi;
+  scan my_scan_string('abc123def')
+  for
+      if ~lit('abc') then error(2) fi;
+      if break('fde') ~= '123' then error(3) fi;
+      if cursor ~= 6 then error(4) fi;
+      if text ~= 'abc123def' then error(5) fi;
+  rof;
+  scan my_scan_string('a747372b565758c21222324')
+  for
+      if lit('a') fails then error(100) fi;
+      if span('0123456789') ~= '747372' then error(101) fi;
+      if lit('b') fails then error(102) fi;
+      if span('246813579') ~= '565758' then error(103) fi;
+      if lit('c') fails then error(104) fi;
+      if span('987654321') ~= '21222324' then error(105) fi;
+  rof;
+  if check('ab;cde;f;', 'abcdef') ~= 2 then error(6) fi;
+  if check('ab;cde;f;', 'bacdef') ~= 2 then error(7) fi;
+  if check('ab;cde;f;', 'baedcf') ~= 2 then error(8) fi;
+  if check('ab;cde;f;', 'abx') ~= 0 then error(9) fi;
+  if check('ab;cde;f', 'abcdef') ~= 1 then error(10) fi;
+  if check('ab;;ef;', 'abef') ~= 2 then error(11) fi;
+  if check('ab;;ef;', 'bafe') ~= 2 then error(12) fi;
+  if check('ab;;ef;', 'abxef') ~= 0 then error(13) fi;
+)

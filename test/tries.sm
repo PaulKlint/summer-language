@@ -1,0 +1,84 @@
+#					#
+# tries -- try construction		#
+#					#
+
+var Gp := 0;
+var Gq := 13;
+
+proc error(n) put('ERROR: ', n, '\n');
+
+proc s(n) ();
+
+program tries()
+( var a := [1, 2, 3], t, v, n, b, i;
+
+  s(n := 0);
+  try v := 1 yrt;
+  if v ~= 1 then error(n+0) fi;
+
+  s(n := 10);
+  try (v := 2; if v ~= 2 then error(n+0) fi) yrt;
+  if v ~= 2 then error(n+1) fi;
+
+  s(n := 20);
+  if try Gp := 2 & 0 = 1 yrt fails then
+     if Gp ~= 0 then error(n+0) fi;
+  else
+     error(n+1)
+  fi;
+
+  s(n := 30);
+  try Gp := 2 & 0 = 1 yrt | 1 = 1;
+  if Gp ~= 0 then error(n+0) fi;
+
+  s(n := 40);
+  try (v := 1; Gp := 10; 0 = 1) yrt | 1 = 1;
+  if v ~= 1 then error(n+0) fi;
+  if Gp ~= 0 then error(n+1) fi;
+
+  s(n := 50);
+  if try a[0] := -1 & 0 = 1 yrt | 1 = 2 then fi;
+  if a[0] ~= 1 then error(n+0) fi;
+
+  try a[0] := -2 & Gp := -3 & 0 = 0 yrt;
+  if a[0] ~= -2 | Gp ~= -3 then error(n+1) fi;
+
+  s(n := 60);
+  t := table(5, 'X') init ['a' : 'A', 'b' : 'B'];
+  try (t['a'] := 'AA'; t['c'] := 'C'; 0 = 1) yrt | 0 = 0;
+  if t['a'] ~= 'A' then error(n+0) fi;
+  if t['c'] ~= 'X' then error(n+1) fi;
+
+  s(n := 70);
+  Gp := 0;
+  try (Gp := 10; 0 = 1) yrt | try (Gp := 20; 2 = 3) yrt | 5 = 5;
+  if Gp ~= 0 then error(n+0) fi;
+
+  s(n := 80);
+  try (Gq := 14; Gp := 15; 0 = 1) yrt | 0 = 0;
+  if Gq ~= 13 | Gp ~= 0 then error(n+0) fi;
+
+  s(n := 90);
+  try (Gp := 11; Gq := 12; Gp := 13; 0 = 1) yrt | 0 = 0;
+  if Gq ~= 13 | Gp ~= 0 then error(n+0) fi;
+
+  s(n := 100);
+  b := bits(5, 1);
+  b[1] := b[3] := 0;
+  try (b[4] := 0; b[3] := 1; 0 = 1) yrt | '';
+  if b[0] ~= 1 | b[2] ~= 1 | b[4] ~= 1 then error(n + 0) fi;
+  if b[1] ~= 0 | b[3] ~= 0 then error(n + 1) fi;
+
+  s(n := 110);
+  v := 'b';
+  for i in interval(0, 50000, 1)
+  do
+     try (Gp:=v||'a' & try Gp := v || 'a' yrt) yrt
+  od;
+
+  s(n := 120);
+
+  t := ['a' : 1, 'b' : 2];
+  try if t['c'] = undefined then t['c'] := 3 fi yrt;
+  if t['c'] ~= 3 then error(n + 0) fi;
+)

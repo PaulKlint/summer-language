@@ -1,0 +1,54 @@
+Dit zijn de sources van sep3. Deze SUMMER vertaler maakt gebruik van een
+beperkte vorm van incrementele vertaling, en wel onder de volgende
+omstandigheden:
+
+1)	De herarchie van source modulen mag niet wijzigen.
+
+2)	Aan een symbool moet steeds het zelfde type declaratie gerelateerd
+	zijn.
+
+3)	Het aantal parameters van een procedure of klasse mag niet wijzigen.
+
+4)	De waarde van een constante mag niet wijzigen.
+
+5)	De associaties en de velden van een klasse mogen niet wijzigen.
+
+Een totale vertaalsessie wordt gestart als blijkt dat de file
+<wortelfile>.env.o niet bestaat.
+
+
+De volgende files worden gegenereerd:
+
+<wortelfile>.er:	De fouten in de totale SUMMER tekst.
+<file>.sk:		De omgevingsbeschrijving voor <file>.sm in SUMMER.
+<file>.o:		De object-module voor <file>.
+<file>.s:		De assebler-module voor <file>.
+<wortelfile.env.o>:	De object-module voor de omgevingsbeschrijvende SAM
+			code.
+<wortelfile.env.s>:	De assembler-module voor de omgevingsbeschrijvende
+			SAM code.
+
+
+Terugkeer waarden:
+
+0:			Vertaling was een succes.
+1:			Er werden fouten in de vertaling gevonden.
+2:			Er is totale vertaling nodig.
+
+
+Verwachte omgevingsvariabelen:
+
+AS:			Padnaam van de te gebruiken assembler.
+CC:			Padnaam van de te gebruiken C-vertaler voor het
+			linkage-editen.
+RM:			Padnaam van het "remove" commando.
+PREFIX:			Een assembler-file met de constante definities voor
+			de SAM.
+INT:			De object-bibliotheek voor SAM.
+OLDEST:			Een programma wat van een aantal files bepaald welke
+			de oudste is.
+
+Argument:
+
+Naam van de source-module die overeenkomt met de wortel van de
+source-modulen herachie.

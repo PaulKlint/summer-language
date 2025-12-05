@@ -1,0 +1,6 @@
+var x, Ga;
+program q(a)
+( var a, b, c;
+  try((a:=10);(x:=100)) yrt;
+  Ga:=a
+)

@@ -1,0 +1,423 @@
+var digit := '0123456789',
+      letter:= 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
+      letgit:= letter || digit,
+      alpha := letter || '_',
+      alphanum := alpha || digit;
+proc L ()
+   (span(' \t\n') | '' ) &
+   while lit('#') & break('#') & move(1) & (span(' \t\n') | '')
+   do od;
+
+proc id ()
+( var x;
+   L & x := (any(alpha) || (span(alphanum) | '')) &
+   if keyword[x] ~= undefined then
+      move(-size(x)) & freturn
+   fi
+);
+
+proc empty () ();
+
+proc integer_const ()
+   span(digit);
+
+proc real_const ()
+   (span(digit) | '') & lit('.') & (span(digit) | '') &
+   ((lit('e') & (any('+-') | '') & span(digit)) | '') ;
+
+proc string_const ()
+   lit('''') & break('''') & move(1) &
+   while lit('''') do break('''') & move(1) od;
+proc op_id ()
+   (lit('_') & span(letgit) & lit('_')) |
+   span('*+-/:<=>|$&~!\\@?') ;
+#% syntactic definitions %
+
+summer-program	::= (var-decl | const-decl | proc-decl | op-decl |
+		    class-decl | op-id-decl)* program-decl .
+#
+
+proc summer_program()
+( while (var_decl|const_decl|proc_decl|op_decl|class_decl|op_id_decl) do  od &program_decl);
+#
+
+program-decl	::= PROGRAM id formals [expr] .
+#
+
+proc program_decl()
+(L&lit('program')&L&id&formals&(expr | empty) );
+#
+
+op-id-decl	::= (MONADIC | DYADIC) { op-id ',' }+ ';' .
+#
+
+proc op_id_decl()
+((L&lit('monadic')&L|L&lit('dyadic')&L)&op_id& while L&lit(',')&L do op_id od &L&lit(';')&L);
+#
+
+class-decl	::= CLASS id formals
+		    BEGIN subclass-decl
+		      fetch-assocs
+		      store-assocs
+		      (proc-decl | op-decl | var-decl | const-decl)*
+		      [ INIT ':' [block] ]
+		    END id ';' .
+#
+
+proc class_decl()
+(L&lit('class')&L&id&formals&L&lit('begin')&L&subclass_decl&fetch_assocs&store_assocs& while (proc_decl|op_decl|var_decl|const_decl) do  od &(L&lit('init')&L&L&lit(':')&L&(block | empty)  | empty) &L&lit('end')&L&id&L&lit(';')&L);
+#
+
+subclass-decl	::= [ SUBCLASS OF id ';' ] .
+#
+
+proc subclass_decl()
+((L&lit('subclass')&L&L&lit('of')&L&id&L&lit(';')&L | empty) );
+#
+
+fetch-assocs	::= [ FETCH assocs ] .
+#
+
+proc fetch_assocs()
+((L&lit('fetch')&L&assocs | empty) );
+#
+
+store-assocs	::= [ STORE assocs ] .
+#
+
+proc store_assocs()
+((L&lit('store')&L&assocs | empty) );
+#
+
+assocs		::= { assoc ',' }+ ';' .
+#
+
+proc assocs()
+(assoc& while L&lit(',')&L do assoc od &L&lit(';')&L);
+#
+
+assoc		::= field-id [ ':' id ] .
+#
+
+proc assoc()
+(field_id&(L&lit(':')&L&id | empty) );
+#
+
+field-id	::= id | op-id .
+#
+
+proc field_id()
+(id|op_id);
+#
+
+proc-decl	::= PROC id formals [ expr ] ';' .
+#
+
+proc proc_decl()
+(L&lit('proc')&L&id&formals&(expr | empty) &L&lit(';')&L);
+#
+
+op-decl		::= OP op-id formals expr ';' .
+#
+
+proc op_decl()
+(L&lit('op')&L&op_id&formals&expr&L&lit(';')&L);
+#
+
+var-decl	::= VAR { var-init ',' }+ ';' .
+#
+
+proc var_decl()
+(L&lit('var')&L&var_init& while L&lit(',')&L do var_init od &L&lit(';')&L);
+#
+
+var-init	::= id [ ':=' expr ] .
+#
+
+proc var_init()
+(id&(L&lit(':=')&L&expr | empty) );
+#
+
+const-decl	::= CONST { const-init ',' }+ ';' .
+#
+
+proc const_decl()
+(L&lit('const')&L&const_init& while L&lit(',')&L do const_init od &L&lit(';')&L);
+#
+
+const-init	::= id ':=' const-expr .
+#
+
+proc const_init()
+(id&L&lit(':=')&L&const_expr);
+#
+
+formals		::= '(' { id ',' }* ')' .
+#
+
+proc formals()
+(L&lit('(')&L&if id then  while L&lit(',')&L do id od fi &L&lit(')')&L);
+#
+
+constant	::=  string-const | integer-const | real-const .
+#
+
+proc constant()
+(string_const|integer_const|real_const);
+#
+
+const-op	::= '+' | '-' | '*' | '/' | '%' | '||' .
+#
+
+proc const_op()
+(L&lit('+')&L|L&lit('-')&L|L&lit('*')&L|L&lit('/')&L|L&lit('%')&L|L&lit('||')&L);
+#
+
+const-expr	::= simple-const-expr (const-op const-expr)* .
+#
+
+proc const_expr()
+(simple_const_expr& while (const_op&const_expr) do  od );
+#
+
+simple-const-expr	::= constant | id | '-' constant | '(' const-expr ')' .
+#
+
+proc simple_const_expr()
+(constant|id|L&lit('-')&L&constant|L&lit('(')&L&const_expr&L&lit(')')&L);
+#
+
+expr		::= unary-expr (dyadic-op unary-expr)* .
+#
+
+proc expr()
+(unary_expr& while (dyadic_op&unary_expr) do  od );
+#
+
+unary-expr	::= (monadic-op)* primary .
+#
+
+proc unary_expr()
+( while (monadic_op) do  od &primary);
+#
+
+dyadic-op	::= '+'  | '-'  | '*'  | '/'  | '%'  | '||' | '<'  |
+		    '<=' | '>'  | '>=' | '='  | '~=' | ':=' | '&'  |
+		    '|'  | op-id .
+#
+
+proc dyadic_op()
+(L&lit('+')&L|L&lit('-')&L|L&lit('*')&L|L&lit('/')&L|L&lit('%')&L|L&lit('||')&L|L&lit('<')&L|L&lit('<=')&L|L&lit('>')&L|L&lit('>=')&L|L&lit('=')&L|L&lit('~=')&L|L&lit(':=')&L|L&lit('&')&L|L&lit('|')&L|op_id);
+#
+
+monadic-op	::= '~' | '-' | op-id .
+#
+
+proc monadic_op()
+(L&lit('~')&L|L&lit('-')&L|op_id);
+#
+
+primary		::= ( id [ actuals ] | constant |
+	              return-expr | while-expr | array-expr | table-expr |
+  		      if-expr | try-expr | scan-expr | for-expr | case-expr |
+		      assert-expr | par-expr
+		    ) ( subscript | select )* .
+#
+
+proc primary()
+((id&(actuals | empty) |constant|return_expr|while_expr|array_expr|table_expr|if_expr|try_expr|scan_expr|for_expr|case_expr|assert_expr|par_expr)& while (subscript|select) do  od );
+#
+
+actuals		::= '(' { expr ',' }* ')' .
+#
+
+proc actuals()
+(L&lit('(')&L&if expr then  while L&lit(',')&L do expr od fi &L&lit(')')&L);
+#
+
+subscript	::= '[' expr ']' .
+#
+
+proc subscript()
+(L&lit('[')&L&expr&L&lit(']')&L);
+#
+
+select		::= '.' id [ actuals ] .
+#
+
+proc select()
+(L&lit('.')&L&id&(actuals | empty) );
+#
+
+return-expr	::= FRETURN | RETURN [ '(' expr ')' ] .
+#
+
+proc return_expr()
+(L&lit('freturn')&L|L&lit('return')&L&(L&lit('(')&L&expr&L&lit(')')&L | empty) );
+#
+
+while-expr	::= WHILE test DO block OD .
+#
+
+proc while_expr()
+(L&lit('while')&L&test&L&lit('do')&L&block&L&lit('od')&L);
+#
+
+try-expr	::= TRY { expr ',' }+ [UNTIL block] YRT .
+#
+
+proc try_expr()
+(L&lit('try')&L&expr& while L&lit(',')&L do expr od &(L&lit('until')&L&block | empty) &L&lit('yrt')&L);
+#
+
+scan-expr	::= SCAN expr FOR block ROF .
+#
+
+proc scan_expr()
+(L&lit('scan')&L&expr&L&lit('for')&L&block&L&lit('rof')&L);
+#
+
+for-expr	::= FOR id IN expr DO block OD .
+#
+
+proc for_expr()
+(L&lit('for')&L&id&L&lit('in')&L&expr&L&lit('do')&L&block&L&lit('od')&L);
+#
+
+case-expr	::= CASE expr OF { case-entry ',' }* [ DEFAULT ':' [expr]] ESAC .
+#
+
+proc case_expr()
+(L&lit('case')&L&expr&L&lit('of')&L&if case_entry then  while L&lit(',')&L do case_entry od fi &(L&lit('default')&L&L&lit(':')&L&(expr | empty)  | empty) &L&lit('esac')&L);
+#
+
+case-entry	::= { const-expr ':' }+ expr .
+#
+
+proc case_entry()
+(const_expr& while L&lit(':')&L do const_expr od &expr);
+#
+
+assert-expr	::= ASSERT expr .
+#
+
+proc assert_expr()
+(L&lit('assert')&L&expr);
+#
+
+if-expr		::= IF test THEN block ( ELIF test THEN block )* [ELSE block] FI .
+#
+
+proc if_expr()
+(L&lit('if')&L&test&L&lit('then')&L&block& while (L&lit('elif')&L&test&L&lit('then')&L&block) do  od &(L&lit('else')&L&block | empty) &L&lit('fi')&L);
+#
+
+test		::= expr [ FAILS | SUCCEEDS ] .
+#
+
+proc test()
+(expr&(L&lit('fails')&L|L&lit('succeeds')&L | empty) );
+#
+
+par-expr	::= '(' block ')' .
+#
+
+proc par_expr()
+(L&lit('(')&L&block&L&lit(')')&L);
+#
+
+block		::= ( var-decl | const-decl )* { [expr] ';' }* .
+#
+
+proc block()
+( while (var_decl|const_decl) do  od &if (expr | empty)  then  while L&lit(';')&L do (expr | empty)  od fi );
+#
+
+array-expr	::= ARRAY sizedef [ INIT array-init ] | array-init .
+#
+
+proc array_expr()
+(L&lit('array')&L&sizedef&(L&lit('init')&L&array_init | empty) |array_init);
+#
+
+sizedef		::= '(' expr ',' expr ')' .
+#
+
+proc sizedef()
+(L&lit('(')&L&expr&L&lit(',')&L&expr&L&lit(')')&L);
+#
+
+array-init	::= '[' { expr ',' }* ']' .
+#
+
+proc array_init()
+(L&lit('[')&L&if expr then  while L&lit(',')&L do expr od fi &L&lit(']')&L);
+#
+
+table-expr	::= TABLE sizedef [ INIT table-init ] | table-init .
+#
+
+proc table_expr()
+(L&lit('table')&L&sizedef&(L&lit('init')&L&table_init | empty) |table_init);
+#
+
+table-init	::= '[' { ( {expr ':'}+ expr ) ',' }* ']' .
+#
+
+proc table_init()
+(L&lit('[')&L&if (expr& while L&lit(':')&L do expr od &expr) then  while L&lit(',')&L do (expr& while L&lit(':')&L do expr od &expr) od fi &L&lit(']')&L);
+
+var keyword := table(20, undefined) init[
+	'array':
+	'assert':
+	'begin':
+	'case':
+	'class':
+	'const':
+	'default':
+	'do':
+	'dyadic':
+	'elif':
+	'else':
+	'end':
+	'esac':
+	'fails':
+	'fetch':
+	'fi':
+	'for':
+	'freturn':
+	'if':
+	'in':
+	'init':
+	'monadic':
+	'od':
+	'of':
+	'op':
+	'proc':
+	'program':
+	'return':
+	'rof':
+	'scan':
+	'store':
+	'subclass':
+	'succeeds':
+	'table':
+	'then':
+	'try':
+	'until':
+	'var':
+	'while':
+	'yrt':
+	1];
+program parse(prog)
+( scan open(prog[0], 'r' , 512)
+  for
+    if summer_program
+    then
+      put(prog[0], ' is syntactically correct\n')
+    else
+      put(prog[0], ' contains syntax error(s)\n');
+      put('near ... ''', move(20) | rtab(0), ''' ...\n')
+    fi
+  rof
+)

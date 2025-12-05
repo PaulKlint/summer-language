@@ -1,0 +1,133 @@
+var	skelet;
+
+# The string for the skelet of a source.				#
+
+
+var	first_pos, last_pos;
+
+# first_pos and last_pos are the positions in line.text between wich    #
+# the real lexical value (as on the input) of sy can be found.          #
+
+
+proc string_sy()
+(
+  # This procedure gets the string value of sy from line. #
+  # It uses first_pos and last_pos. #
+  return(line.text.substr(first_pos,last_pos - first_pos))
+); # string_sy #
+
+
+class FILTER(to)
+begin
+      fetch start_copying, end_copying, hidden_variable, put, stop, to;
+      var times_copying_started, prev := '';
+      
+      proc start_copying()
+      (
+	if times_copying_started = 0
+	then
+	  to.put(prev);
+	  prev := string_sy
+	fi;
+        times_copying_started := times_copying_started + 1
+      ); # start_copying #
+      
+      proc end_copying(del_prev)
+      (
+        if del_prev = True & times_copying_started = 1
+	then
+	  prev := ''
+	fi;
+	times_copying_started := times_copying_started - 1
+      ); # end_copying #
+      
+      proc hidden_variable()
+      (
+	prev := prev || nullchr
+      ); # hidden_variable #
+      
+      proc put()
+      (
+	if times_copying_started > 0
+	then
+	  to.put(prev);
+	  prev := string_sy
+	fi
+      ); # put #
+      
+      proc stop()
+      (
+	to.put(prev)
+      ); # stop #
+      
+      init: times_copying_started := 0;
+
+end FILTER;
+
+class NULLFILTER(to)
+begin subclass of FILTER;
+      fetch start_copying, end_copying, hidden_variable, put, stop, to;
+
+      proc start_copying()
+      (
+	
+      ); # start_copying #
+      
+      proc end_copying(del_prev)
+      (
+	
+      ); # end_copying #
+      
+      proc hidden_variable()
+      (
+	
+      ); # hidden_variable #
+      
+      proc put()
+      (
+	
+      ); # put #
+      
+      proc stop()
+      (
+	
+      ); # stop #
+      
+end NULLFILTER;
+
+class FORMOUT()
+begin
+      fetch put, text;
+      var previous_was_alphanum_or_op, curr_size, text;
+      
+      proc put(str)
+      (
+	var this_is_alphanum_or_op :=
+	  if scan_string(str).any(alphanum || ops)
+          then
+	    True
+	  else
+	    False
+	  fi, str_size := str.size();
+	if curr_size + str_size > 65
+	then
+	  text := text || '\n';
+	  curr_size := 0;
+	  previous_was_alphanum_or_op := False
+	fi;
+	if this_is_alphanum_or_op = True
+	 & previous_was_alphanum_or_op = True
+	then
+	  curr_size := curr_size + 1;
+	  text := text || ' '
+	fi;
+	text := text || str;
+	previous_was_alphanum_or_op := this_is_alphanum_or_op;
+	curr_size := curr_size + str_size
+      ); # put #
+
+      init: text := '';
+            previous_was_alphanum_or_op := False;
+            curr_size := 0;
+
+end FORMOUT;

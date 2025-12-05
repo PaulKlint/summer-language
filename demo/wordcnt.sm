@@ -1,0 +1,53 @@
+#************************************************************************
+*									*
+*	This program counts the frequency of occurrence of words in	*
+*	files. A word is defined as a sequence of (upper or lower case)	*
+*	letters. Note how the "index" function in "printab"		*
+*	sorts table keys automatically.					*
+*									*
+*	extract_words extracts and counts all words in "line".		*
+*	Frequencies are registrated in table "freq". The value		*
+*	delivered by extract_word is the maximal word width so far.	*
+*									*
+*	printtab prints the frequncy table with given maximal		*
+*	word width.							*
+************************************************************************#
+
+proc extract_words(line, freq, width)
+( const letters := 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+  scan line
+  for while break(letters)
+      do var word := span(letters);
+	 freq[word] := freq[word] + 1;
+         if word.size > width then width := word.size fi
+      od
+  rof;
+  return(width)
+);
+
+proc printtab(freq, width)
+( var word;
+
+  for word in freq.index 
+  do  put(word.left(width + 2, ' ') , freq[word], '\n') od
+);
+
+program wordcount(files)
+( var current_file, line;
+
+  for current_file in files
+  do var data;
+     if data := file(current_file,'r') fails then
+        put('can''t open ', current_file, '\n')
+     else
+        var line, freq := table(100, 0), width := 0;
+        while line := data.get 
+        do
+           width := extract_words(line, freq, width)
+        od;
+	put('Word frequency in ', current_file, ':\n\n');
+        printtab(freq, width);
+     fi;
+  od
+)

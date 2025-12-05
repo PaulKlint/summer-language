@@ -1,0 +1,287 @@
+#****************************************************************
+* This program implements a formal rewriting system that	*
+* models pattern matching operations.				*
+* All pattern components are described by unary or binary	*
+* functions:							*
+*	SUBS(a,b)	==	a -- b	subsequentiation	*
+*	ALT(a,b)	==	a | b	alternation		*
+*	IMSBAS(p,v)	==	p !=: x	immediate subject asg.	*
+*	CDSBAS(p,v)	==	p =: x conditional subject asg. *
+*	IMACT(e)	==	!@e	immediate action	*
+*	CDACT(e)	==	@e	conditional action	*
+* In this system all function arguments have to be taken	*
+* literally, i.e. IMSBAS("abc",x) is supposed to assign to a	*
+* variable with name 'x'.					*
+* A pattern is defined as					*
+* 	a variable (the initial value is used as pattern)	*
+* or								*
+*	a string (succeeds if that string occurs at the current	*
+*		 cursor position.				*
+* or								*
+*	[cursor,actions,pattern]				*
+*		pattern is applied at position cursor with the	*
+*		given list of actions.				*
+* or								*
+*	a functional composition of the primitive functions	*
+*	(SUBS, ALT, CDACT, IMACT, CDSBAS, IMSBAS, UNEVAL)	*
+*	with patterns as arguments.				*
+*								*
+* An action consists of an identifier followed by ':=' followed	*
+* by either an identifier or a string. An action list consists	*
+* of actions separated by semicolons.				*
+****************************************************************#
+
+var letter := 'abcdefghijklmnopqrstuvwxyz',
+    digit  := '0123456789',
+    letgit := letter || digit,
+    actions,
+    subject,		# current subject string #
+    env_init,		# environment at start of pattern match #
+    env_cur,		# current environment #
+    null  := '',
+    quote := '"',
+    debug := 1;
+
+proc bal(s1, s2, s3) code;
+
+proc empty() ();
+
+proc error(s) put('\nERROR: ', s, '\n');
+
+proc unop ()
+  lit('UNEVAL') | lit('CDACT') | lit('IMACT') | lit('TAB');
+
+proc binop ()
+  lit('SUBS') | lit('ALT') |
+  lit('IMSBAS') | lit('CDSBAS');
+
+proc identifier()
+  return(any(letter) || (span(letgit) | empty()));
+
+proc stringcon()
+( var body;
+
+  if lit(quote) & body := break(quote) & lit(quote)
+  then
+     return(body)
+  else
+     freturn
+  fi
+);
+
+proc pattern(e)
+( var op, a, b, c;
+
+  scan e
+  for
+    if a := identifier()
+    then
+       return('IDENTIFIER', a, b, c)
+    elif a := stringcon()
+    then
+       return('STRING', a, b, c)
+    elif lit('[') &
+       a := break(',') & move(1) &		# cursor #
+       b := break(',') & move(1) &		# actions #
+       c := bal(']', '([', '])') & move(1)	# pattern #
+    then
+       return('COMPOUND', a, b, c)
+    elif op := unop() & lit('(') & a := bal(')', '([', '])') & lit(')')
+    then
+       return(op, a, b, c)
+    elif op := binop() & lit('(') & a := bal(',', '([', '])') & lit(',') &
+         b := bal(')', '([', '])') & lit(')')
+    then
+       return(op, a, b, c)
+    fi
+  rof;
+  freturn
+);
+
+proc eval(s)
+( var x, v;
+
+  scan s
+  for
+     while x := identifier() & lit(':=') &
+           v := (env_cur[identifier()] | (quote || stringcon() || quote)) &
+	   (lit(';') | empty())
+     do
+        env_cur[x] := v
+     od;
+     if ~rpos(0) then error('EVAL(' || s || ')\n') fi
+  rof
+);
+
+
+proc substr(s, start, length)
+  scan s for tab(start) & return(move(length)) rof;
+
+
+proc make1(op, a)
+  return(op || '(' || a || ')');
+
+proc make2(op, a, b)
+  if a = null then return(b)
+  elif b = null then return(a)
+  else
+    return(op || '(' || a || ',' || b || ')')
+  fi;
+
+proc makesubs(a, b) return(make2('SUBS', a, b));
+
+proc makealt(a, b) return(make2('ALT', a, b));
+
+proc makeimsbas(p, v) return(make2('IMSBAS', p, v));
+
+proc makecdsbas(p, v) return(make2('CDSBAS', p, v));
+
+proc makeassign(x, v)
+  return(x || ':=' || v || ';');
+
+proc makecomp(c, a, p)
+  if p = null then
+     return(null)
+  else
+    return('[' || string(c) || ',' || a || ',' || p || ']')
+  fi;
+
+proc litmatch(cursor, t)
+  scan subject for tab(number(cursor)) & lit(t) rof;
+
+#****************************************************************
+*								*
+* match(c0, a0, p0) attempts to apply the pattern p0 to the	*
+* current subject at cursor position c0. a0 denotes the action	*
+* list that has been accumulated so far. The match can either	*
+* fail or succeed. In the latter case the triple (cr, ar,pr) is	*
+* delivered as value.						*
+*	cr	is the resulting cursor value			*
+*	ar	is the resulting action list			*
+*	pr	is a pattern that contains (eventual) untried	*
+*		alternatives of p0				*
+*								*
+****************************************************************#
+
+proc match(c0, a0, p0)
+(var op, alpha, beta, gamma, c1, c2, a1, a2, p1, p2, body;
+
+  c0 := number(c0);
+  if debug > 0 then
+     put(c0, '\t', a0, '\t', p0, '\n')
+  fi;
+  if ~ let op, alpha, beta, gamma := pattern(p0) then
+     error('MATCH\n')
+  fi;
+  if op = 'STRING' then
+     if litmatch(c0, alpha)
+     then
+	return(c0 + size(alpha), a0, null)
+     else
+        freturn
+     fi
+  elif op = 'IDENTIFIER' then
+     if let c1, a1, p1 := match(c0, a0, env_init[p0])
+     then
+        return(c1, a1, p1)
+     else
+        freturn
+     fi
+  elif op = 'COMPOUND' then
+     if let c1, a1, p1 := match(alpha, beta, gamma)
+     then
+	return(c1, a1, p1)
+     else
+	freturn
+     fi
+  elif op = 'ALT' then
+     if let c1, a1, p1 := match(c0, a0, alpha) then
+	return(c1, a1, makecomp(c0, a0, makealt(p1, beta)))
+     elif let c2, a2, p2 := match(c0, a0, beta) then
+	return(c2, a2, makecomp(c0, a0, p2))
+     else
+	freturn
+     fi
+  elif op = 'SUBS' then
+     if let c1, a1, p1 := match(c0, a0, alpha) then
+	if let c2, a2, p2 := match(c1, a1, beta) then
+	   return(c2, a2,
+		makealt(makecomp(c1,a1,p2),makesubs(makecomp(c0,a0,p1),beta)))
+	else
+           if p1 ~= null then
+	      if let c2, a2, p2 := match(c0, a0, makesubs(p1, beta))
+              then
+		 return(c2, a2, p2)
+              fi
+	   fi
+	fi
+     fi;
+     freturn
+  elif op = 'UNEVAL' then
+     if let c1, a1, p1 := match(c0, a0, env_cur[alpha])
+     then
+        return(c1, a1, p1)
+     else
+        freturn
+     fi
+  elif op = 'IMSBAS' then
+     if let c1, a1, p1 := match(c0, a0, alpha) then
+	env_cur[beta] := quote || substr(subject, c0, c1 - c0) || quote;
+        return(c1, a1, makecomp(c0, a0, makeimsbas(p1, beta)))
+     else
+	freturn
+     fi
+  elif op = 'CDSBAS' then
+     if let c1, a1, p1 := match(c0, a0, alpha) then
+        a2 := makeassign(beta, quote || substr(subject, c0, c1 - c0) || quote);
+        return(c1, a2, makecomp(c0, a0, makecdsbas(p1, beta)))
+     else
+        freturn
+     fi
+  elif op = 'CDACT' then
+     return(c0, a0 || alpha || ';', p0)
+  elif op = 'IMACT' then
+     if eval(alpha) then
+	   return(c0, a0, null)
+    else
+	freturn
+     fi
+  fi
+);
+
+program pm ()
+( var i := 0, pat, cursor, action, ex := [
+	'abc',	'"abc"',
+	'abc',	'SUBS("a","bc")',
+	'ac',	'ALT("ab","ac")',
+	'abe',	'SUBS("ab",ALT("c","e"))',
+	'abe',	'SUBS(ALT("a","ab"),"e")',
+	'abe',	'SUBS(ALT("a","ab"),ALT("c","e"))',
+	'abc',	'IMSBAS("a",x)',
+	'abc',	'CDSBAS("a",x)',
+	'aa',	'SUBS(IMSBAS("a",x),UNEVAL(x))',
+	'abc',	'IMACT(x:="xxxx")',
+	'abc',	'SUBS(IMACT(x:="abc"),UNEVAL(x))',
+	'abc',	'CDACT(x:="yy")',
+	'abc',	'SUBS(CDACT(x:="yy"),"a")',
+	'abc',	'SUBS(SUBS(CDACT(x:="yy"),CDACT(y:="xx")),CDACT(z:=x))',
+	'cd',	'SUBS(CDSBAS(ALT("b","c"),zzz),"d")',
+	'abc',	'SUBS(CDSBAS(ALT("a","ab"),zzz),"c")'
+	];
+  while i < size(ex) - 1
+  do
+     subject := ex[i];
+     pat     := ex[i+1];
+     cursor  := 0;
+     env_init    := table(10, null);
+     env_cur    := table(10, null);
+     put('\nsubject: ', subject, ' pattern: ', pat, '\n');
+     if let cursor, action, pat := match(cursor, null, pat) then
+        put('succeeds\n');
+	put('returns: ', action, '\n')
+     else
+        put('fails\n')
+     fi;
+     i := i + 2;
+  od
+)

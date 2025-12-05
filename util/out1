@@ -1,0 +1,186 @@
+Parse "(a+a)*a" with grammer "gram_ae"
+38 states generated
+Parse derived from: [E->T. , 0]
+
+
+E->T->F * T 
+    F->( E ) 
+      E->T + E 
+        T->F->a 
+        E->T->F->a 
+    T->F->a 
+Parse "xxxx" with grammer "gram_ubda"
+29 states generated
+Parse derived from: [A->AA. , 0]
+
+
+A->A A 
+  A->A A 
+    A->A A 
+      A->x 
+      A->x 
+    A->x 
+  A->x 
+Parse "xxxxx" with grammer "gram_pal"
+28 states generated
+Parse derived from: [A->xAx. , 0]
+
+
+A->x A x 
+  A->x A x 
+    A->x 
+Parse "ededea" with grammer "gram_gre"
+22 states generated
+Parse derived from: [X->Ya. , 0]
+
+
+X->Y a 
+  Y->Y d Y 
+    Y->Y d Y 
+      Y->e 
+      Y->e 
+    Y->e 
+Parse "ededeabbbb" with grammer "gram_gre"
+30 states generated
+Parse derived from: [X->Xb. , 0]
+
+
+X->X b 
+  X->X b 
+    X->X b 
+      X->X b 
+        X->Y a 
+          Y->Y d Y 
+            Y->Y d Y 
+              Y->e 
+              Y->e 
+            Y->e 
+Parse "ededededeabb" with grammer "gram_gre"
+53 states generated
+Parse derived from: [X->Xb. , 0]
+
+
+X->X b 
+  X->X b 
+    X->Y a 
+      Y->Y d Y 
+        Y->Y d Y 
+          Y->Y d Y 
+            Y->Y d Y 
+              Y->e 
+              Y->e 
+            Y->e 
+          Y->e 
+        Y->e 
+Parse "p" with grammer "gram_prop"
+15 states generated
+Parse derived from: [F->U. , 0]
+
+
+F->U->L->p 
+Parse "(p&q)" with grammer "gram_prop"
+44 states generated
+Parse derived from: [F->U. , 0]
+
+
+F->U->( F ) 
+    F->P->U & U 
+        U->L->p 
+        U->L->q 
+Parse "(p`&q)|r|p|q`" with grammer "gram_prop"
+97 states generated
+Parse derived from: [F->S. , 0]
+
+
+F->S->U | S 
+    U->( F ) 
+      F->P->U & U 
+          U->L->L ` 
+              L->p 
+          U->L->q 
+    S->U | S 
+      U->L->r 
+      S->U | U 
+        U->L->p 
+        U->L->L ` 
+            L->q 
+Parse "p>((q>~(r`|(p&q)))>(q`|r))" with grammer "gram_prop"
+174 states generated
+Parse derived from: [F->C. , 0]
+
+
+F->C->U > U 
+    U->L->p 
+    U->( F ) 
+      F->C->U > U 
+          U->( F ) 
+            F->C->U > U 
+                U->L->q 
+                U->~ U 
+                  U->( F ) 
+                    F->S->U | U 
+                        U->L->L ` 
+                            L->r 
+                        U->( F ) 
+                          F->P->U & U 
+                              U->L->p 
+                              U->L->q 
+          U->( F ) 
+            F->S->U | U 
+                U->L->L ` 
+                    L->q 
+                U->L->r 
+Parse "~(~p`&(q|r)&p`)" with grammer "gram_prop"
+108 states generated
+Parse derived from: [F->U. , 0]
+
+
+F->U->~ U 
+    U->( F ) 
+      F->P->U & P 
+          U->~ U 
+            U->L->L ` 
+                L->p 
+          P->U & U 
+            U->( F ) 
+              F->S->U | U 
+                  U->L->q 
+                  U->L->r 
+            U->L->L ` 
+                L->p 
+Parse "((p&q)|(q&r)|(r&p`))>~((p`|q`)&(r`|p))" with grammer "gram_prop"
+264 states generated
+Parse derived from: [F->C. , 0]
+
+
+F->C->U > U 
+    U->( F ) 
+      F->S->U | S 
+          U->( F ) 
+            F->P->U & U 
+                U->L->p 
+                U->L->q 
+          S->U | U 
+            U->( F ) 
+              F->P->U & U 
+                  U->L->q 
+                  U->L->r 
+            U->( F ) 
+              F->P->U & U 
+                  U->L->r 
+                  U->L->L ` 
+                      L->p 
+    U->~ U 
+      U->( F ) 
+        F->P->U & U 
+            U->( F ) 
+              F->S->U | U 
+                  U->L->L ` 
+                      L->p 
+                  U->L->L ` 
+                      L->q 
+            U->( F ) 
+              F->S->U | U 
+                  U->L->L ` 
+                      L->r 
+                  U->L->p 

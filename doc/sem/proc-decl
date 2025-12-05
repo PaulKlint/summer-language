@@ -1,0 +1,22 @@
+.iy I ENV
+.iy I N
+.iy I OP
+.iy I PROC
+.iy I a_proc
+.iy I a_undefined
+.iy I bind
+.{{
+\fBif\fR \jg{{ \fIe\fR =\h'-0.3m'= \jh\s-2PROC\s0 \ji\fIid\fR:\*<identifier\*> \*<formals\*> [\*<expression\*>] \*`\fI;\fR\^\*' }} |
+\h'|\ngu'{{ \fIe\fR =\h'-0.3m'= \jh\s-2OP\s0 \jj\fIid\fR:\*<operator-symbol\*> \*<formals\*> [\*<expression\*>] \*`\fI;\fR\^\*' }}
+\fBthen\fR
+\h'|\ngu'\fIENV\fR.\fIbind\fR\^(\fIid\fR, \fIa\*_proc\fR\^(\fIe\fR, \fIundefined\fR\|));
+\h'|\ngu'\fIreturn\fR\^(\^[\fIa\*_undefined\fR, \fIN\fR\|]\^)
+\fBfi\fR;
+.}}
+.iy I ENV
+.iy I N
+.iy I OP
+.iy I PROC
+.iy I a_proc
+.iy I a_undefined
+.iy I bind

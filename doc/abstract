@@ -1,0 +1,31 @@
+.ND
+.nr LL 7i
+.LP
+From SPRING to SUMMER:
+design, definition and implementation of programming
+languages for string manipulation and pattern matching.
+.sp 8
+.PP
+This research is devoted to the design, definition and implementation
+of programming languages for string processing and pattern matching.
+It consists of two parts.
+.PP
+In the first part the problems with language concepts in existing
+string processing languages are analyzed.
+This analysis is based on experience with the language SPRING,
+a first attempt in designing a string processing language.
+Next, two language concepts are introduced that are as powerful
+as the existing ones but do not exhibit the same, undesirable
+properties:
+a general mechanism for the control over side-effects that may occur
+during a pattern match, and a notion of a "current focus of activity"
+that allows, among other things, the definition of a current subject
+string in a pattern match.
+These two language concepts can be combined and form a very general pattern
+matching model.
+This model has been used in the design of the SUMMER programming language.
+.PP
+The second part contains a complete definition of the language
+SUMMER.
+This definition is based on an improved technique for formal, operational,
+language definitions.

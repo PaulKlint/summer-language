@@ -1,0 +1,25 @@
+echo .DS C >@t
+echo INDEX >>@t
+echo .DE >>@t
+echo .LP >>@t
+echo ".Ib" >>@t
+echo ".2C" >>@t
+grep "In I" <index.all >@tt
+for s in `cat syn/NOTIONS`
+do
+ex @tt <<+
+1,\$s/"<$s>"/"$s"/p
+w!
++
+done
+sort <@tt -ft\" +1 -2 +2n | uniq >>@t
+for s in `cat syn/NOTIONS`
+do ex @t <<!
+g/"$s"/s//"<$s>"/p
+w!
+q
+!
+done
+echo .Ie >>@t
+nroff -ms index.ms @t >indexres
+: rm @t

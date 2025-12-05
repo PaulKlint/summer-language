@@ -1,0 +1,68 @@
+#****************************************************************
+*								*
+* trema [-xN] [-yN] [infile [outfile]]				*
+*								*
+* This programs replaces all occurrences of the string '"\b' in	*
+* the input file by an appropriate sequence of diablo plot	*
+* commands which draw a trema symbol above the character that	*
+* follows the '"\b' sequence.					*
+* The optional arguments specify:				*
+*	-xN	the two dots of the trema are separated by N	*
+*		points (default: N=1)				*
+*	-yN	the trema is placed N half line distances above	*
+*		the line (default N=1)				*
+*	infile	input file (default: standard input)		*
+*	outfile output file (default: standard output)		*
+*								*
+* Version: 1979 may 1 -- paulk					*
+****************************************************************#
+
+var infile, outfile;
+
+
+proc trema (x, y)
+( put(outfile, '\033&', repl('\0338', y));
+  put(outfile, repl('\b', x + 2));
+  put(outfile, ' .');
+  put(outfile, repl(' ', x + x + 1));
+  put(outfile, '.\b');
+  put(outfile, repl('\b', x - 1));
+  put(outfile, repl('\0339', y));
+  put(outfile, '\033#');
+);
+
+proc can_t(file) ( put('Can''t open ', file, '\n'); stop(1) );
+
+proc error(s) ( put(s, '\n'); stop(1) );
+
+program tremas (args)
+( var i, line, pre, dx := 1, dy := 1,
+  inname := 'standin', outname := 'standout', digit := '0123456789';
+
+  i := 0;
+  while i < size(args) &  i < 4
+  do
+    if scan args[i] for lit('-') rof then
+       if scan args[i] for lit('-x') & dx := number(span(digit)) rof then
+       elif scan args[i] for lit('-y') & dy := number(span(digit)) rof then
+       else
+            error('Illegal argument : ''' || args[i])
+       fi
+    else
+       if inname = 'standin' then inname else outname fi := args[i]
+    fi;
+    i := i + 1
+  od;
+
+  if infile := open(inname, 'r', 512) then else can_t(inname) fi;
+  if outfile:= open(outname, 'w', 512) then else can_t(outname) fi;
+
+  while line := get(infile)
+  do
+     scan line
+     for
+        while pre := find('"\b') do put(pre); move(2); trema(dx, dy) od &
+        put(rtab(0), '\n')
+     rof
+  od;
+)

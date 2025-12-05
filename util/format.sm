@@ -1,0 +1,233 @@
+op %% (a, b)	# remainder #
+( var x := a % b; return(a - b * x) );
+
+const FF := '\014', TRUE := 1, FALSE := 0;
+const margin := '          ';
+
+program formatter(args)
+( var f;
+  for f in args
+  do var fin;
+     if fin := file(f, 'r') fails
+     then error('can''t open "' || f)
+     else
+	  format(fin, stand_out, stand_er)
+     fi
+  od
+);
+
+proc error(s)
+( stand_er.put('\nERROR: ', s, '\n') );
+
+proc format(fin, fout, ferr)
+( var p := page(fout), line;
+
+  while line := fin.get
+  do process_line(line, p, ferr) od;
+  p.terminate;
+);
+
+proc process_line(line, page, ferr)
+( scan line
+  for if lit('.') then do_command(page, ferr)
+      else do_text_line(page)
+      fi
+  rof
+);
+
+proc do_text_line(p)
+( if rpos(0)	# empty line #
+  then p.skip_line; return
+  elif any(' \t') then p.break_line
+  fi;
+  while ~ rpos(0)
+  do if lit(' ') then p.add_space
+     elif lit('\t') then p.add_htab
+     else var w := break(' \t') | rtab(0);
+	  p.add_word(word(w))
+     fi
+  od;
+  p.add_newline;
+);
+
+proc do_command(p, ferr)
+( var nm := break(' \t') | rtab(0);
+  case nm of
+  'br':	p.break_line,
+  'fi':	p.break_line; p.set_fill,
+  'nf':	p.break_line; p.set_nofill,
+  default: ferr.put('"', nm, '" is not a command.\n')
+  esac;
+  return('')
+);
+
+class page(fout)
+begin	fetch add_word, add_space, add_htab, add_newline, break_line,
+	skip_line, set_fill, set_nofill, terminate;
+	var curline := line(), fill := TRUE, lineno := 0,
+	    pageno := 1;
+
+	proc add_word(w)
+	( if fill = TRUE & ~curline.empty
+	  then var h := w.width;
+	       if curline.width + h > 60
+	       then curline.justify(60);
+		    output_line
+	       fi;
+	  fi;
+	  curline.add_word(w)
+	);
+
+	proc add_space() ( curline.add_space );
+
+	proc add_htab() ( curline.add_htab );
+
+	proc add_newline()
+	( if fill = FALSE
+	  then output_line
+	  else curline.add_space
+	  fi
+	);
+
+	proc break_line()
+	( if ~ curline.empty then output_line fi );
+
+	proc skip_line()
+	( break_line;
+	  output_line;	# empty line #
+	);
+
+	proc set_fill() (fill := TRUE);
+
+	proc set_nofill() (fill := FALSE);
+
+	proc terminate()
+	( break_line;
+	  if lineno > 0 then fout.put(FF) fi;
+	  fout.close
+	);
+
+	proc output_line()
+ 	( if lineno = 0
+	  then fout.put('\n\n', margin, 'Page ', pageno, '\n\n\n')
+	  fi;
+	  lineno := lineno + 1;
+	  curline.output(fout);
+	  if lineno = 50
+	  then
+	     fout.put(FF);
+	     lineno := 0;
+	     pageno := pageno + 1
+	  fi
+	);
+end page;
+
+class space(width)
+begin	fetch width, output;
+	store width;
+
+	proc output(f) ( f.put(' '.repl(width)) );
+end space;
+
+class htab(width)
+begin	fetch width, output; 
+	store width;
+        proc output(f) ( f.put(' '.repl(width)) );
+end htab;
+
+class word(text)
+begin 	fetch text, width, output;
+
+	proc width() return(text.size);
+
+	proc output(f) ( f.put(text) );
+end word;
+
+class line()
+begin	fetch add_word, add_space, add_htab, empty, width, justify, output;
+
+	var width := 0, cont := [] ;
+
+	proc add_word(w)
+	( cont.append(w); width := width + w.width );
+
+	proc add_space()
+	( cont.append(space(1)); width := width + 1 );
+
+	proc add_htab()
+	( var d := 8 - (width %% 8);
+	  width := width + d;
+	  cont.append(htab(d))
+	);
+
+	proc empty() return(cont.size = 0);
+
+	proc justify(len)
+	( var diff, first;
+	  remove_trailing_spaces;
+	  if width >= len then return fi;
+	  diff := len - width;
+	  if first := find_first_justifiable_space fails then return fi;
+	  enlarge_spaces(first, diff);
+	  if width ~= len then error('justify failed') fi
+	);
+
+	proc output(f)
+	( if ~ empty
+	  then var t;
+	       f.put(margin);
+	       for t in cont do t.output(f) od;
+	  fi;
+	  f.put('\n');
+	  width := 0;
+	  cont := [];
+	);
+
+	proc remove_trailing_spaces()
+	( while cont.size > 0 & type(cont.last) = 'space'
+	  do
+	    width := width - cont.delete.width
+	  od
+	);
+
+	proc find_first_justifiable_space()
+	( var low := 0, high := cont.size-1, i := high;
+
+	  if cont.size = 0 then freturn fi;
+	  while i > low & type(cont[i]) ~= 'htab' do i := i - 1 od;
+	  while i <= high & type(cont[i]) ~= 'space' do i := i + 1 od;
+	  if i > high then freturn fi;
+	  return(i)
+	);
+
+	proc enlarge_spaces(first, diff)
+	( var nspaces := count_spaces(first), neach, nextra, i;
+
+	  if nspaces = 0 then return fi;
+	  neach := diff % nspaces;
+	  nextra := diff %% nspaces;
+	  for i in interval(first, cont.size-1, 1)
+	  do var w := cont[i];
+	     if type(w) = 'space'
+	     then w.width := w.width + neach;
+		  width := width + neach;
+		  if nextra > 0 
+		  then w.width := w.width + 1;
+		       width := width + 1;
+		       nextra := nextra - 1;
+		  fi
+	     fi
+	  od
+	);
+
+	proc count_spaces(first)
+	( var count := 0, i := first;
+	  while i < cont.size
+	  do if type(cont[i]) = 'space'
+	     then count := count + 1
+	     fi;
+	     i := i + 1
+	  od;
+	  return(count)
+	);
+end line;

@@ -1,0 +1,26 @@
+proc error(n) put('\nERROR ', n, '\n');
+
+proc work(n, f)
+(
+  scan f
+  for
+      if cursor ~= 0 then error(n+1) fi;
+      if move(3) ~= 'abc' then error(n+2) fi;
+      if span('1234567890') ~= '123' then error(n+3) fi;
+      if cursor ~= 6 then error(n+4) fi;
+      if lit('def') ~= 'def' then error(n+5) fi;
+      if rtab(0) ~= '456' then error(n+6) fi;
+  rof
+);
+
+program scan_str4 ()
+( var f, i;
+
+  f := file('tmp.4','w');
+  f.put('abc123def456');
+  f.close ;
+  for i in interval(1, 10, 1)
+  do
+     work(i*10, file('tmp.4','r'))
+  od;
+)

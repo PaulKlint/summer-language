@@ -1,0 +1,47 @@
+.iy I CASE
+.iy I DEFAULT
+.iy I ERROR
+.iy I ESAC
+.iy I N
+.iy I OF
+.iy I dereference
+.iy I eval
+.iy I require_constant_expression
+.{{
+\fBif\fR \jg{{ \fIe\fR =\h'-0.3m'= \jh\s-2CASE\s0 \ji\fIexpr\fR:  \jj\*<expression\*> \s-2OF\s0
+\h'|\nhu'\fIcaselist\fR:\h'|\nju'{\*<case-entry\*> \*`\fI,\fR\^\*'}\v'0.25m'*\v'-0.25m'
+\h'|\nhu'\fIdef\fR:\h'|\nju'[\s-2DEFAULT\s0 \jk\*`\fI:\fR\^\*' \*<block\*>] \s-2ESAC\s0 \jl}}
+\fBthen\fR
+\h'|\ngu'\fBvar\fR \jm\fIb\fR, \fIonecase\fR, \fIv\fR1, \fIv\fR2, \fIsig\fR;
+.sp 0.5
+\h'|\ngu'[\fIv\fR1, \fIsig\fR] := \fIeval\fR\^(\fIexpr\fR);
+\h'|\ngu'\fBif\fR \jn\fIsig\fR \(ap\h'-0.2m'= \fIN\fR \fBthen\fR \jo\fIreturn\fR\^(\^[\fIv\fR1, \fIsig\fR]\^) \fBfi\fR;
+\h'|\ngu'\fIv\fR1 := \fIdereference\fR\^(\fIv\fR1);
+\h'|\ngu'\fBfor\fR \jm\fIonecase\fR \fBin\fR \jp\fIcaselist\fR
+\h'|\ngu'\fBdo\fR \jn\fBvar\fR \jq\fIonekey\fR, \fIkeylist\fR;
+.sp 0.5
+\h'|\nnu'{{ \fIonecase\fR =\h'-0.3m'= \jo\fIkeylist\fR:{\*<constant-expression\*> \*`\fI:\fR\^\*'}+ \fIb\fR:\*<block\*> }};
+\h'|\nnu'\fBfor\fR \jq\fIonekey\fR \fBin\fR \jo\fIkeylist\fR
+\h'|\nnu'\fBdo\fR \jr\fIrequire\*_constant\*_expression\fR\^(\fIonekey\fR);
+\h'|\nru'[\fIv\fR2, \fIsig\fR] := \fIeval\fR\^(\fIonekey\fR);
+\h'|\nru'\fBif\fR \js\fIsig\fR \(ap\h'-0.2m'= \fIN\fR \fBthen\fR \jt\fIERROR\fR \fBfi\fR;
+\h'|\nru'\fBif\fR \js\fIequal\fR\^(\fIv\fR1, \fIv\fR2) \fBthen\fR \ju\fIreturn\fR\^(\fIeval\fR\^(\fIb\fR)) \fBfi\fR
+\h'|\nnu'\fBod\fR
+\h'|\ngu'\fBod\fR;
+\h'|\ngu'\fBif\fR \jn{{ \fIdef\fR =\h'-0.3m'= \ji\s-2DEFAULT\s0 \jv\*`\fI:\fR\^\*' \fIb\fR:\*<block\*> }}
+\h'|\ngu'\fBthen\fR
+\h'|\nnu'\fIreturn\fR\^(\fIeval\fR\^(\fIb\fR))
+\h'|\ngu'\fBelse\fR
+\h'|\nnu'\fIERROR\fR
+\h'|\ngu'\fBfi\fR
+\fBfi\fR;
+.}}
+.iy I CASE
+.iy I DEFAULT
+.iy I ERROR
+.iy I ESAC
+.iy I N
+.iy I OF
+.iy I dereference
+.iy I eval
+.iy I require_constant_expression

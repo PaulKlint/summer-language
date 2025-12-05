@@ -1,0 +1,2 @@
+<procedure-declaration> ::=
+        PROC <identifier> <formals> [ <expression> ] ';' .

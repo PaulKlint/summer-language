@@ -1,0 +1,16 @@
+J.Heering, P.Klint & J.Rekers, Incremental generation of parsers,
+\fIProceedings of the SIGPLAN '89 Conference on Programming Language Design
+and Implementation\fP, pp. 179-191 (June 1989).
+
+P. Klint, Scanner generation for modular regular grammars,
+in \fILiber Amicorum J.W. de Bakker, 25 jaar Semantiek\fP, Centre for Mathematics and Computer Science, Amsterdam, pp.291-305, 1989.
+
+P. Klint, A meta-environment for generating programming environments,
+\fIProceedings of the METEOR workshop on Methods based on formal specifications\fP, Mierlo,
+September 1989
+(to appear in Springer Lecture Notes series).
+
+J. Heering, P.R.H. Hendriks, P. Klint & J.Rekers,
+The syntax definition formalism SDF -- Reference Manual,
+Report CS-R8926, Centre for Mathematics and Computer Science, Amsterdam, 1989.
+Published in \fISIGPLAN Notices\fP, Vol. 14 (11) pp.43-75 (November 1989).

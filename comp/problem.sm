@@ -1,0 +1,13 @@
+
+class A()
+begin
+	 proc extract()
+		put('this is global extract\n');
+end A;
+
+program t()
+(	extract
+);
+
+proc extract()
+	put('this is global extract\n');

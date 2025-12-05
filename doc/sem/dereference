@@ -1,0 +1,18 @@
+.iy I STATE
+.iy I contents
+.iy I dereference
+.iy I is_loc
+.{{
+\fBproc\fR \jg\fIdereference\fR\^(\fIval\fR\|)
+\z(  \jh\fBif\fR \jg\fIis\*_loc\fR\^(\fIval\fR\|)
+\h'|\nhu'\fBthen\fR
+\h'|\ngu'\fIreturn\fR\^(\fISTATE\fR.\fIcontents\fR\^(\fIval\fR\|))
+\h'|\nhu'\fBelse\fR
+\h'|\ngu'\fIreturn\fR\^(\fIval\fR\|)
+\h'|\nhu'\fBfi\fR
+);
+.}}
+.iy I STATE
+.iy I contents
+.iy I dereference
+.iy I is_loc

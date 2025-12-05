@@ -1,0 +1,541 @@
+var digit := '0123456789',
+      letter:= 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
+      letgit:= letter || digit,
+      alpha := letter || '_',
+      alphanum := alpha || digit;
+proc L ()
+   (span(' \t\n') | '' ) &
+   while lit('#') & break('#') & move(1) & (span(' \t\n') | '')
+   do od;
+
+proc identifier ()
+( var x;
+   L & x := (any(alpha) || (span(alphanum) | '')) &
+   if keyword[x] ~= undefined then
+      move(-x.size ) & freturn
+   fi
+);
+
+proc empty () ();
+
+proc integer_constant ()
+   span(digit);
+
+proc real_constant ()
+   (span(digit) | '') & lit('.') & (span(digit) | '') &
+   ((lit('e') & (any('+-') | '') & span(digit)) | '') ;
+
+proc string_constant ()
+   lit('''') & break('''') & move(1) &
+   while lit('''') do break('''') & move(1) od;
+proc operator_symbol ()
+   (lit('_') & span(letgit) & lit('_')) |
+   span('*+-/:<=>|$&~!\\@?') ;
+#<pattern>	::= <pattern-primary>
+			[ ( '|' | '--' | '=:' | '!=:' ) <pattern-primary> ] .
+#
+
+proc pattern()
+(pattern_primary&((L&lit('|')&L|L&lit('--')&L|L&lit('=:')&L|L&lit('!=:')&L)&pattern_primary | empty) );
+#
+
+<pattern-primary>
+		::= <identifier> |
+		    <string-literal> |
+		    ('@' | '!@') '(' <expression> ')' |
+		    '*' <identifier> |
+		    TRY {<pattern> ','}+ UNTIL <pattern> YRT |
+		    '(' <pattern> ')' |
+		    '<' <integer-constant> ',' [<expression>] ',' <pattern> '>' .
+#
+
+proc pattern_primary()
+(identifier|string_literal|(L&lit('@')&L|L&lit('!@')&L)&L&lit('(')&L&expression&L&lit(')')&L|L&lit('*')&L&identifier|L&lit('try')&L&pattern& while L&lit(',')&L do pattern od &L&lit('until')&L&pattern&L&lit('yrt')&L|L&lit('(')&L&pattern&L&lit(')')&L|L&lit('<')&L&integer_constant&L&lit(',')&L&(expression | empty) &L&lit(',')&L&pattern&L&lit('>')&L);
+#
+
+<expression>	::= { <assignment> ';' }* .
+#
+
+proc expression()
+(if assignment then  while L&lit(';')&L do assignment od fi );
+#
+
+<assignment>	::= <identifier> ':=' <right-hand-side> .
+#
+
+proc assignment()
+(identifier&L&lit(':=')&L&right_hand_side);
+#
+<right-hand-side>
+		::= <identifier> | <string-literal> .
+#
+
+proc right_hand_side()
+(identifier|string_literal);
+
+var keyword := table(20, undefined) init[
+	'try':
+	'until':
+	'yrt':
+	1];
+#****************************************************************
+* This program implements a formal rewriting system that	*
+* models pattern matching operations.				*
+* All pattern components are described by unary or binary	*
+* functions:							*
+*	SUBS(a,b)	==	a -- b	subsequentiation	*
+*	ALT(a,b)	==	a | b	alternation		*
+*	IMSBAS(p,v)	==	p !=: x	immediate subject asg.	*
+*	CDSBAS(p,v)	==	p =: x conditional subject asg. *
+*	IMACT(e)	==	!@e	immediate action	*
+*	CDACT(e)	==	@e	conditional action	*
+* In this system all function arguments have to be taken	*
+* literally, i.e. IMSBAS("abc",x) is supposed to assign to a	*
+* variable with name 'x'.					*
+* A pattern is defined as					*
+* 	a variable (the initial value is used as pattern)	*
+* or								*
+*	a string (succeeds if that string occurs at the current	*
+*		 cursor position.				*
+* or								*
+*	[curs,actions,pattern]				*
+*		pattern is applied at position cursor with the	*
+*		given list of actions.				*
+* or								*
+*	a functional composition of the primitive functions	*
+*	(SUBS, ALT, CDACT, IMACT, CDSBAS, IMSBAS, UNEVAL)	*
+*	with patterns as arguments.				*
+*								*
+* An action consists of an identifier followed by ':=' followed	*
+* by either an identifier or a string. An action list consists	*
+* of actions separated by semicolons.				*
+****************************************************************#
+
+# flex -- flexible arrays #
+
+class flex ()
+begin fetch update, retrieve, append, size, next, index;
+
+      var mem, size;
+
+      proc retrieve(i)
+      if 0 <= i < size then return(mem[i]) else stop(-1) fi;
+
+      proc update(i, v)
+      if 0 <= i < size then return(mem[i] := v) else stop(-1) fi;
+
+      proc append(v)
+      ( if size >= mem.size then
+           var i, m1 := array(mem.size + 10, undefined);
+	   for i in mem.index do m1[i] := mem[i] od;
+	   mem := m1
+	fi;
+	mem[size] := v;
+	size := size + 1;
+	return(v)
+      );
+
+      proc next(state)
+      ( if state = undefined then
+	 state := 0
+	fi;
+        if state < size then
+	   return([mem[state], state + 1])
+        else
+	   freturn
+        fi
+      );
+
+      proc index()
+      return(interval(0, size - 1, 1));
+
+init: mem := array(10, undefined);
+      size := 0;
+end flex;
+var    ruletrace,
+    pre, post,
+    subject_string,		# current subject string #
+    INITIAL_ENV,		# environment at start of pattern match #
+    CURRENT_ENV,		# current environment #
+    null  := '',
+    quote := '"',
+    debug := 1,
+    model,	# designates immediate/conditional, reversible or
+		  recovery model #
+    IMMEDIATE_CONDITIONAL := 0,
+    REVERSIBLE	 	  := 1,
+    RECOVERY		  := 2,
+    modelname		  := ['IMMEDIATE/CONDITIONAL','REVERSIBLE','RECOVERY'];
+
+
+
+proc string_literal ()
+( var res := '';
+   lit('"') & res := break('"') & move(1) &
+   while lit('"') do res := res || '"' || break('"') & move(1) od;
+
+);
+proc error(s) put('\nERROR: ', s, '\n');
+
+class environment()
+begin fetch binding, bind;
+      var t := table(10, undefined);
+      proc binding(id) return(t[id]);
+      proc bind(id, val) t[id] := val;
+end environment;
+
+proc eval(s, env)
+( var e, exprs, id, rhs, val, res := null;
+  if #{{ s  ==  exprs: { <assignment> ';' }* }}#
+scan s  for 
+exprs:=flex& if pre:=cursor&(assignment)&post:=cursor&exprs.append(tab(pre)) & tab(post) then  while L&lit(';')&L do pre:=cursor&(assignment)&post:=cursor&exprs.append(tab(pre)) & tab(post) od  fi & L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  exprs: { <assignment> '';'' }*  }\n')fi
+
+  then
+     for e in exprs
+     do #{{ e  ==  id:<identifier> ':=' rhs: <right-hand-side> }}#
+scan e  for 
+pre:=cursor&(identifier)&post:=cursor&id:=tab(pre)&tab(post)&
+L&lit(':=')&L&
+pre:=cursor&(right_hand_side)&post:=cursor&rhs:=tab(pre)&tab(post)& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  id:<identifier> '':='' rhs: <right-hand-side>  }\n')fi
+ ;
+        val := if #{{ rhs  ==  <identifier> }}#
+scan rhs  for 
+identifier& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  <identifier>  }\n')fi
+ then env.binding(rhs) else rhs fi;
+        env.bind(id, val);
+        if model ~= IMMEDIATE_CONDITIONAL then
+	   res := add_assign(res, id, val)
+        fi
+     od;
+  else
+     error('EVAL(' || s || ')\n')
+  fi;
+  return(res)
+);
+
+proc add_assign(alist, id, val)
+  if alist = null
+  then
+     return(mk_assign(id, val))
+  else
+     return(alist || ';' || mk_assign(id, val))
+  fi;
+
+proc substr(s, start, length) 
+  scan s for tab(start) & return(move(length)) rof;
+
+proc mk_2(operator, a, b)
+  if a = null then return(b)
+  elif b = null then return(a)
+  else
+    return(a || operator || b )
+  fi;
+
+proc mk_subs(a, b) return(mk_2('--', a, b));
+
+proc mk_alt(a, b) return(mk_2('|', a, b));
+
+proc mk_imsbas(p, v) return(mk_2('!=:', p, v));
+
+proc mk_cdsbas(p, v) return(mk_2('=:', p, v));
+
+proc mk_assign(id, val)
+  return(mk_2(':=', id, val));
+
+proc mk_comp(curs, act, pat)
+  if pat = null then
+     return(null)
+  else
+    return('<' || string(curs) || ',' || act || ',' || pat || '>')
+  fi;
+
+proc litmatch(curs, t)
+  scan subject_string for tab(integer(curs)) & lit(t) rof;
+
+#****************************************************************
+*								*
+* match(curs0, act0, pat0) attempts to apply the pattern pat0 to the	*
+* current subject at cursor position curs0. act0 denotes the action	*
+* list that has been accumulated so far. The match can either	*
+* fail or succeed. In the latter case the triple (cr, ar,pr) is	*
+* delivered as value.						*
+*	cr	is the resulting cursor value			*
+*	ar	is the resulting action list			*
+*	pr	is a pattern that contains (eventual) untried	*
+*		alternatives of pat0				*
+*								*
+****************************************************************#
+
+proc match(curs0, act0, pat0)
+(var curs, curs1, curs2, act, act1, act2, pat, pat1, pat2;
+ var pata, patb, pats, endpat, val;
+ var str, expr, id;
+
+  curs0 := integer(curs0);
+  if debug > 0 then
+     put(curs0, '\t', act0, '\t', pat0, '\n')
+  fi;
+  if #{{ pat0  ==  str:<string-literal> }}#
+scan pat0  for 
+pre:=cursor&(string_literal)&post:=cursor&str:=tab(pre)&tab(post)& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  str:<string-literal>  }\n')fi
+ then
+     if litmatch(curs0, str.substr(1, str.size-2))
+     then
+	return([curs0 + str.size - 2 , act0, null])
+     else
+        freturn
+     fi
+  elif #{{ pat0  ==  id:<identifier> }}#
+scan pat0  for 
+pre:=cursor&(identifier)&post:=cursor&id:=tab(pre)&tab(post)& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  id:<identifier>  }\n')fi
+ then
+     if [curs1, act1, pat1] := match(curs0, act0, INITIAL_ENV.binding(id))
+     then
+        return([curs1, act1, pat1])
+     else
+        freturn
+     fi
+  elif #{{ pat0  == 
+	        '<' curs:<integer-constant> ','
+	            act:[<expression>] ',' pat:<pattern> '>' }}#
+scan pat0  for 
+L&lit('<')&L&
+pre:=cursor&(integer_constant)&post:=cursor&curs:=tab(pre)&tab(post)&
+L&lit(',')&L&
+pre:=cursor&((expression | empty) )&post:=cursor&act:=tab(pre)&tab(post)&
+L&lit(',')&L&
+pre:=cursor&(pattern)&post:=cursor&pat:=tab(pre)&tab(post)&
+L&lit('>')&L& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  ... }\n')fi
+	
+  then
+     if [curs1, act1, pat1] := match(curs, act, pat)
+     then
+	return([curs1, act1, pat1])
+     else
+	freturn
+     fi
+  elif #{{ pat0  ==  pata:<pattern-primary> '|' patb:<pattern-primary> }}#
+scan pat0  for 
+pre:=cursor&(pattern_primary)&post:=cursor&pata:=tab(pre)&tab(post)&
+L&lit('|')&L&
+pre:=cursor&(pattern_primary)&post:=cursor&patb:=tab(pre)&tab(post)& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  pata:<pattern-primary> ''|'' patb:<pattern-primary>  }\n')fi
+ then
+     if [curs1, act1, pat1] := match(curs0, act0, pata) then
+	if model = RECOVERY then
+	   return([curs1, act1, null])
+	else
+	   return([curs1, act1, mk_comp(curs0, act0, mk_alt(pat1, patb))])
+	fi
+     elif [curs2, act2, pat2] := match(curs0, act0, patb) then
+	if model = RECOVERY then
+	   return([curs1, act1, null])
+	else
+	   return([curs2, act2, mk_comp(curs0, act0, pat2)])
+	fi
+     else
+	freturn
+     fi
+  elif #{{ pat0  ==  pata:<pattern-primary> '--' patb:<pattern-primary> }}#
+scan pat0  for 
+pre:=cursor&(pattern_primary)&post:=cursor&pata:=tab(pre)&tab(post)&
+L&lit('--')&L&
+pre:=cursor&(pattern_primary)&post:=cursor&patb:=tab(pre)&tab(post)& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  pata:<pattern-primary> ''--'' patb:<pattern-primary>  }\n')fi
+ then
+     if [curs1, act1, pat1] := match(curs0, act0, pata) then
+	if [curs2, act2, pat2] := match(curs1, act1, patb) then
+	   if model = RECOVERY then
+	      return([curs2, act2, null])
+	   else
+	      return([curs2, act2,
+		mk_alt(mk_comp(curs1,act1,pat2),mk_subs(mk_comp(curs0,act0,pat1),patb))])
+	   fi
+	else
+	   if model = RECOVERY then freturn fi;
+           if pat1 ~= null then
+	      if [curs2, act2, pat2] := match(curs0, act0, mk_subs(pat1, patb))
+              then
+		 return([curs2, act2, pat2])
+              fi
+	   fi
+	fi
+     fi;
+     freturn
+  elif #{{ pat0  ==  '*' expr:<expression> }}#
+scan pat0  for 
+L&lit('*')&L&
+pre:=cursor&(expression)&post:=cursor&expr:=tab(pre)&tab(post)& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  ''*'' expr:<expression>  }\n')fi
+ then
+     if model ~= IMMEDIATE_CONDITIONAL then
+        CURRENT_ENV := copy(INITIAL_ENV);
+        eval(act0, CURRENT_ENV);
+     fi;
+     if [curs1, act1, pat1] := match(curs0, act0, CURRENT_ENV.binding(expr))
+     then
+        return([curs1, act1, pat1])
+     else
+        freturn
+     fi
+  elif #{{ pat0  ==  pat:<pattern-primary> '!=:' id:<identifier> }}#
+scan pat0  for 
+pre:=cursor&(pattern_primary)&post:=cursor&pat:=tab(pre)&tab(post)&
+L&lit('!=:')&L&
+pre:=cursor&(identifier)&post:=cursor&id:=tab(pre)&tab(post)& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  pat:<pattern-primary> ''!=:'' id:<identifier>  }\n')fi
+ then
+     if [curs1, act1, pat1] := match(curs0, act0, pat) then
+	val := quote || subject_string.substr(curs0, curs1 - curs0) || quote;
+	if model = IMMEDIATE_CONDITIONAL then
+	   CURRENT_ENV.bind(id, val);
+	else # REVERSIBLE and RECOVERY #
+	   act1 := add_assign(act1, id, val)
+	fi;
+        return([curs1, act1, mk_comp(curs0, act0, mk_imsbas(pat1, id))])
+     else
+	freturn
+     fi
+  elif #{{ pat0  ==  pat:<pattern-primary> '=:' id:<identifier> }}#
+scan pat0  for 
+pre:=cursor&(pattern_primary)&post:=cursor&pat:=tab(pre)&tab(post)&
+L&lit('=:')&L&
+pre:=cursor&(identifier)&post:=cursor&id:=tab(pre)&tab(post)& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  pat:<pattern-primary> ''=:'' id:<identifier>  }\n')fi
+ then
+     if model ~= IMMEDIATE_CONDITIONAL then error(pat0) fi;
+     if [curs1, act1, pat1] := match(curs0, act0, pat) then
+        act2 := mk_assign(id, quote || subject_string.substr(curs0, curs1 - curs0) || quote);
+        return([curs1, act2, mk_comp(curs0, act0, mk_cdsbas(pat1, id))])
+     else
+        freturn
+     fi
+  elif #{{ pat0  ==  '@' '(' expr:<expression> ')' }}#
+scan pat0  for 
+L&lit('@')&L&
+L&lit('(')&L&
+pre:=cursor&(expression)&post:=cursor&expr:=tab(pre)&tab(post)&
+L&lit(')')&L& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  ''@'' ''('' expr:<expression> '')''  }\n')fi
+ then
+     if model ~= IMMEDIATE_CONDITIONAL then error(pat0) fi;
+     return([curs0, act0 || expr || ';', pat0])
+  elif  #{{ pat0  ==  '!@' '(' expr:<expression> ')' }}#
+scan pat0  for 
+L&lit('!@')&L&
+L&lit('(')&L&
+pre:=cursor&(expression)&post:=cursor&expr:=tab(pre)&tab(post)&
+L&lit(')')&L& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  ''!@'' ''('' expr:<expression> '')''  }\n')fi
+ then
+     if model = IMMEDIATE_CONDITIONAL then
+        if eval(expr, CURRENT_ENV) then
+   	   return([curs0, act0, null])
+        else
+   	   freturn
+        fi
+     else # REVERSIBLE and RECOVERY #
+       CURRENT_ENV := copy(INITIAL_ENV);
+       eval(act0, CURRENT_ENV);
+       val := eval(expr, CURRENT_ENV);
+       return([curs0, act0 || val, null])
+     fi
+  elif  #{{ pat0  ==  TRY pats:{<pattern> ','}+ UNTIL endpat: <pattern> YRT }}#
+scan pat0  for 
+L&lit('try')&L&
+pats:=flex&pre:=cursor&(pattern)&post:=cursor&pats.append(tab(pre)) & tab(post)& while L&lit(',')&L do pre:=cursor&(pattern)&post:=cursor&pats.append(tab(pre)) & tab(post) od &
+L&lit('until')&L&
+pre:=cursor&(pattern)&post:=cursor&endpat:=tab(pre)&tab(post)&
+L&lit('yrt')&L& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  TRY pats:{<pattern> '',''}+ UNTIL endpat: <pattern> YRT  }\n')fi
+ then
+     if model ~= RECOVERY then error(pat0) fi;
+     for pat in pats
+     do
+        if [curs1, act1, pat1] := match(curs0, act0, pat) then
+	   if [curs2, act2, pat2] := match(curs1, act1, endpat) then
+	      return([curs2, act2, null])
+	   fi
+	fi;
+     od;
+
+     freturn
+  elif #{{ pat0  ==  '(' pat:<pattern> ')' }}#
+scan pat0  for 
+L&lit('(')&L&
+pre:=cursor&(pattern)&post:=cursor&pat:=tab(pre)&tab(post)&
+L&lit(')')&L& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  ''('' pat:<pattern> '')''  }\n')fi
+ then
+     return(match(curs0, act0, pat))
+  else
+     error(pat0);
+  fi
+);
+
+proc do_match(this_model, ex)
+( var i, pat, curs, action;
+
+  model := this_model;
+  put('---------------------------------- ', modelname[model], '\n\n');
+  i := 0;
+  while i < ex.size - 1
+  do
+     subject_string := ex[i];
+     pat     := ex[i+1];
+     curs  := 0;
+     INITIAL_ENV    := environment();
+     CURRENT_ENV    := environment();
+     put('\nsubject_string: ', subject_string, ' pattern: ', pat, '\n');
+     if [curs, action, pat] := match(curs, null, pat) then
+        put('succeeds\n');
+	put('returns: ', action, '\n')
+     else
+        put('fails\n')
+     fi;
+     i := i + 2;
+  od
+);
+
+program pm ()
+( var i := 0, pat, curs, action, ex;
+  ruletrace := 1;
+  ex := [
+	'abc',	'"abc"',
+	'abc',	'"a"--"bc"',
+	'ac',	'"ab"|"ac"',
+	'abe',	'"ab"--("c"|"e")',
+	'abe',	'("a"|"ab")--"e"',
+	'abe',	'("a"|"ab")--("c"|"e")',
+	'abc',	'"a"!=:x',
+	'abc',	'"a"=:x',
+	'aa',	'("a"!=:x)--(*x)',
+	'abc',	'!@(x:="xxxx")',
+	'abc',	'!@(x:="abc")--(*x)',
+	'abc',	'@(x:="yy")',
+	'abc',	'@(x:="yy")--"a"',
+	'abc',	'(@(x:="yy")--@(y:="xx"))--@(z:=x)',
+	'cd',	'(("b"|"c")=:zzz)--"d"',
+	'abc',	'(("a"|"ab")=:zzz)--"c"'
+	];
+  do_match(IMMEDIATE_CONDITIONAL, ex);
+  ex := [
+	'abc',	'"abc"',
+	'abc',	'"a"!=:x',
+	'abc',	'!@(x:="ZZZZ")',
+	'aa',	'("a"!=:x)--(*x)',
+        'YY',   '!@(x:="YY")--((!@(x:="ZZ")--"Q")|(*x))'
+        ];
+  do_match(REVERSIBLE, ex);
+  ex := [
+	'abc',	'("ab"|"a")--"bc"',
+	'abc',	'try "", !@(x:="Z")--"Q", !@(x:="Y")--"abc" until "" yrt'
+	];
+  do_match(RECOVERY, ex);
+)

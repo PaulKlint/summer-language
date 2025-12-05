@@ -1,0 +1,31 @@
+.iy I ENV
+.iy I N
+.iy I STATE
+.iy I VAR
+.iy I a_undefined
+.iy I bind
+.iy I extend
+.{{
+\fBif\fR \jg{{ \fIe\fR =\h'-0.3m'= \jh\s-2VAR\s0 \ji\fIvarlist\fR:{\*<variable-initialization\*> \*`\fI,\fR\^\*' }+ \*`\fI;\fR\^\*' }}
+\fBthen\fR
+\h'|\ngu'\fBvar\fR \jj\fIname\fR, \fIonevar\fR;
+.sp 0.5
+\h'|\ngu'\fBfor\fR \jj\fIonevar\fR \fBin\fR \jk\fIvarlist\fR
+\h'|\ngu'\fBdo\fR \jl\fBif\fR \jm{{ \fIonevar\fR =\h'-0.3m'= \jn\fIname\fR:\*<identifier\*> \*`\fI:=\fR\^\*' \*<expression\*> }}
+\h'|\nlu'\fBthen\fR
+\h'|\nmu'\fIvarinit\fR := \fIvarinit\fR || \fIonevar\fR || \*`\fI;\fR\^\*'
+\h'|\nlu'\fBelse\fR
+\h'|\nmu'{{ \fIonevar\fR =\h'-0.3m'= \jn\fIname\fR:\*<identifier\*> }}
+\h'|\nlu'\fBfi\fR;
+\h'|\nlu'\fIENV\fR.\fIbind\fR\^(\fIname\fR, \fISTATE\fR.\fIextend\fR\^(\fIa\*_undefined\fR\|))
+\h'|\ngu'\fBod\fR;
+\h'|\ngu'\fIreturn\fR\^(\^[\fIa\*_undefined\fR, \fIN\fR\|]\^)
+\fBfi\fR;
+.}}
+.iy I ENV
+.iy I N
+.iy I STATE
+.iy I VAR
+.iy I a_undefined
+.iy I bind
+.iy I extend

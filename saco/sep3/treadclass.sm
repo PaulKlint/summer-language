@@ -1,0 +1,154 @@
+
+#********** Procedures associated with the treatment of classes *********#
+
+proc putopassoc(opname)
+(	var mon := opname || '.1',
+	    dy  := opname || '.2',
+	    monentry := fieldtab[mon],
+	    dyentry  := fieldtab[dy],
+	    undef := 0;
+
+	if monentry ~= undefined & monentry.last.classname = clname
+	then	monentry.last.ffetch := monentry.last.intern
+	else	undef := undef+1
+	fi;
+	if dyentry ~= undefined & dyentry.last.classname = clname
+	then	dyentry.last.ffetch := dyentry.last.intern
+	else	undef := undef+1
+	fi;
+	if undef = 2
+	then	ermsg('field "' || opname || '" undefined', lnr)
+	fi
+);
+	# Puts fetch associations for an operator field in 'fieldtab'.	#
+	# When, say, a declaration 'fetch @' is encountered, an entry	#
+	# in 'fetchtab' is made with key '@' and value '_s'. A monadic	#
+	# (dyadic) operator '@' declared within that class is entered	#
+	# in 'fieldtab' with key '@.1' ('@.2'). 'Putopassoc' checks	#
+	# whether the fetch association is indeed '_s' (the only one	#
+	# allowed) and whether at least one version of @ is defined 	#
+	# within the class, and adds the fetch association(s).	 	#
+
+proc putassocs(type)
+(	var field, fld, fstab, fetching, assoc;
+
+	if type = fetch_type
+	then	fstab := fetchtab; fetching := True
+	else	fstab := storetab; fetching := False
+	fi;
+	for field in fstab.index
+	do assoc := fstab[field];
+	   if assoc ~= '_s'
+	   then	fld := fieldtab[assoc];
+		if fld = undefined | fld.last.classname ~= clname
+	        then	ermsg('fetch/store association "'
+			      || assoc || '" undeclared', lnr)
+		elif fld.last.ftype ~= PROC
+		then	ermsg('fetch/store association "'
+			      || assoc || '" is not a procedure', lnr)
+		fi
+	   fi;
+	   if montab[field] ~= undefined | dytab[field] ~= undefined
+	   then if type = fetch_type & assoc = '_s'
+		then putopassoc(field)
+		else ermsg('illegal ' || type ||
+			   ' association for "' || field || '"', lnr)
+		fi
+	   else	var entry;
+
+		entry := fieldtab[field];
+		if entry = undefined | entry.last.classname ~= clname
+		then ermsg('field "' || field || '" undeclared', lnr)
+		elif entry.last.ftype = PROC
+		then if type = fetch_type & assoc = '_s'
+		     then entry.last.ffetch := entry.last.intern
+		     else ermsg('illegal ' || type ||
+				' association for "' || field || '"', lnr)
+		     fi
+		else	if fetching = True then
+			   entry.last.ffetch
+			else
+			   entry.last.fstore
+			fi :=
+			  if assoc = '_s'
+			  then SIMPLE else fieldtab[assoc].last.intern
+			  fi
+		fi
+	   fi
+	od
+);
+	# Sets fetch or store associations for fields of the current	#
+	# class, using the entries from 'fetchtab' or 'storetab'	#
+	# (depending on the value of 'type').				#
+	# 'putassocs' has to distinguish between operators, procedures	#
+	# and data fields. For operators 'putopassoc' is called.	#
+	# Procedures cannot have a store association. The only value	#
+	# allowed for the fetch association in 'fetchtab' is '_s', but	#
+	# the entry in 'fieldtab' will be the name of the procedure with#
+	# the class suffix appended. Data fields can have both a fetch	#
+	# and a store association; both can have value '~simple' or an	#
+	# name of an associated procedure. 'putassocs' also check	#
+	# whether all fields mentioned in 'fetch' and 'store' declara-	#
+	# tions are indeed declared in the current class.		#
+	# 'putopassoc' is called), procedures (which cannot have a store#
+	# association and for which the only fetch association allowed	#
+
+
+proc do_subclass(super)
+(	var cl_super;
+
+	if (cl_super := classtab[super]) = undefined
+	then ermsg('"' || super || '" not (yet) defined as class', lnr)
+	else var i, fldlist, fld, sub_entry, super_entry, nosubset := False;
+
+	     fldlist := cl_super[1];		# parameters #
+	     for i in fldlist.index
+	     do	if i >= par_flds.size | par_flds[i] ~= fldlist[i]
+		 then nosubset := True
+		 fi;
+	     od;
+	     if nosubset = True
+	     then ermsg('parameters of "' || clname ||
+			'" should include those of "' || super || '"', lnr)
+	     else for fld in fldlist
+		  do sub_entry := fieldtab[fld].last;
+		     super_entry := fieldtab[fld].locate_fld(super);
+		     sub_entry.ffetch := super_entry.ffetch;
+		     sub_entry.fstore := super_entry.fstore;
+		  od
+	     fi;
+	     for fld in cl_super[2]		# data fields #
+	     do super_entry := fieldtab[fld].locate_fld(super);
+	        fieldentry(fld, clname, VAR, offset := offset + 1,
+			   super_entry.ffetch, super_entry.fstore);
+		data_flds.append(fld);
+		symentry(fld, level, VARIABLE(fld, ClassVar));
+		inhertab[fld] := 1;
+	     od;
+	     for fld in cl_super[3]		# procedures #
+	     do super_entry := fieldtab[fld].locate_fld(super);
+	        fieldentry(fld, clname, PROC, super_entry.intern,
+			   super_entry.ffetch, NOSTORE);
+		proc_flds.append(fld);
+		symentry(fld, level, super_entry.intern);
+		inhertab[fld] := 1;
+	     od;
+	     for fld in cl_super[4]		# operators #
+	     do super_entry := fieldtab[fld].locate_fld(super);
+	        fieldentry(fld, clname, PROC, super_entry.intern,
+			   super_entry.ffetch, NOSTORE);
+	        op_flds.append(fld);
+		inhertab[fld] := 1
+	     od
+	fi
+);
+	# All fieldtable entries of the superclass are copied. Parameters #
+	# have been entered already; only the fetch and store associations#
+	# are changed. They may not be redefined. For all other fields a  # 
+	# new entry is created; and they are entered in inhertab to       #
+	# denote that they may be redefined.				  #
+	# Offsets: if A(a) with datafields x and y is the superclass of	  #
+	# B(a,b,c) then after 'do_subclass' B has five datafields:	  #
+	# 'a' (offset 0), 'b' (1), 'c' (2), 'x' (3) and 'y' (4).	  #
+
+

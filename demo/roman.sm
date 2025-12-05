@@ -1,0 +1,29 @@
+#****************************************************************
+*								*
+* Convert to roman numerals.					*
+* (See "algorithms in SNOBOL4")					*
+*								*
+****************************************************************#
+
+proc roman(numb)
+( var head, tail;
+  if scan numb for (head := rtab(1) & tail := move(1)) rof
+  then
+     return(
+        roman(head).replace('IVXLCDM', 'XLCDM**') ||
+          scan '0,1I,2II,3III,4IV,5V,6VI,7VII,8VIII,9IX,' 
+	  for break(tail) & lit(tail) & break(',') rof
+	)
+  else
+     return('')
+  fi
+);
+
+program main()
+( var i;
+
+  for i in interval(0, 99, 1)
+  do if i%10*10 = i then put('\n') fi;
+     put(roman(string(i)).right(8, ' ') );
+  od
+);
