@@ -1,0 +1,54 @@
+
+class <repeat-expr> ::= REPEAT b:<block> UNTIL t:<test> .
+begin
+  value =>
+	L: b.value;
+	if t.value then goto l fi;
+
+  edit: b':<block> =>
+	b := b';
+
+  edit: t':<test> =>
+	t := t';
+end <repeat-expr> ;
+
+class <identifier> ::= i:<simple-identifier> .
+begin
+  var v;
+
+  value =>
+	return(v);
+
+end <identifier> ;
+
+class <var-decl> ::= VAR n:<identifier> .
+begin
+  var val;
+
+  parse =>
+	return(delta_env(n));
+  assign: e:<expr> =>
+	val := e.value;
+	return(val);
+  value =>
+	return(val);
+  edit: n':<identifier> =>
+	n := n';
+
+end <var-decl>;
+
+class <block> ::= d : <var-decl>* e : <expr>* .
+begin
+  parse ==>
+	"check declaration compatibility between d and e"
+  value ==>
+	"install declarations  d"
+
+	for v in e do w := e.value od;
+	return(w);
+  edit: d':<var-decl> n:<integer> =>
+	d[n] := d';
+  edit: e':<expr> n:<integer> =>
+	e[n] := e';
+end <block> ;
+

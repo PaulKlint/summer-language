@@ -1,0 +1,37 @@
+INT=./sys/int
+COMP=./sys/comp
+PGEN=./sys/pgen
+TEST=./sys/test
+DOC=./sys/doc
+UTIL=./sys/util
+BIN=./sys/bin
+DEMO=./sys/demo
+ASC=./alg/asc
+BAS=./alg/basic
+tar crv \
+./sys/READ_ME \
+./sys/RUN \
+$INT/*.c $INT/*.h $INT/Makefile \
+$COMP/bootVAX/* \
+$COMP/Makefile \
+$COMP/parser.ns $COMP/parser.ud $COMP/parser.syn $COMP/parser.sm \
+$COMP/mkpref.sm $COMP/sumc.sh \
+$PGEN/pgen $PGEN/pg.ns $PGEN/pg.ud $PGEN/pg.syn $PGEN/pg.sm $PGEN/pglib \
+$PGEN/manual.ms $PGEN/pgen.man \
+$TEST/*.sm $TEST/*.out $TEST/run \
+$DOC/Makefile \
+$DOC/firstpage $DOC/index $DOC/index.all \
+$DOC/index.ms $DOC/ix.ms \
+$DOC/anno*.ms \
+$DOC/refman1.ms $DOC/refman2.ms $DOC/library.ms $DOC/summer.ms \
+$DOC/tracer.ms $DOC/sumc.1 \
+$DOC/summer.syn $DOC/summer.lex \
+$DOC/lex/* $DOC/syn/* $DOC/sem/* \
+$DEMO/run $DEMO/*.sm $DEMO/*.out $DEMO/*.data \
+$UTIL/format.sm $UTIL/iref.sm $UTIL/inline.sm \
+$BIN/parser $BIN/int.a \
+$ASC/Makefile $ASC/README $ASC/asc* $ASC/asc.sm $ASC/defs1.sm \
+$ASC/defs2.sm $ASC/defs3.sm $ASC/man.1 $ASC/syntax \
+$ASC/parser.sm $ASC/parser.syn $ASC/scanner.sm \
+$ASC/mk-tab* $ASC/mk-tab.sm $ASC/reseq.sm \
+$BAS/*.eq

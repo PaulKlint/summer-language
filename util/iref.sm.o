@@ -1,0 +1,210 @@
+
+var ucase := 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+    lcase := 'abcdefghijklmnopqrstuvwxyz',
+    letter := lcase || ucase,
+    digit := '0123456789',
+    letgit:= letter || digit || '_',
+    notagsym := '+-<>{}:=!$, \t\n';
+const empty := '', unknown := '??';
+
+var debug := 0, filename, lineno := 1, pass,
+    ctab := table(20, undefined), refs := table(200, undefined);
+
+proc error(p, s)
+  if pass = p then
+     stand_er.put(filename, ', line ', lineno, ':\t', s, '\n')
+  fi;
+
+program iref(files)
+( var line, data;
+
+  for pass in [1, 2]
+  do  for filename in files
+      do  lineno := 0;
+	  if filename = '-d0' then debug := 0
+	  elif filename = '-d1' then debug := 1
+          elif data := file(filename, 'r') fails
+          then
+	     error(1, 'can''t open')
+          else
+	     while line := data.get
+             do lineno := lineno + 1;
+		process_line(line);
+             od;
+             data.close
+          fi
+      od
+  od
+);
+
+proc tag()
+( return(break(notagsym))
+);
+
+proc use(name)
+( var r, oper;
+  if (r := ctab[name]) ~= undefined then
+     while oper := any('+-<>')
+     do case oper of
+	'+':	r.incr,
+	'<':	r.left,
+	'>':	r.right,
+	'-':	r.decr
+	esac
+     od;
+     return(r.value(if lit('$') then 1 else 0 fi))
+  elif (r := refs[name]) ~= undefined then
+     return(r)
+  else
+     error(2, '"' || name || '" not defined');
+     return(unknown)
+  fi
+);
+
+proc process_line(line)
+( var pre, cname, cntr, arg;
+  if debug ~= 0 then put('>> ', line, '\n') fi;
+  scan line
+  for while pre := find('#{')
+      do if pass = 2 then put(pre) fi;
+	 lit('#{');
+	 if cname := tag() fails then
+	    error(1, 'Syntax')
+	 elif cname = 'counter' then
+	    counter() | error(1, 'malformed counter definition')
+	 elif lit(':=') | lit('=') then
+	    arg := tag & 
+	    refs[cname] := use(arg) &
+	    if lit('!') & pass = 2 then
+	       put(refs[cname])
+	    fi &
+	    lit('}') | error(1, 'illegal assignment')
+	 else var sep;
+	    if pass = 2 then put(use(cname)) fi;
+	    while ~lit('}') & sep := break(letter)
+	    do var item := tag() ;
+ 	       if pass = 2 then put(sep, use(item)) fi;
+	    od;
+	 fi;
+      od;
+      if pass = 2 then put(rtab(0), '\n') fi;
+  rof;
+);
+
+
+class single_counter(left)
+begin fetch incr, decr, value, left, right;
+      store right;
+      var start, k, ftype, right;
+
+      proc to_lcase(s)
+         return(s.replace(ucase, lcase));
+
+      proc roman(numb)
+      ( var head, tail;
+        if scan numb for (head := rtab(1) & tail := integer(move(1))) rof
+        then
+        return(
+           roman(head).replace('IVXLCDM', 'XLCDM**') ||
+           ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX'] [tail]
+	)
+        else
+           return('')
+        fi
+      );
+
+      proc cvt(n, radix)
+      (var R := radix.size;
+        if n < R then return(radix[n])
+	else
+	   return(cvt(n % R, radix) || cvt(n - (n%R)*R, radix) )
+	fi
+      );
+
+      proc incr() k := k + 1;
+
+      proc decr()
+        if k > 0 then
+	   k := k - 1
+	else
+	   error(1, 'zero counter may not be decremented')
+	fi;
+
+      proc value()
+      ( case ftype of
+	'numeric':	return(string(k)),
+	'letter':	return(cvt(k, lcase)),
+	'LETTER':	return(cvt(k, ucase)),
+	'roman':	return(to_lcase(roman(string(k)))),
+	'ROMAN':	return(roman(string(k))),
+	default:	error(1, 'ILLEGAL FORMATTYPE')
+	esac
+      );
+init: var c;
+      start := 0;
+      if ftype := (lit('roman') | lit('ROMAN'))
+      then
+	 if lit('(') & c := span(digit) & lit(')')
+         then
+	    start := integer(c);
+	 else
+	    error(1, 'illegal "roman" format');
+	    start := 0;
+	 fi
+      elif c := any(lcase) then
+	 ftype := 'letter';
+	 start := scan lcase for break(c).size rof;
+      elif c := any(ucase) then
+	 ftype := 'LETTER';
+	 start := scan ucase for break(c).size rof;
+      elif c := span(digit) then
+	 ftype := 'numeric';
+	 start := integer(c);
+      else
+	 ftype := 'numeric'; start := 0;
+      fi;
+      k := start;
+      if debug ~= 0 then
+         put('single counter ftype: ', ftype, ' start: ', start, '\n');
+      fi;
+end single_counter;
+
+class counter()
+begin fetch left, right, incr, decr, value ;
+      var firstsub, lastsub;
+
+      proc left()
+      ( if lastsub.left = undefined then
+	   error(1, 'more < then > operations on counter')
+	else
+	   lastsub := lastsub.left;
+	   lastsub.right := undefined;
+	fi
+      );
+
+      proc right()
+	lastsub := lastsub.right := single_counter(lastsub);
+
+      proc incr()
+        lastsub.incr;
+
+      proc decr()
+        lastsub.decr;
+
+      proc value(tail)
+      ( var s := firstsub, res := '', sep := '';
+	if tail ~= 0 then return(lastsub.value) fi;
+	while s ~= undefined
+	do res := res || sep || s.value;
+	   sep := '.';
+	   s := s.right;
+	od;
+	return(res)
+      );
+
+init: var cname;
+      lit(',') & cname := tag() & lit(',') &
+      firstsub := lastsub := single_counter(undefined) &
+      lit('}') | freturn;
+      ctab[cname] := self;
+end counter;

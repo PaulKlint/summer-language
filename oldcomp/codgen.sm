@@ -1,0 +1,2088 @@
+#****************************************************************
+*								*
+* SUMMER compiler part 2 -- codegeneration.			*
+*								*
+* The codegenerator consists of two completely independent	*
+* subparts:							*
+*	part2a: an expander from intermediate code (ic)		*
+*		to assembler for the target machine.		*
+*		This part is machine dependent.			*
+*	part2b: the codegenerator proper which transforms	*
+*		parsetrees into ic code.			*
+*								*
+* The interface between these two subparts is as follows:	*
+* The expander provides procedures of the form exp_xxx, where	*
+* "xxx" stands for some special case. The sequence of calls 	*
+* should be:							*
+*	expinit							*
+*	exp_classes(line)	(at least 2 calls with arguments*
+*				'classes' and 'endclasses')	*
+*	exp_fields0()						*
+*	exp_fields(line)	(zero or more times)		*
+*	exp_fields2()						*
+*								*
+* followed by an arbitrary number of calls to:			*
+*								*
+*	exp_op0, exp_op1, exp_glob, exp_real, exp_lab, exp_error*
+*	exp_line, exp_proc, exp_procend, exp_subr, exp_dclstr	*
+*	exp_call, exp_dclglob, exp_newclass, exp_fld,		*
+*								*
+* or calls to the procedure "exp(opcode, alist)" which 		*
+* represents the general case, i.e. exp selects the appropriate	*
+* subcase itself.						*
+* Finally, processing should be terminated by a call to		*
+*	expterminate						*
+*								*
+* Usage: codgen [-S] [-EXP] [-IC] prefixfile programfile	*
+*								*
+* prefixfile	contains assembly language equates used to	*
+*		synchronize the compiler and the interpreter.	*
+*		The machine type is determined by the first	*
+*		line of the prefix file (i.e. 'VAX' or 'PDP11').*
+* programfile	contains the user program			*
+*								*
+* The optional arguments have the following meaning:		*
+* -S		suppresses some symbolic info to reduce size	*
+* -EXP		performs expansion only				*
+* -IC		produces an additional ic file			*
+*								*
+****************************************************************#
+
+#****************************************************************
+*								*
+* Part2a: expand intermediate code to assembler			*
+*								*
+* VAX = 0	: pdp11 code					*
+* VAX = 1	: VAX code					*
+****************************************************************#
+
+var   VAX	:= 1;
+var   long;	# string to declare one word in assembler	#
+		# '' for PDP11					#
+		# '.long ' for VAX				#
+
+var   squeeze   := 0;
+		# 1 => no line instructions, no local symbols	#
+var   sqtab     := table(100, undefined);
+		# strings to be discarded when squeeze = 1	#
+
+		# Here follow various variables and constants	#
+		# used for the line flushing mechanism. To avoid#
+		# generating zillions of lines of the form	#
+		#	.byte opcode				#
+		# We generate lines of the form			#
+		#	.byte opcode1,opcode2,...		#
+		# The lineflushing mechanism implements this	#
+var   linesize	:= 0,
+      opsep     := '.byte ';
+const opsize1	:= 5,
+		# safe average size of instruction name		#
+      opsize2   := 9,
+		# safe average size of instruction name + arg	#
+      linemax   := 100;
+		# max number of chars on output line		#
+
+var   globtab	:= table(350, -1),
+      globval	:= table(350, 'nil'),
+      globname  := [],
+
+      classtab  := table(20, -1),
+      nclasses := 0,
+      dt_last,
+
+      fdtab     := table(40, -1),
+      fldproctab := table(40, undefined),
+      nfldproc   := 0,
+      realtab   := table(40, undefined),
+      nreal     := 0,
+      stdclass  := [
+		# Note: order must be the same as in summer.h #
+		'scan_string',	2,
+		'interval',	3
+		],
+      nfields := 0,
+
+      inprogram	:= 0,
+      n256 := 256,
+      f_ic,
+      f_s;
+const
+      digit	:= '0123456789',
+      nl	:= '\n',
+      sc	:= ',',
+      letter	:= 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+# flush line if current line not empty #
+
+proc lineflush()
+( if linesize > 0 then
+     f_s.put(nl);
+     opsep := '.byte ';
+     linesize := 0;
+  fi
+);
+
+# generate assembler to create one word of info. Used to include	#
+# pointers and values > 256 in the output code				#
+
+proc word(opcode)
+( lineflush();
+  f_s.put(opcode, nl);
+);
+
+# generate one opcode; take care of lineflushing			#
+
+proc code1(opcode)
+( if linesize > linemax then lineflush() fi;
+  f_s.put(opsep, opcode);
+  linesize := linesize + opsize1;
+  opsep := sc;
+);
+
+# generate one opcode + argument; take care of lineflushing		#
+
+proc code2(opcode, a)
+( if linesize > linemax then lineflush() fi;
+  f_s.put(opsep, opcode, sc, a);
+  linesize := linesize + opsize2;
+  opsep := sc;
+);
+
+# generate one opcode + argument; if argument > 256 then generate	#
+# opcode prefixed with 'x' (for extended instruction)			#
+
+proc exp_2(opcode, a)(
+  var n;
+  n := integer(a);
+  if 0 <= n < n256 then code2(opcode, dec(a)) else code3('x' || opcode, dec(a)) fi
+);
+
+# generate one opcode + argument; argument does not fit in byte		#
+ 
+proc code3(opcode, a)(
+  code1(opcode);
+  if VAX = 1 then
+	lineflush();
+	f_s.put(';.long ', a, nl)
+  else
+     code1('[' || a || ']\\>8');
+     code1('[' || a || ']&377');
+  fi
+);
+
+# part2b interface routine #
+
+proc exp_op0(opcode)
+( if f_ic ~= undefined then f_ic.put(opcode, nl) fi;
+  # here follows an inline expansion of "code1" #
+  if linesize > linemax then lineflush() fi;
+  f_s.put(opsep, opcode);
+  linesize := linesize + opsize1;
+  opsep := sc;
+);
+
+# part2b interface routine #
+
+proc exp_op1(opcode, alist)
+( var n;
+  if f_ic ~= undefined then f_ic.put(opcode, '\t', alist, nl) fi;
+  # here follows an inline expansion of "exp_2" and "dec" #
+  n := integer(alist);
+  if 0 <= n < n256 then
+     if VAX = 0 then alist := string(alist) || '.' fi;
+     if linesize > linemax then lineflush() fi;
+     f_s.put(opsep, opcode, sc, alist);
+     linesize := linesize + opsize2;
+     opsep := sc;
+  else
+     code3('x' || opcode, dec(alist))
+  fi
+);
+
+# return decimal version of number "n". #
+ 
+proc dec(n)
+( if VAX = 0 then
+     return(string(n) || '.')
+  else
+     return(string(n))
+  fi
+);
+
+# return "s" as assembly language comment #
+
+proc comment(s)
+( return(if VAX = 0 then ' / ' else ' # ' fi || s)
+);
+
+# insert label "lab" in the code #
+
+proc genlab(lab)
+( if VAX = 1 then
+     lineflush();
+     f_s.put('.long ', lab, nl);
+  else
+     code1('[' || lab || '^0]\\>8');
+     code1('[' || lab || '^0]&0377');
+  fi
+);
+
+
+proc exp_glob(opcode, a)(
+  var n := globtab[a];
+  if f_ic ~= undefined then f_ic.put(opcode, '\t', a, nl) fi;
+  if er ~= 0 then return fi;
+  if n < 0 then n := exp_dclglob(a) fi;
+  if n < n256 then code2(opcode, dec(n)) else code3('x' || opcode, dec(n)) fi
+);
+
+proc exp_dclglob(a)
+( var n;
+  if f_ic ~= undefined then f_ic.put('dclglob\t', a, nl) fi;
+  if er ~= 0 then return(-1) fi;
+  if (n := globtab[a]) < 0 then
+     n := globtab[a] := globname.size;
+     globname.append(a);
+  fi;
+  return(n)
+);
+
+
+proc enter_proc(name)
+( var n;
+  if (n := globtab[name]) = -1 then
+     n := globtab[name] := globname.size;
+     globname.append(name);
+     globval[n] := 'P' || string(n);
+  fi;
+  return(n)
+);
+
+proc enter_fldproc(name)
+( var n;
+  if (n := fldproctab[name]) = undefined then
+     n := fldproctab[name] := [nfields - 1, nfldproc];
+     nfldproc := nfldproc + 1;
+   fi;
+   return('FLDP' || string(n[1]));
+);
+
+proc exp_call(name, nargs)
+( var idx;
+
+  if f_ic ~= undefined then f_ic.put('call\t', name, sc, nargs, nl) fi;
+  if er ~= 0 then return fi;
+  idx := enter_proc(name);
+  exp_2('call', idx);
+  code1(dec(nargs));
+);
+
+proc genstr(lab, nchar, str, sflag)
+( lineflush();
+  if VAX = 0 then
+     f_s.put('.even\n', lab, '=.\n')
+  else
+     f_s.put(lab, ':\n')
+  fi;
+  f_s.put(long, 'dt_string', nl,
+          long, dec(nchar), nl);
+  if sflag > 0 then
+     var c, sep := '';
+
+     f_s.put('.byte ');
+     for c in str do f_s.put(sep, '''', c); sep := sc od;
+     f_s.put(nl)
+  elif str.size < linemax then
+     f_s.put('.byte ', str, nl);
+  else
+     scan str
+     for var c;
+         while c := break(sc) & move(1)
+         do  f_s.put('.byte ', c, nl)
+         od;
+         f_s.put('.byte ', rtab(0), nl)
+     rof
+  fi;
+  if VAX = 0 then
+     if (nchar%2)*2 ~= nchar then f_s.put('\t.even\n') fi;
+  fi
+);
+
+proc exp_dclstr(lab, nchar, str)
+( if f_ic ~= undefined then f_ic.put('dclstr\t', lab, sc, nchar, sc, nl) fi;
+  if er ~= 0 then return fi;
+  if (squeeze = 1 & sqtab[lab] = 1) fails then
+	genstr(lab, integer(nchar), str, 0)
+  fi
+);
+
+proc exp_proc(opcode, a)(
+  var name, locnames,  nformals, nlocals, lino, endlino;
+  var plab, fldlab, d;
+
+  if f_ic ~= undefined then f_ic.put(opcode, '\t', a, nl) fi;
+  if er ~= 0 then return fi;
+  if ~ scan a for
+     name := break(sc) & move(1) &
+     locnames := break(sc) & move(1) &
+     nformals := span(digit) & lit(sc) &
+     nlocals := span(digit) & lit(sc) &
+     lino := span(digit) & lit(sc) &
+     endlino := span(digit) & rpos(0)
+     rof
+  then experror(opcode, a); return fi;
+  if VAX = 0 then f_s.put('.even\n') fi;
+  if opcode = 'program' then
+     inprogram := 1;
+     f_s.put('.globl\t_program\n');
+     f_s.put('_program:');
+  fi;
+  if (d := fldproctab[name]) ~= undefined then
+     fldlab := 'FLD' || string(d[0]);
+     plab := 'FLDP' || string(d[1]);
+  else
+     fldlab := if opcode = 'cproc' then dec(-1) else 'nil' fi;
+     plab   := 'P' || string(enter_proc(name))
+  fi;
+  f_s.put(plab, ':', nl,
+          long, 'dt_proc', nl,
+          long, fldlab, nl,
+          long, dec(nformals), nl,
+          long, dec(nlocals), nl,
+          long, dec(integer(nformals) + integer(nlocals)), nl,
+          long, dec(lino), nl,
+          long, dec(endlino), nl);
+  if squeeze = 1 then
+	sqtab[locnames] := 1;
+	locnames := 'nil';
+  fi;
+  f_s.put(long, locnames, nl,
+          long, dec(0), nl,	# freq #
+          long, dec(0), nl);	# prof #
+);
+
+proc exp_procend(a)(
+
+  if f_ic ~= undefined then f_ic.put('procend\t', a, nl) fi;
+  if er ~= 0 then return fi;
+  if inprogram = 0 then
+     exp_2('return', 0)
+  else
+     inprogram := 0;
+  fi;
+  code1(if VAX = 0 then 'halt' else 'ihalt' fi);
+  lineflush();
+);
+
+proc exp_subr(alist)(
+  # kludge: avoid redefinition of 'real' #
+  if alist = 'real' then return fi;
+  if f_ic ~= undefined then f_ic.put('subr\t', alist, nl) fi;
+  if er ~= 0 then return fi;
+  exp_subr1(alist);
+);
+
+proc exp_subr1(alist)
+( var stdclasssubr := table(5, 'nil') init [
+	'integer':
+	'interval':
+	'real':
+	'scan_string':
+	'string':
+	'file':
+	'bits':		dec(-1)
+	];
+
+  if VAX = 0 then f_s.put('.even\n') fi;
+  enter_proc(alist);
+  f_s.put(globval[globtab[alist]], ':', nl,
+          long, 'dt_subr', nl,
+          long, stdclasssubr[alist], nl);	# fld pointer #
+  alist := '__' || alist;
+  f_s.put('\t.globl\t', alist, nl,
+          long, alist, nl,
+          long, dec(0), nl,	# freq #
+          long, dec(0), nl);	# prof #
+);
+
+proc exp_classes(line)
+( var i;
+
+  if f_ic ~= undefined then f_ic.put(line, nl) fi;
+  if line = 'classes' then
+     f_s.put('.globl _class_sizes\n_class_sizes:\n');
+     for nclasses in interval(0, dt_last, 1) do f_s.put(long, '\t0\n') od;
+     nclasses := nclasses + 1;
+     for i in interval(0, stdclass.size - 1, 2)
+     do
+        f_s.put(long, dec(stdclass[i + 1]), nl);
+        classtab[stdclass[i]] := nclasses;
+        nclasses := nclasses + 1;
+     od;
+     return;
+  fi;
+  if nclasses < dt_last then experror('classes missing', '') fi;
+  if line ~= 'endclasses' then
+     var cname, csize;
+
+     if ~ scan line for
+            cname := break(sc) & move(1) &
+	    csize := integer(rtab(0))
+          rof
+     then
+	experror(line, ''); return
+     fi;
+     f_s.put(long, dec(csize), nl);
+     classtab[cname] := nclasses;
+     nclasses := nclasses + 1;
+     return
+  else
+     var i, cname;
+
+     f_s.put('.globl _class_names\n_class_names:\n');
+     for i in interval(0, nclasses - 1, 1)
+     do
+        f_s.put(long, '\tCN', i, nl)
+     od;
+
+     for cname in classtab.index
+     do
+        genstr('CN' || string(classtab[cname]), cname.size , cname, 1);
+     od;
+     freturn
+  fi
+);
+
+
+var switch;	# array to construct switch table for current field definition #
+var alias;	# name of global alias for field, or 'nil' if none #
+var nentries;	# number of entries in current field definition #
+
+var stdfld := table(10, undefined) init [
+		'any':		'any',
+		'append':	'append',
+		'bal':		'bal',
+		'break':	'break',
+		'center':	'center',
+		'close':	'close',
+		'compl':	'compl',
+		'conj':		'conj',
+		'cursor':	'cursor',
+		'delete':	'delete',
+		'disj':		'disj',
+		'find':		'find',
+		'get':		'get',
+		'index':	'index',
+		'last':		'last',
+		'left':		'left',
+		'lit':		'lit',
+		'move':		'move',
+		'next':		'next',
+		'pos':		'pos',
+		'put':		'put',
+		'repl':		'repl',
+		'replace':	'replace',
+		'retrieve':	'retrieve',
+		'reverse':	'reverse',
+		'right':	'right',
+		'rpos':		'rpos',
+		'rtab':		'rtab',
+		'size':		'size',
+		'sort':		'sort',
+		'span':		'span',
+		'substr':	'substr',
+		'tab':		'tab',
+		'text':		'text',
+		'update':	'update',
+		
+	
+		'+.2':		'add',
+		'-.2':		'sub',
+		'-.1':		'neg',
+		'*.2':		'mul',
+		'/.2':		'div',
+		'%.2':		'idiv',
+		'||.2':		'conc',
+		'=.2':		'eq',
+		'~=.2':		'ne',
+		'>.2':		'gt',
+		'>=.2':		'ge',
+		'<.2':		'lt',
+		'<=.2':		'le'
+		],
+      typetag	:= table(10, '') init [
+		'integer':	'I',
+		'real':		'R',
+		'string':	'S',
+		'array':	'A',
+		'table':	'T',
+		'file':		'F',
+		'bits':		'B',
+		'scan_string':	'SC',
+		'interval':	'IV'
+		],
+     fldname,
+     fldbuf := [];
+
+proc fieldterm ()
+( if nfields > 0
+  then
+     var n, sep := '.byte ', line;
+
+     fdtab[fldname] := nfields-1;
+     genstr('FLDN' || string(nfields-1), fldname.size , fldname, 1);
+     f_s.put('FLD', nfields-1, ':\n');
+     if stdfld[fldname] ~= undefined
+     then var fldpref := '_f_' || stdfld[fldname];
+	  f_s.put('.globl ', fldpref, ';' , fldpref, ':\n');
+     fi;
+     f_s.put(long, 'FLDN', nfields-1, nl);	# fdesc_name #
+     f_s.put(long, 'FLDSW', nfields-1, nl);	# fdesc_switch #
+     f_s.put(long, alias, nl);			# fdesc_alias #
+     for line in fldbuf do f_s.put(line, nl) od;
+
+     f_s.put('FLDSW', nfields-1, ': ');
+     for n in switch do f_s.put(sep, n); sep := sc od;
+     f_s.put(nl);
+  fi;
+  nfields := nfields + 1;
+  alias := 'nil';
+  switch := array(nclasses, -1);
+  fldbuf := [];
+  nentries := 0;
+);
+
+proc exp_fields0() ();
+
+proc exp_fields1(line)
+( var cname, off, fetch_assoc, store_assoc, ty, f ;
+
+     if f_ic ~= undefined then f_ic.put(line, nl) fi;
+     scan line for
+	 if lit('fld') & span(' \t') & f := rtab(0) then
+	   fieldterm();
+	   fldname := f;
+	 elif
+	   cname := break(sc) & move(1) &
+	   ty    := break(sc) & move(1) &
+	   off   := break(sc) & move(1) &
+	   fetch_assoc := break(sc) & move(1) &
+	   store_assoc := rtab(0)
+	then
+	   if cname = '~global' then
+	      alias := 'P' || string(enter_proc(fetch_assoc));
+	   else
+	      var classtype := classtab[cname], line := '';
+
+	      switch[classtype] := nentries;
+	      nentries := nentries + 1;
+	      if ty = '~var' then
+		 line := long || dec(0) || ';' ||	# fld_type #
+		 	 long || dec(off);		# fld_offset #
+	      elif ty = '~proc' then
+		 var p;
+		 if off = fldname  then
+		    p := '_' || typetag[cname] || fldname
+	         else
+		    p := enter_fldproc(off)
+		 fi;
+		 line := long || p || ';' ||		# fld_type #
+		 	 long || dec(-1);		# fld_offset #
+	      else
+	         experror(line, '')
+	      fi;
+	      line :=	line || ';' || long ||
+	      		if fetch_assoc = '~nil' then '_fetcher'
+	      		elif fetch_assoc = '~simple' then '0'
+	      		elif fetch_assoc = fldname  then
+              		   '_' || typetag[cname] || fldname
+	      		else
+                 	   enter_fldproc(fetch_assoc)
+	      		fi;
+	      line :=	line || ';' || long ||
+	      		if store_assoc = '~nil' then '_storeer'
+	      		elif store_assoc = '~simple' then '0'
+	      		else
+              		   enter_fldproc(store_assoc)
+	      		fi;
+	      fldbuf.append(line)
+           fi
+	 else
+	   experror(line, '') & return('')
+         fi
+     rof;
+   return(stdfld);
+);
+
+proc exp_fields2()
+( var i;
+
+  if f_ic ~= undefined then f_ic.put('endfields\n') fi;
+  fieldterm();
+  nfields := nfields - 1;	# take account of last spurious increment #
+  f_s.put('.globl _fields\n_fields:\n');
+  for i in interval(0, nfields - 1, 1) do f_s.put(long, '\tFLD', i, nl) od;
+);
+
+proc exp_fld(opcode, name, n)
+( var ind;
+
+  if f_ic ~= undefined then f_ic.put(opcode, '\t', name, sc, n, nl) fi;
+  if er ~= 0 then return fi;
+  if (ind := fdtab[name]) = -1 then experror(opcode, name || sc || n) fi;
+  code1(opcode);
+  code1(dec(ind));
+  code1(dec(n));
+);
+
+proc exp_lab(opcode, alist)
+( if f_ic ~= undefined then f_ic.put(opcode, '\t', alist, nl) fi;
+  if er ~= 0 then return fi;
+  if opcode = 'lab' then
+     lineflush();
+     f_s.put(alist, if VAX = 1 then ':\n' else '=.\n' fi);
+  elif opcode = 'gocase' then
+     code3(opcode, dec(globtab[alist]))
+  else
+     code1(opcode);
+     genlab(alist)
+  fi
+);
+
+proc exp_error(alist)
+( if f_ic ~= undefined then f_ic.put('error\t', alist, nl) fi;
+  if er ~= 0 then return fi;
+  code2('error', 'er_' || alist)
+);
+
+proc exp_line(opcode, alist)
+( if f_ic ~= undefined then f_ic.put(opcode, '\t', alist, nl) fi;
+  if er ~= 0 then return fi;
+  if opcode = 'line' & squeeze = 0 then exp_2(opcode, alist)
+  elif opcode = 'aline' & squeeze = 0 then code3(opcode, dec(alist)) fi;
+);
+
+proc exp_newclass(alist)
+( var t;
+  if f_ic ~= undefined then f_ic.put('newclass\t', alist, nl) fi;
+  if er ~= 0 then return fi;
+  if (t := classtab[alist]) = -1 then
+     experror('newclass', alist)
+  else
+     exp_2('newclass', t)
+  fi
+);
+
+proc exp_real(alist)
+( var n;
+  if f_ic ~= undefined then f_ic.put('real\t', alist, nl) fi;
+  if er ~= 0 then return fi;
+  if (n := realtab[alist]) = undefined then
+     n := realtab[alist] := nreal;
+     nreal := nreal + 1;
+  fi;
+  code1('undef');
+  code1('load');
+  genlab('RCON' || string(n));
+  exp_call('real', '2')
+);
+
+proc get_args(n, opcode, alist)
+( var a, b, c;
+  if n = 2 then
+    scan alist
+    for a := break(sc) & move(1) &
+        b := rtab(0)
+    rof | experror(opcode, alist);
+    return([a, b]);
+  elif n = 3 then
+    scan alist
+    for a := break(sc) & move(1) &
+        b := break(sc) & move(1) &
+        c := rtab(0)
+    rof | experror(opcode, alist);
+    return([a, b, c]);
+  else
+    experror(opcode, alist);
+  fi
+);
+
+proc exp(opcode, alist)
+( var a, b, c;
+
+	if er ~= 0 then return fi;
+
+	case opcode of
+	'int':
+	'loc':
+	'asloc':
+	'rev':
+	'xar':
+	'cloc':
+	'ascloc':
+	'return':
+			exp_op1(opcode, alist),
+	'glob':
+	'asglob':
+			exp_glob(opcode, alist),
+	'real':		exp_real(alist),
+	'add':
+	'sub':
+	'mul':
+	'div':
+	'idiv':
+	'neg':
+	'void':
+	'freturn':
+	'conc':
+	'newrc':
+	'oldrc':
+	'resrc':
+	'gofl':
+	'oldfl':
+	'newsubj':
+	'oldsubj':
+	'subject':
+	'nullstr':
+	'undef':
+	'self':
+	'eq':
+	'ne':
+	'lt':
+	'gt':
+	'le':
+	'ge':
+	'asind':
+	'ind':
+	'tabinit':
+			exp_op0(opcode),
+	'lab':
+	'newfl':
+	'load':
+	'go':
+	'gocase':
+			exp_lab(opcode, alist),
+	'error':	exp_error(alist),
+	'arinit':
+	'tabelem':
+			code3(opcode, dec(alist)),
+	'aline':
+	'line':
+			exp_line(opcode, alist),
+	'program':
+	'cproc':
+	'proc':		exp_proc(opcode, alist),
+	'procend':	exp_procend(alist),
+	'subr':		exp_subr(alist),
+	'dclstr':	[a, b, c] := get_args(3, opcode, alist);
+			exp_dclstr(a, b, c),
+	'call':		[a, b] := get_args(2, opcode, alist);
+			exp_call(a, b),
+	'dclglob':	exp_dclglob(alist),
+	'newclass':
+			exp_newclass(alist),
+	'ifld':
+	'fld':
+	'iasfld':
+	'asfld':	[a, b] := get_args(2, opcode, alist);
+			exp_fld(opcode, a, b),
+	default:
+			experror(opcode, alist)
+	esac
+);
+
+proc experror(opcode, a) put('>> ', opcode, ' ', a, nl);
+
+proc cant(name)(
+  put('can''t open ''',  name, nl);
+  stop(1)
+);
+
+proc prefix(prename) (
+  var inp, line;
+
+  if inp := file(prename,'r') fails then cant(prename) fi;
+
+  line := inp.get ;
+  if line = 'VAX' then
+     VAX := 1;
+     long := '.long '
+  elif line = 'PDP11' then
+     VAX := 0;
+     long := ''
+  else
+     experror('', 'wrong prefix file');
+     stop(1)
+  fi;
+  while line := inp.get 
+  do
+    f_s.put(line, nl);
+    scan line
+    for var dname;
+        if VAX = 0 then
+           lit('dt_') & dname := break('\t') & lit('\t= ')
+        else
+           lit('.set\tdt_') & dname := break(',') & lit(',')
+        fi &
+        if dname = 'last' then dt_last else classtab[dname] fi := integer(rtab(0))
+     rof | '';
+  od;
+  inp.close ;
+  f_s.put('.data\n');
+);
+
+proc expinit(args)(
+ var nargs := args.size, i;
+
+ if nargs < 2 then experror('', 'Too few args'); stop(1) fi;
+
+ prname := args[nargs - 1];
+ if f_s := file(prname || '.s', 'w') fails then cant(prname || '.s') fi;
+ prefix(args[nargs - 2]);
+ for i in interval(0, nargs - 3, 1)
+ do if args[i] = '-S' then squeeze := 1
+    elif args[i] = '-IC' then
+         if f_ic := file(prname || '.ic', 'w') fails then cant(prname || '.ic') fi;
+    elif args[i] = '-EXP' then
+	 var line, f_icexp;
+         if f_icexp := file(prname || '.ic', 'r') fails then cant(prname || '.ic') fi;
+	 while exp_classes(f_icexp.get) do od;
+	 if (line := f_icexp.get) ~= 'fields' then
+	    experror('file does not field decls', '')
+	 fi;
+	 exp_fields0();
+	 while (line := f_icexp.get) ~= 'endfields' do exp_fields1(line) od;
+	 exp_fields2();
+	 while line := f_icexp.get
+	 do scan line
+	    for
+	        exp(break(' \t'), span(' \t') & rtab(0)) | exp(line, '')
+	    rof
+	 od;
+         expterminate();
+	 stop(0)
+    else
+	 experror('Unrecognized argument ', args[i]);
+	 stop(1)
+    fi
+  od;
+);
+
+proc expterminate()
+( var i, g_er, g_in, g_out;
+   if f_ic ~= undefined then f_ic.close fi;
+   exp_subr1('real');
+   if VAX = 0 then f_s.put('.even\n') fi;
+#
+  if squeeze = 1 then f_s.put('.globl _squeeze\n') fi;
+#
+   f_s.put('.globl _nclasses;_nclasses:', nl,
+           long, dec(if nclasses = 0 then dt_last + 1 else nclasses fi), nl,
+           '.globl _nfields; _nfields:', long, dec(nfields), nl,
+           '.globl _globals', nl,
+           '.globl _eglobals', nl,
+           '.globl _globnames', nl,
+           '.globl _stand_in', nl,
+           '.globl _stand_out', nl,
+           '.globl _stand_er', nl);
+   g_er := exp_dclglob('stand_er');
+   g_in := exp_dclglob('stand_in');
+   g_out := exp_dclglob('stand_out');
+   f_s.put('_globals:');
+   for i in globname.index
+   do
+      if i = g_er then f_s.put('_stand_er:')
+      elif i = g_in then f_s.put('_stand_in:')
+      elif i = g_out then f_s.put('_stand_out:')
+      fi;
+      f_s.put(long, globval[i], nl); i := i + 1 od;
+   f_s.put('_eglobals:\n');
+   for i in globname.index
+   do
+      genstr('N' || string(i), globname[i].size , globname[i], 1);
+   od;
+   f_s.put('_globnames:\n');
+   for i in globname.index do f_s.put(long, 'N', i, nl) od;
+   for i in realtab.index 
+   do
+	genstr('RCON' || string(realtab[i]), i.size , i, 1)
+   od;
+   f_s.close ;
+);
+
+#************************************************************************
+*************************************************************************
+*									*
+*		C O D E G E N E R A T O R				*
+*									*
+*************************************************************************
+************************************************************************#
+
+
+var	f_im,			# file produced by the parser #
+	f_gl,			# file containing initialized globals #
+	f_st,			# file containing string constants #
+#	f_ic,			  file that will contain the final code #
+	prname,			# program name #
+	clname,			# name of current class #
+	er := 0,		# to stop code generation #
+	lastline := 1,		# line number in source file #
+	usedsubrs := '',	# used build in procedures #
+	skiptab := table(10,''),  # contains ic-code for complex operands #
+	symtab := table(100, undefined),
+	fieldtab := table(50, undefined),
+
+	flstack := array(30,''),  # faillabel stack #
+	flstp := -1,	  	# faillabel stackpointer #
+	flsize := 20,
+	lab := 0,		# label counter #
+	flab := 0,		# faillabel counter #
+
+	nrc := 0,		# numbered of unclosed newrc instructions #
+	nsubj := 0;		# number of umclosed newsubj instructions #
+const	empty := '',
+	tabsym := '\t',
+	svoid := 'void',
+	NIL   := 'nil',
+	CASE := 'case';
+
+
+var	opc	:= table (20, '') init [
+			'-1':		'neg',
+			'+':		'add',
+			'-2':		'sub',
+			'*':		'mul',
+			'/':		'div',
+			'%':		'idiv',
+			'||':		'conc',
+			'<':		'lt',
+			'<=':		'le',
+			'>':		'gt',
+			'>=':		'ge',
+			'=':		'eq',
+			'~=':		'ne'
+                ];
+	# the opcodes for the various operators #
+
+proc error(m)
+(	put(string(lastline).right(5, ' '), ': ', m, nl);
+	er := 1
+);
+
+proc comerr(m)
+(	put(string(lastline).right(5, ' '), ': compiler error; ', m, nl);
+	stop(-1)
+);
+
+proc inspect(rval, expr)
+(	if rval > 0
+	then	error(expr || ': value required')
+	elif rval < 0
+	then	error('illegal assignment to ' || expr)
+	fi
+);
+
+proc splitcode(line)
+	scan line
+	for	exp(break(tabsym), lit(tabsym) & rtab(0)) |
+		exp(rtab(0), '')
+	rof;
+		# calls exp for lines of format opcode-tab-args #
+		# and putcode1 otherwise.			     #
+
+proc void(aval)
+(	if aval ~= 0
+	then	exp_op0(svoid)
+	fi
+);
+
+proc voidcall(rval)
+	if rval = 0
+	then	exp_op0(svoid)
+	fi;
+
+proc abs(rval)
+	return(if rval < 0 then -rval else rval fi);
+
+proc nextflab()		return('F' || string(flab := flab + 1));
+
+proc nextlab()		return('L' || string(lab := lab + 1));
+
+proc opcode(op_)		exp_op0(opc[op_]);
+
+proc label(l)		exp_lab('lab', l);
+
+proc gofl()		exp_op0('gofl');
+
+proc newrc()		(nrc := nrc + 1; exp_op0('newrc'));
+
+proc oldrc()		(nrc := nrc - 1; exp_op0('oldrc'));
+
+proc resrc()		exp_op0('resrc');
+
+proc close_rc()
+( var i;
+#
+  for i in interval(1, nrc, 1) do exp_op0('oldrc') od;
+#
+);
+
+proc newsubj()		(nsubj := nsubj + 1; exp_op0('newsubj'));
+
+proc oldsubj()		(nsubj := nsubj - 1; exp_op0('oldsubj'));
+
+proc close_subj()
+( var i;
+#
+  for i in interval(1, nsubj, 1) do exp_op0('oldsubj') od;
+#
+);
+
+proc go(l)		exp_lab('go', l);
+
+proc retu(n)
+( close_rc();
+  close_subj();
+  exp_op1('return', n);
+);
+
+proc fretu()
+( close_rc();
+  close_subj();
+  exp_op0('freturn');
+);
+
+proc ercode(c)		exp_error(c);
+
+proc pushfl(f)
+if er = 0
+then	flstack[flstp := flstp + 1] := f
+fi;
+
+proc popfl()
+if er = 0
+then	if flstp < 0
+	then	comerr('pop tried from empty flstack')
+	else	flstack[flstp] := '';
+		flstp := flstp - 1
+	fi
+fi;
+
+proc newfl(f)
+if er = 0
+then	if flstp = -1 | ~(flstack[flstp] = f = NIL)
+	then	exp_lab('newfl', f)
+	fi;
+	pushfl(f)
+fi;
+
+proc oldfl()
+if er = 0
+then	if flstp <= 0 | ~(flstack[flstp] = flstack[flstp-1] = NIL)
+	then	exp_op0('oldfl')
+	fi;
+	popfl()
+fi;
+
+proc make_decls()
+(	var dcl, line, name, glcnt, i;
+
+	if dcl := file(prname || '.dc','r') fails
+	then	error('cannot open ' || prname || '.dc');
+		stop(1)
+	fi;
+	scan dcl.get for lit('glcnt:\t') & glcnt := integer(rtab(0)) rof;
+	while (line := dcl.get ) ~= 'endsyms'
+	do	scan line
+		for	name := break(':') &
+			lit(':\t') &
+			symtab[name] :=  rtab(0)
+		rof
+	od;
+	while exp_classes(dcl.get) do od;
+	if dcl.get ~= 'fields' then comerr('dcl does not contains fields') fi;
+	exp_fields0();
+	line := dcl.get ;		# field ... #
+	while line ~= 'endfields'
+	do	var x;
+
+		exp_fields1(line);
+		name := scan line for lit('fld\t') & rtab(0) rof;
+		if (line := dcl.get) ~= 'endfields'
+		then	fieldtab[name] := x := 
+			[scan line for break(sc) rof, undefined] | undefined;
+			exp_fields1(line);
+			while	scan (line := dcl.get )
+				for x[1] := [break(sc), undefined] rof
+			do exp_fields1(line); x := x[1] od
+		fi
+	od;
+	exp_fields2();
+	for i in interval(1, glcnt, 1)
+	do	exp_dclglob('_' || string(i)) od;
+	dcl.close 
+);
+
+
+proc splitstrings()
+(	var ss, line, lab, plab, n, pn, str, pstr, instock := 0;
+
+	if ss := file(prname || '.ss', 'r') fails
+	then	comerr('cannot open ' || prname || '.ss');
+		stop(1);
+	fi;
+	while line := ss.get
+	do	scan line
+		for break(tabsym) & move(1) &
+		    lab := break(sc) & move(1) &
+		    n := break(sc) & move(1) &
+		    str := rtab(0)
+		rof | comerr('malformed line in .ss file');
+		if str = pstr
+		then	exp_lab('lab', lab); instock := instock + 1
+		else	if instock > 0 then exp_dclstr(plab, pn, pstr) fi;
+			[plab, pn, pstr] := [lab, n, str];
+			instock := 1;
+		fi
+	od;
+	if instock > 0 then exp_dclstr(plab, pn, pstr) fi
+);
+
+
+
+proc treatclass(rval, name, entry)
+(	var tail;
+
+	exp_op0('undef');
+	if scan entry
+	   for lit('ab') & tail := rtab(0) rof
+	then	symtab[name] := entry := 'ap' || tail;
+		usedsubrs := usedsubrs || name || sc
+	fi;
+	if scan entry
+	   for	lit('ap') &
+		if ~lit('1')
+		then	error(name || ': argument list missing')
+		else	exp_call(name, '1');
+			voidcall(rval)
+		fi &
+		return(abs(rval))
+	   rof
+	then	# ok #
+	else	comerr('illegal symentry ' || entry || ' for ' || name)
+	fi
+);
+
+proc treatglob(rval, name, entry)
+(	var tail;
+
+	if scan entry
+	   for lit('gb') & tail := rtab(0) rof
+	then	symtab[name] := entry := 'gp' || tail;
+		usedsubrs := usedsubrs || name || sc
+	fi;
+	if scan entry
+	   for  lit('g') &
+		(  lit('p') &
+		   if ~lit('0')
+		   then error(name || ': argument list missing')
+		   else exp_call(name, '0');
+			voidcall(rval)
+		   fi &
+   		   return(abs(rval))
+		 | rpos(0) &
+		   if rval = 1
+		   then	exp_glob('glob', name);
+	   		return(1)
+		   elif rval = -1
+		   then	exp_glob('asglob', name);
+			return(-1)
+		   else	inspect(rval, 'global'); return(rval)
+		   fi
+		)
+	   rof
+	then	# ok #
+	else	comerr('illegal symtab entry for ' || name || ': ' || entry)
+	fi
+);
+
+proc treatcloc(rval, v)
+(	if rval = -1
+	then	exp_op0('self');
+		exp_fld('iasfld', v, '1');
+		return(-1)
+	else	exp_op0('self');
+		exp_fld('ifld', v, '1');
+		voidcall(rval);
+		return(rval)
+	fi
+);
+
+proc classvar(rval)
+(	var v, entry;
+
+	v := break(sc) &
+	lit(sc) &
+	entry := symtab[v] &
+	if entry = undefined then comerr('no symtab entry for ' || v) fi &
+	return(treatclass(rval, v, entry))
+);
+
+proc globvar(rval)
+(	var v, entry;
+
+	v := break(sc) &
+	lit(sc) &
+	entry := symtab[v] &
+	if entry = undefined then comerr('no symtab entry for ' || v) fi &
+	return(treatglob(rval, v, entry))
+);
+
+proc clocvar(rval)
+(	var v;
+
+	v := break(sc) &
+	lit(sc) &
+	return(treatcloc(rval, v))
+);
+
+proc identify()
+(	var nm, entry, e, t;
+
+	nm := break(sc) &
+	lit(sc) &
+	e := entry := fieldtab[nm] &
+	while entry ~= undefined
+	do	if entry[0] = clname
+		then	return(['c', nm, entry])
+		else	entry := entry[1]
+		fi
+	od &
+	entry := symtab[nm] &
+	if entry ~= undefined
+	then	if scan entry for lit('a') rof
+		then	return(['a', nm, entry])
+		else	return(['g', nm, entry])
+		fi
+	elif e ~= undefined
+	then	return(['w', nm, ''])
+	else	comerr('unknown not identifiable')
+	fi
+);
+
+proc unknown(rval)
+(	var nm, entry, t;
+
+	[t, nm, entry] := identify() &
+	if t = 'a'
+	then	return(treatclass(rval, nm, entry))
+	elif t = 'g'
+	then	return(treatglob(rval, nm, entry))
+	elif t = 'c'
+	then	return(treatcloc(rval, nm))
+	elif t = 'w'
+	then	exp_op0('subject');
+		if rval = -1 then exp_fld('asfld', nm, '1')
+			     else exp_fld('fld', nm, '1')
+		fi;
+		voidcall(rval);
+		return(rval)
+	else	comerr('unexpected unknown')
+	fi
+);
+
+proc locvar(rval)
+(	var v;
+
+	v := break(sc) &
+	lit(sc) &
+        if rval = 1 
+	then	exp_op1('loc', v);
+		return(1)
+	elif rval = -1 
+	then	exp_op1('asloc', v);
+		return(-1)
+	else	inspect(rval, 'local'); return(rval)
+	fi
+);
+
+proc str(rval)
+(	var s;
+
+	s := ('S'|| break(sc)) &
+	lit(sc) &
+	if rval = 1 
+	then	exp_lab('load', s);
+		return(1)
+	else	inspect(rval, 'string'); return(rval)
+	fi
+);
+
+proc int(rval)
+(	var n;
+
+	n := break(sc) &
+	lit(sc) &
+	if rval = 1 
+	then	exp_op1('int', n);
+		return(1)
+	else	inspect(rval, 'integer'); return(rval)
+	fi
+);
+
+proc realnum(rval)
+(	var r;
+
+	r := break(sc) &
+	lit(sc) &
+	if rval = 1
+	then	exp_real(r);
+		return(1)
+	else	inspect(rval, 'real'); return(rval)
+	fi
+);
+
+proc nullstr(rval)
+	lit(sc) &
+	if rval = 1 
+	then	exp_op0('nullstr');
+		return(1)
+	else	inspect(rval, 'string'); return(rval)
+	fi;
+
+proc fret(rval)
+	lit(sc) &
+	fretu() &
+	inspect(rval, 'freturn') &
+	return(rval);
+                        # hence "if t then freturn else x fi := 3" is illegal #
+
+proc undef(rval)
+	lit(sc) &
+	if rval = 1 
+	then	exp_op0('undef') &
+		return(1)
+	else	inspect(rval, 'undefined'); return(rval)
+	fi;
+
+proc subj(rval)
+	lit(sc) &
+	if rval = 1
+	then	exp_op0('subject');
+		return(1)
+	else	inspect(rval, 'subject'); return(rval)
+	fi;
+
+proc clself(rval)
+	lit(sc) &
+	if rval = 1
+	then	exp_op0('self') &
+		return(1)
+	else	inspect(rval, 'self'); return(rval)
+	fi;
+
+proc lineinc()
+(	var i;
+
+	lit('i') & i := break(sc) & lit(sc) &
+	lastline := lastline + integer(i) &
+	exp_line('line', i)
+);
+
+proc monop(lab,rval,op_)
+(	var aval;
+
+	treecode(empty,1) &
+	opcode(op_) &
+	return(1)
+);
+
+proc opnot(lab,rval,op_)
+(	var f,l,aval;
+
+	newfl(if lab = empty then f := nextflab() else f := lab fi) &
+	l := nextlab() &
+	aval := treecode(l,0) &
+	void(aval) & inspect(rval, 'not') &
+	label(l) & oldfl() & gofl() &
+	if lab = empty then label(f) fi &
+	return(0)
+);
+
+		# ~ cannot deliver a value: if ~p succeeds, p has failed #
+		# and hence cannot have delivered a value.		 #
+
+proc assign(lab,rval,op_)
+(	var aval;
+
+	treecode(empty, 1) &
+	aval := treecode(empty, -1) &
+	if aval ~= -1
+	then	error('illegal asignment: destination not address')
+	fi &
+	return(1)
+);
+
+
+proc dyop(lab,rval,op_)
+	treecode(empty,1) & treecode(empty,1) &
+	opcode(op_) &
+	return(1);
+
+proc match(lab,rval,op_)
+(	var aval;
+
+	treecode(empty,1) &
+	newsubj() &
+	aval := treecode(empty,rval) &
+	oldsubj() &
+	return(aval)
+);
+
+proc opand(lab,rval,op_)
+(	var aval;
+
+	aval := treecode(empty,0) & void(aval) &
+	aval := treecode(lab,rval) &
+	return(aval)
+);
+
+proc opor(lab,rval,op_)
+(	var f,l,aval;
+
+	newfl(f := nextflab()) &
+	if lab = empty then l := nextlab() else l := lab fi &
+	aval := treecode(empty,rval) &
+	if   rval = 0 then void(aval)
+	elif rval = -1 then rval := aval
+	fi &
+	oldfl() & go(l) & label(f) &
+	aval := treecode(l,rval) &
+	if   rval = 0 then void(aval)
+	elif rval = -1 then rval := aval
+	fi &
+	if lab = empty then label(l) fi &
+	return(rval)
+);
+
+proc whiledo(lab,rval,op_)
+(	var f,l1,l2,aval;
+
+	lineinc() &
+	label(l1:= nextlab() ) &
+	newfl(f := nextflab()) &
+	aval := treecode(empty,0) & void(aval) &
+	oldfl() & 
+	aval := treecode(l1,0) & void(aval) &
+	go(l1) & label(f) & inspect(rval, 'whiledo') &
+	return(0)
+);
+
+proc ifthen(lab,rval,op_)
+(	var f, aval;
+
+	newfl(f := nextflab()) &
+	lineinc() &
+	aval := treecode(empty,0) & void(aval) &
+	oldfl() &
+	aval := treecode(empty,0) & void(aval) &
+	label(f) & inspect(rval, 'ifthen') &
+	return(0)
+);
+
+proc ifelse(lab,rval,op_)
+(	var f,l,aval;
+
+	lineinc() &
+	newfl(f := nextflab()) &
+	aval := treecode(empty,0) & void(aval) &
+	oldfl() &
+	if lab = empty then l := nextlab() else l := lab fi &
+	aval := treecode(l,rval) &
+	if   rval = 0 then void(aval)
+	elif rval = -1 then rval := aval
+	fi &
+	go(l) & label(f) &
+	aval := treecode(l,rval) &
+	if rval = 0 then void(aval) fi  &
+	if lab = empty then label(l) fi &
+	return(rval)
+);
+
+proc forloop(lab,rval,op_)
+(	var name, lg1, lg2, var1, var2, t, e, f, l1, l2, aval;
+
+	lineinc() &
+	(  lit('l') & lg1 := 'loc'  & var1 := break(sc)
+	 | lit('g') & lg1 := 'glob' & var1 := break(sc)
+	) & lit(sc) &
+	if er = 0
+	then	exp_op0('undef') &
+		exp('as' || lg1, var1) &
+		exp_op0(svoid)
+	fi &
+	treecode(empty, 1) &
+	(  lit('l') & lg2 := 'loc'  & var2 := break(sc)
+	 | lit('g') & lg2 := 'glob' & var2 := break(sc)
+	) & lit(sc) &
+	exp('as' || lg2, var2) & exp_op0(svoid) &
+	t := move(1) &
+	if t = 'w'
+	then	[t,name,e] := identify();
+		if t ~= 'g' & t ~= 'c'
+		then	error('illegal control variable "' || name ||
+			      '" in forloop');
+			t := 'l'; name := 0;
+		fi
+	else	name := break(sc) & lit(sc)
+	fi &
+	label(l1:= nextlab ()) &
+	newfl(f := nextflab()) &
+	exp(lg2, var2) &
+	exp(lg1, var1) &
+	exp_fld('fld', 'next', '2') &
+	exp_op1('xar', '2') &
+	if   t = 'l' then exp_op1('asloc', name)
+	elif t = 'c' then exp_op0('self') & exp_fld('iasfld', name, '1')
+	elif t = 'g' then exp_glob('asglob', name)
+	else comerr('in forloop')
+	fi & 
+	exp_op0(svoid) &
+	exp('as' || lg1, var1) &
+	exp_op0(svoid) &
+	oldfl() &
+	aval := treecode(l1,0) & void(aval) &
+	go(l1) & label(f) & inspect(rval, 'forloop') &
+	return(0)
+);
+
+
+proc try_yrt(lab, rval, op_)
+(	var f, l, n, i, aval,
+	    rv := if op_ = 'try' then rval else 0 fi;
+
+	lineinc() &
+	lit('n') &
+	n := integer(break(sc)) & lit(sc) &
+	newrc() & l := nextlab() &
+	for i in interval(1, n, 1)
+	do	newfl(f := nextflab()) &
+		aval := treecode(empty, rv) &
+		if   rv = 0 then void(aval)
+		elif rv < 0 then error('illegal assignment to try')
+		fi &
+		go(l) & label(f) &
+		resrc()
+	od &
+	gofl() & label(l) &
+	if op_ = 'try'
+	then	lit(sc)
+	else	aval := treecode(empty, rval) &
+		if   rval = 0 then void(aval)
+		elif rval < 0 then error('illegal assignment to try')
+		fi
+	fi &
+	oldfl() & oldrc() &
+	return(rval)
+);
+
+
+
+proc assertion(lab,rval,op_)
+(	var aval, l, f;
+
+	newfl(f := nextflab()) &
+	l := nextlab() &
+	aval := treecode(l, rval) &
+	oldfl() & go(l) & 
+	label(f) & ercode('assert') &
+	label(l) &
+	return(aval)
+);
+
+proc arind(lab,rval,op_)
+	treecode(empty,1) & treecode(empty,1) &
+	if rval = -1
+	then	exp_op0('asind');
+		return(-1)
+	else	exp_op0('ind');
+		return(1)
+	fi;
+
+
+proc opret(lab,rval,op_)
+(	var f;
+
+	if lit(sc)
+	then	retu(0)
+	else	newfl(f:=nextflab()) &
+		treecode(empty,1) &
+		# oldfl() is not necessary , put flstack must be popped #
+		popfl() &
+		retu(1) &
+		label(f) &
+		fretu()
+	fi &
+	inspect(rval,'return') &
+	return(0)
+);
+
+proc caseclause(lab, rval, op_)
+(	var nm, n, lout, aval, l;
+
+	lineinc() &
+	treecode(empty, 1) &
+	lit('g') & nm := break(sc) & lit(sc) &
+	exp_lab('gocase', nm) &
+	lit('n') & n := integer(break(sc)) & lit(sc) &
+	lout := nextlab() &
+	(	var i;
+
+		for i in interval(1,n,1)
+		do	l := break(sc) & lit(sc) &
+			label(l) &
+			aval := treecode(empty, rval) &
+			if   rval = 0 then void(aval)
+			elif rval = -1 then rval := aval
+			fi &
+			go(lout)
+		od
+	) &
+	l := break(sc) & lit(sc) &
+	label(l) &
+	if lit(sc)
+	then	ercode(CASE)
+	else	aval := treecode(empty, rval) &
+		if   rval = 0 then void(aval)
+		elif rval = -1 then rval := aval
+		fi
+	fi &
+	label(lout) &
+	return(rval)
+);
+
+
+proc semi(lab,rval,op_)
+(	var n, i, aval;
+
+	lit('n') &
+	n := integer(break(sc)) & lit(sc) &
+	newfl(NIL) &
+	for i in interval(1, n-1, 1)
+	do	aval := treecode(empty,0) &
+		void(aval)
+	od &
+	oldfl() &
+	return(treecode(lab, rval))
+);
+
+proc acall(rval, name, entry, nargs)
+(	var nexp, tail;
+
+	if scan entry
+	   for lit('ab') & tail := rtab(0) rof
+	then	symtab[name] := entry := 'ap' || tail;
+		usedsubrs := usedsubrs || name || sc
+	fi &
+	scan entry
+	for	lit('ap') & nexp := integer(span(digit)) rof &
+	if nexp ~= nargs+1
+	then	error(name || ' called with wrong number of arguments')
+	fi &
+	exp_call(name, string(nexp)) &
+	voidcall(rval) &
+	return(abs(rval))
+);
+
+proc gcall(rval, name, entry, nargs)
+(	var tail, nexp;
+
+	if scan entry for lit('gb') & tail := rtab(0) rof
+	then	symtab[name] := entry := 'gp' || tail;
+		usedsubrs := usedsubrs || name || sc
+	fi &
+	scan entry
+	for	  (lit('gp') | lit('ap')) &
+		  nexp := (integer(span(digit)) | lit('?') & nargs)
+		| lit('g') & rpos(0) &
+		  error(name || ' called while not procedure') &
+		  return(abs(rval))
+	rof &
+	if nexp ~= nargs
+	then	error(name || ' called with wrong number of arguments')
+	fi &
+	exp_call(name, string(nexp)) &
+	voidcall(rval) &
+	return(abs(rval))
+);
+
+proc c_call(rval, name, entry, nargs)
+(	var nrets, tail;
+
+	exp_fld('ifld', name, string(nargs+1)) &
+	voidcall(rval) &
+	return(abs(rval))
+);
+
+proc ocall(rval, name, nargs)
+(	var f := fieldtab[name];
+
+	if f ~= undefined
+	then	exp_fld('fld', name, string(nargs))
+	else	exp_call(name, string(nargs))
+	fi &
+	voidcall(rval) &
+	return(abs(rval))
+);
+
+proc scall(rval, name, nargs)
+(	exp_fld('fld', name, string(nargs+1)) &
+	voidcall(rval) &
+	return(abs(rval))
+);
+
+proc call(lab,rval,op_)
+(	var nargs := 0, t, name, entry;
+
+	t := move(1) &
+	if t = 'w'
+	then	[t, name, entry] := identify()
+	else	name := break(sc) & lit(sc) &
+		if   t = 'a' | t = 'g'
+		then	entry := symtab[name]
+		elif t = 'c'
+	        then    entry := fieldtab[name] &
+	                while entry ~= undefined & entry[0] ~= clname
+	                do      entry := entry[1] od;
+		fi
+	fi &
+	if   t = 'a'
+	then	exp_op0('undef')
+	elif t = 'c'
+	then	exp_op0('self')
+	elif t = 'w'
+	then	exp_op0('subject')
+	fi &
+	lit('n') &
+	nargs := integer(break(sc)) & lit(sc) &
+	(	var i;
+		for i in interval(1,nargs,1)
+	 	do treecode(empty,1) od
+	) &
+	return(if   t = 'a' then acall(rval, name, entry, nargs)
+	       elif t = 'g' then gcall(rval, name, entry, nargs)
+	       elif t = 'c' then c_call(rval, name, entry, nargs)
+	       elif t = 'o' then ocall(rval, name, nargs)
+	       elif t = 'w' then scall(rval, name, nargs)
+		else	rval
+	       fi
+	      )
+);
+
+proc field(lab, rval, op_)
+(	var name, nargs;
+
+	lit('w') & name := break(sc) & lit(sc) &
+	if fieldtab[name] = undefined
+	then	error('non existing field ' || name || ' selected')
+	fi &
+	lit('n') & nargs := integer(break(sc)) & lit(sc) &
+	(	var i;
+
+		for i in interval(1,nargs,1)
+		do	treecode(empty, 1) od
+	) &
+	if rval = -1
+	then	if nargs = 1
+		then exp_fld('asfld', name, '1') &
+			return(-1)
+		else	return(1)
+		fi
+	else	exp_fld('fld', name, string(nargs)) &
+		voidcall(rval) &
+		return(rval)
+	fi
+);
+
+
+proc arinit(lab,rval,op_)
+(	var n;
+
+	lit('n') &
+	n := integer(break(sc)) & lit(sc) &
+	if rval >= 0
+	then	var i;
+
+		for i in interval(1,n+1,1)
+		do treecode(empty, 1) od &
+		(  lit('n0,') & exp_op1('int', n)
+		 | treecode(empty,1)
+		) &
+	        exp('arinit', n) &
+		return(1)
+	else	var i, aval;
+
+		exp_op1('xar', n);
+		for i in interval(1,n,1)
+		do	aval := treecode(empty, -1) &
+			if aval >= 0
+			then	error('illegal assignment in tuple')
+			fi &
+			if i ~= n then void(aval) fi
+		od &
+		if ~lit('u,n0,')
+		then	error('illegal assignment to array');
+			rtab(0)
+		fi &
+		return(-1)
+	fi
+);
+
+         # tabelem matches one sequence 'key1:...keym: v  #
+         # in a table initialisation                      #
+
+proc tabelem(lab,rval,op_)
+(	var m;
+
+	lit('n') &
+	m := integer(break(sc)) & lit(sc) &
+	(	var i;
+		for i in interval(1, m+1, 1)
+		do treecode(empty, 1) od
+	) &
+						# expr and m keys #
+        exp('tabelem', m) &
+	return(1)
+);
+
+proc tabinit(lab,rval,op_)
+(	var n,sumk;
+
+	lit('n') &
+	sumk := integer(break(sc)) & lit(sc) &
+	treecode(empty,1) &
+	(  lit('n0,') & exp_op1('int', sumk)
+	  | treecode(empty,1)
+	) &
+	exp_op0('tabinit') &
+	lit('n') &
+	n := integer(break(sc)) & lit(sc) &
+	(	var i;
+		for i in interval(1,n,1)
+		do treecode(empty,1) od
+	) &				# must be tabelem #
+	return(1)
+);
+
+
+proc treecode(lab,rval)
+(	var op_, aval, sklab;
+
+	case move(1) of		# is this a leave ? #
+	'a':	return(classvar(rval)),
+	'b':	return(subj(rval)),
+	'c':	return(clocvar(rval)),
+	'f':	return(fret(rval)),
+	'g':	return(globvar(rval)),
+	'l':	return(locvar(rval)),
+	'm':	return(clself(rval)),
+	'n':	return(int(rval)),
+	'r':	return(realnum(rval)),
+	'S':	return(str(rval)),
+	'u':	return(undef(rval)),
+	'w':	return(unknown(rval)),
+	'z':	return(nullstr(rval)),
+	default:	# not a leave, then it should be a node #
+		move(-1);
+	 	sklab := break(sc) & lit(sc) &
+	   	scan skiptab[sklab]
+		for	op_ := break(tabsym) & lit(tabsym) &
+			aval := case op_ of
+				'-1' :	monop(lab, rval, op_),
+				'+'  : '-2' : '*'  : '/'  : '%'  : '||' :
+				'<'  : '<=' : '>'  : '>=' : '='  : '~=' :
+					dyop(lab,rval,op_),
+				'~'  :	opnot(lab,rval,op_),
+				':=' :	assign(lab,rval,op_),
+				'?'  :	match(lab,rval,op_),
+				'&'  :	opand(lab,rval,op_),
+				'|'  :	opor(lab,rval,op_),
+				'wd' :	whiledo(lab,rval,op_),
+				'ift':	ifthen(lab,rval,op_),
+				'ife':	ifelse(lab,rval,op_),
+				'fr' :	forloop(lab,rval,op_),
+				'try':
+				'tru':	try_yrt(lab,rval,op_),
+				'as' :	assertion(lab,rval,op_),
+				'ind':	arind(lab,rval,op_),
+				'rt' :	opret(lab,rval,op_),
+				'cs' :	caseclause(lab,rval,op_),
+				';'  :	semi(lab,rval,op_),
+				'cl' :
+				'clo':	call(lab,rval,op_),
+				'fld':	field(lab,rval,op_),
+				'ar' :	arinit(lab,rval,op_),
+				'key':	tabelem(lab,rval,op_),
+				'tb' :	tabinit(lab,rval,op_),
+				default:
+					comerr('treecode fails on ' || sklab ||
+						'= ' || skiptab[sklab]);
+					undefined
+				esac &
+			rpos(0) &
+			skiptab[sklab] := '' &
+			return(aval)
+		rof
+	esac |
+	comerr('treecode fails')
+);
+
+proc labpat()
+(	var sklab, stat;
+
+	sklab := (lit('L') || break(':')) & lit(':\t') &
+	stat := rtab(0) &
+	if skiptab[sklab] ~= ''
+	then comerr('label ' || sklab || ' in skiptab redefined')
+	else skiptab[sklab] := stat
+	fi
+);
+
+proc globdecl()
+(	var name;
+
+	lit('G:\t') & name := rtab(0) &
+	exp_dclglob(name)
+);
+
+proc varinit()
+(	var l, aval;
+
+	lit('I:\t') &
+	lastline := integer(break(sc)) & lit(sc) &
+	exp_line('aline', lastline) &
+	aval := treecode(empty,0) & void(aval) &
+	lastline := integer(break(sc)) & lit(sc) &
+	exp_line('aline', lastline)
+);
+
+proc procedure()
+(	var classdecl, heading, returns, aval, name, i;
+
+	(  lit('P:\t') & classdecl := 0
+	 | lit('C:\t') & classdecl := 1
+	) &
+	returns := integer(break(tabsym)) & lit(tabsym) &
+	heading := break(tabsym) & lit(tabsym) &
+	assert (nrc = 0 & nsubj = 0) &
+	exp_proc(if classdecl = 1 then 'cproc' else 'proc' fi, heading) &
+	(	var i := 0;
+		scan heading
+		for	name := break(sc) & lit(sc) &
+			for i in interval(1,3,1)
+			do break(sc) & lit(sc) od;
+			lastline := integer(break(sc))
+		rof
+	) &
+	if classdecl = 1
+	then	var ll := lastline, line;
+		newfl(NIL);
+		exp_newclass(clname);
+		exp_op1('asloc', 0);
+		exp_op0(svoid);
+		while (line := f_im.get ) ~= 'CLASSEND'
+		do	while scan line for labpat() rof
+			do line := f_im.get od;
+			if ~scan line for varinit() rof
+			then	comerr('class init error on ' || line)
+			fi
+		od;
+		lastline := ll;
+		oldfl();
+		exp_line('aline', ll)
+	fi &
+	aval := treecode(empty,0) &
+	void(aval) &
+	if classdecl = 1
+	then	exp_op1('loc', 0);
+		retu(1);
+		clname := undefined
+	fi &
+	if returns ~= 0 then ercode('ret') fi &
+   	exp_procend(returns) &
+	skiptab := table(10,'')
+);
+
+proc programme()
+(	var	heading, aval, line, ll, f_cs;
+
+	lit('M:\t') & heading := break(tabsym) & lit(tabsym) &
+	assert (nrc = 0 & nsubj = 0) &
+        exp_proc('program', heading) &
+	(	var i := 0;
+		scan heading
+		for	for i in interval(1,4,1)
+			do break(sc) & lit(sc) od;
+			ll := integer(break(sc))
+		rof
+	) &
+	if f_cs := file(prname || '.cs','r') fails
+	then	comerr('cannot open ' || prname || '.cs');
+		stop(1)
+	fi &
+	while line := f_cs.get do splitcode(line) od &
+	f_cs.close &
+	if f_gl := file(prname || '.gl','r') fails
+	then	comerr('can''t open ' || prname || '.gl');
+		stop(1)
+	fi &
+	newfl(NIL) &
+	while line := f_gl.get 
+	do	while scan line for labpat() rof
+		do line := f_gl.get od;
+		if ~ scan line for varinit() rof
+		then comerr('unrecognizable line ' || line)
+		fi
+	od &
+	oldfl() &
+	lastline := ll &
+	exp_line('aline', ll) &
+	aval := treecode(empty,0) &
+	void(aval) &
+	exp_procend(0) &
+	skiptab := table(10, '')
+);
+
+program codgen(a)
+(	var line;
+
+	expinit(a);	# defines prname #
+	make_decls();
+	if f_im := file(prname || '.im','r') fails
+	then	comerr('scan2 cannot open ' || prname || '.im');
+		stop(1)
+	fi;
+	while   line := f_im.get
+	do	if scan line
+		   for	lit('CLASS:\t') & 
+			clname := break(sc) & lit(sc)
+		   rof
+		then	line := f_im.get 
+		fi;
+		while scan line for labpat() rof
+		do line := f_im.get od;
+		if ~ scan line
+		     for globdecl() | procedure() | programme() rof
+		then comerr('unrecognizable line ' || line)
+		fi
+	od;
+	if er = 0
+	then	scan usedsubrs
+		for	while exp_subr(break(sc))
+			do lit(sc) od
+		rof;
+		splitstrings();
+	fi;
+	expterminate();
+	if er ~= 0 then stop(1) fi
+)

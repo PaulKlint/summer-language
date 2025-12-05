@@ -1,0 +1,26 @@
+-) syntax regel table-element:
+   {<expr> ','}+  ==> (<expr> ',')+
+-) -c en -t optie werken niet goed bij aanroep met redirected input.
+-) a.out >tmp
+   zou na interrupt i/o via error stream moeten doen
+-) bug in sort
+-) LINE-INSTRUCTIES: MEER, MINDER, WAAR?
+   voor iedere case entry.
+-) tracer heeft nog moeite met field procedures.
+-) ivm pdp11 versie:
+   int/Makefile moet pcc ipv cc als c-compiler gebruiken.
+   vergelijk eval.c met pdp11 versie.
+   vergelijk beide sumc's.
+-) Bij te diep geneste expressie (proc p(a) ((((((((...((( 2000 keer)
+   knapt de interpretator zonder duidelijke foutmelding (te weinig ruimte?).
+-) Suggestie: maak scan_string een subclass van string.
+   (hierdoor kunnen alle stringoperaties op scan_strings toegepast worden)
+-) BUGS:
+   - foutmeldingen bij fout rond "include" grens geven tekst
+     van verkeerde file
+   - Regelnummers voor "niet-dedeclareerde variabelen"
+     in de aanwezigheid van include files, klopt niet.
+   - tracer kent regelnummmers van include file niet.
+   - \177 in string wordt decimaal geinterpreteerd, moet octaal zijn.
+   - cache vergroten
+   - i/o op reeds gesloten file!

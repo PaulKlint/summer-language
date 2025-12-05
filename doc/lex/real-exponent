@@ -1,0 +1,1 @@
+<real-exponent>    ::=  'e' <integer-constant> .

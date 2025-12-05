@@ -1,0 +1,131 @@
+#								#
+# This program computes the relation A calls B (indirectly)	#
+# by computing the transitive closure of the relation		#
+# A calls B directly.						#
+# Expected input format:					#
+# >P								#
+# p1								#
+# ...								#
+# pn								#
+# for each procedure P that calls p1, ... pn			#
+# The output is in the form of a bitmatrix			#
+
+var nfunctions, calls, name_index, index_name;
+var max := 250;
+
+
+proc buildmat(n)
+( var a, i;
+
+  a := array(n, 0);
+  for i in interval(0, n - 1, 1)
+  do
+     a[i] := bits(n, 0)
+  od;
+  return(a)
+);
+
+proc printslice(from, to, maxname)
+( var i, name, sname, n, j, line;
+  for i in interval(0, maxname - 1, 1)
+  do
+     var j;
+     put(' '.repl(maxname + 1) );
+     for j in interval(from, to - 1, 1)
+     do
+        name := index_name[j];
+        sname := name.size ;
+        n := i - (maxname - sname);
+        if n >= 0 then
+           put(scan name for tab(n) & move(1) rof, ' ')
+        fi
+     od;
+     put('\n')
+  od;
+  put('\n');
+  for i in interval(0, nfunctions - 1, 1) do
+    line := (index_name[i] || ' ').right(maxname + 1, ' ') ;
+    for j in interval(from, to - 1, 1) do
+      line := line || if calls[i][j] = 0 then '. ' else '+ ' fi;
+    od;
+    put(line, '\n');
+  od
+);
+
+proc printmat(a, page_width)
+(var i, j, n, maxname, step;
+
+  put(nfunctions, ' functions\n\n');
+  n := 0;
+  for i in interval(0, nfunctions - 1, 1)
+  do
+     if calls[i][i] = 1 then
+        put('\t', index_name[i], '\n');
+        n := n + 1
+     fi
+  od;
+  put(if n = 0 then 'none' else n fi, ' are recursive\n\n');
+  maxname := 0;
+  for i in interval(0, nfunctions - 1, 1) do
+     if (n := index_name[i].size ) > maxname then
+        maxname := n
+     fi;
+  od;
+  step := (page_width - maxname - 3) % 2;
+  for i in interval(0, nfunctions - 1, step)
+  do
+     var next := if i + step >= nfunctions then nfunctions else i + step fi;
+     printslice(i, next, maxname);
+     put('\n\n\n');
+  od
+);
+
+proc closure(a)
+( var i, j, k;
+
+  # Warshall's algorithm #
+  for i in interval(0, nfunctions - 1, 1) do
+    for j in interval(0, nfunctions - 1, 1) do
+      if a[j][i] ~= 0 then
+        for k in interval(0, nfunctions - 1, 1) do
+                a[j][k] := if a[j][k] = 1 | a[i][k] = 1 then 1 else 0 fi;
+      	od
+      fi;
+    od;
+  od
+);
+proc enter(name)
+( if name_index[name] = -1 then
+    name_index[name] := nfunctions;
+    index_name[nfunctions] := name;
+    nfunctions := nfunctions + 1
+  fi;
+  return(name_index[name])
+);
+
+program main (args)
+( var line, inp, cfun, inname;
+  inname := if args.size = 0 then 'standin' else args[0] fi;
+  nfunctions := 0;
+  name_index := table(20, -1);
+  index_name := array(max, undefined);
+  calls := buildmat(max);
+  if inp := file(inname,'r')then else
+     put('can''t open ', inname, '\n');
+     stop(1)
+  fi;
+  
+  while line := inp.get 
+  do
+     scan line for
+          if lit('>') then # start of a new function #
+             cfun := enter(rtab(0))
+          else
+             var n := enter(rtab(0));
+             calls[cfun][n] := 1;
+          fi
+     rof
+  od;
+  closure(calls);
+  printmat(calls, 80);
+)

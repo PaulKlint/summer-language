@@ -1,0 +1,25 @@
+class A()
+begin fetch =, <;
+      op = (x) return(0 = x);
+
+      op < (x) return(0 < x);
+end A;
+
+program rel(args)
+( var a := [1, 2, 3], x;
+  for x in args do
+  case integer(x) of
+  1:	'a' < 3,
+  2:	3 < 'a',
+  3:	if 3 = undefined then put('ERROR\n'); stop(0) fi,
+  4:	if undefined = 3 then put('ERROR\n'); stop(0) fi,
+  5:	if a ~= a then put('ERROR\n'); stop(0) fi,
+  6:	if a = [1, 2, 3] then put('ERROR\n'); stop(0) fi,
+  7:	(var x := A;
+         if A = 0 fails then put('ERROR\n'); stop(0) fi;
+         if A < 1 fails then put('ERROR(2)\n'); stop(0) fi),
+  default:
+	put('illegal arg: ', args, '\n')
+  esac
+  od
+)

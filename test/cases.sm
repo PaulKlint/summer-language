@@ -1,0 +1,60 @@
+# case construction #
+
+include 'heading.sm';
+
+program cases()
+(	var x := 'a', y := 'b', z := 0, t := 1, n;
+
+	start('case');
+	test(n := 0);
+	case x || y of
+		'a':	error(n+0),
+		'ab':	# noop #
+		default: error(n+1)
+	esac;
+
+	test(n := 10);
+	case y || x of
+		'ab': 'abc':,
+		'ba': 'bac': # noop #
+		default: error(n+0)
+	esac;
+
+	test(n := 20);
+	x := case y of 'a': 'z', 'b': 'y', 'c': 'x' esac;
+	if x ~= 'y' then error(n+0) fi;
+
+	test(n := 30);
+	x := 'X';
+	case x of default: x := 'XX' esac;
+	if x ~= 'XX' then error(n+0) fi;
+
+	test(n := 40);
+	z := 'Z';
+	y := 'Y';
+	t := 'T';
+	x := 'y';
+	case x of 'z': z, 'y': y, 'x': t esac := 'abc';
+	if x ~= 'y' | y ~= 'abc' | z ~= 'Z' | t ~= 'T' then error(n+0) fi;
+
+	test(n := 50);
+	for x in [1, 'abc', 3.5, 'def']
+	do
+		case x of
+
+		1:	if x ~= 1 then error(n+0) fi,
+		'abc':	if x ~= 'abc' then error(n+1) fi,
+		3.5:	if x ~= 3.5 then error(n+2) fi
+		default:
+			if x ~= 'def' then error(n+3) fi
+		esac
+	od;
+
+	test(n := 60);
+	case x of default: esac;
+
+	test(n := 70);
+	case x of ,,,, default: esac;
+
+	finish('case');
+);

@@ -1,0 +1,3 @@
+<table-expression> ::=
+        TABLE <size-and-default> [ INIT <table-initialization> ] |
+        <table-initialization> .

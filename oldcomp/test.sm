@@ -1,0 +1,86 @@
+var x, y:=3;
+
+const c := 'abc';
+
+proc p() put('dit is p');
+
+dyadic ++;
+
+op ++ (a,b) return(a-b);
+
+class C(a,b)
+begin	fetch a, b;
+
+	var c := 3;
+
+	proc p(q) return(q);
+
+	init: c := 2*c
+end C;
+
+program pr();
+
+
+class D(a,b,c)
+begin	subclass of C;
+
+	op -- () return(self ++ self);
+end D;
+
+proc subs(a) a[0];
+
+proc select(a) (a.b; a.p(3));
+
+proc constant()
+(	var x := 3 + 4.4,
+	    y := 'abc',
+	    z := undefined;
+);
+
+proc actuals()
+(	var x := D(2*y, y:=y-4, 3););
+
+proc subj(a)
+scan a for return(subject) rof;
+
+proc iffi()
+if 0=0 then put('ja heus')
+elif 1=1 succeeds then put('neemaar')
+elif y=y+1 fails then put('toch')
+fi;
+
+
+proc case_()
+case y
+of 14: put(14),
+   'abc': put('abc'); y := 10,
+   5.1e3: put(6.1e-3),
+esac;
+
+proc while_() while 'TRUE' do od;
+
+proc for_()
+(	var f;
+
+	for f in interval(1,10,2)
+	do	y := y+1	od
+);
+
+proc try_()
+try 1 = 0, 1 = 1 until 2 = 2 yrt;
+
+proc assert_()
+assert 3 ~= 10;
+
+proc array_()
+(	var x := array(10,0) init [1,2,3,4];
+);
+
+proc table_()
+return(table['a':1, 'b': 'c': 3]);
+
+proc artab()
+(	var x := [1,2,3],
+	    y := ['a':1];
+);
+

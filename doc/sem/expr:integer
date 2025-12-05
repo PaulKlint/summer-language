@@ -1,0 +1,10 @@
+.iy I N
+.iy I a_integer
+.{{
+\fBif\fR \jg{{ \fIe\fR =\h'-0.3m'= \jh\fIexpr\fR:\*<integer-constant\*> }}
+\fBthen\fR
+\h'|\ngu'\fIreturn\fR\^(\^[\fIa\*_integer\fR\^(\fIexpr\fR), \fIN\fR\|]\^)
+\fBfi\fR;
+.}}
+.iy I N
+.iy I a_integer

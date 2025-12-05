@@ -1,0 +1,1541 @@
+.nr LL 7.2i
+.ND
+.pl 66
+.DS L
+                ORGANISATION OF THE SUMMER COMPILER
+
+                            MARLEEN SINT
+
+                            (March 1980)
+
+
+Note:   This document was far from complete at the time this tape was made.
+        A complete version can be expected in June or July 1980;
+        a listing will be sent to everyone who received this tape.
+	Missing sections are indicated in the text.
+
+
+
+
+.DE
+.NH
+Introduction
+.PP
+This document forms one half of the documentation of the SUMMER compiler, the
+other half being formed by extensive comments accompanying individual
+variable and procedure declarations in the program sources. It is not
+meant to be any more than program documentation; in particular no effort is
+made to define precise semantics for source and target language, nor to
+prove either the mapping or the programs implementing that mapping correct.
+.PP
+It is assumed that readers are familiar with SUMMER.
+.PP
+The SUMMER compiler consists of two passes, implemented in separate programs.
+The first pass is a recursive descent parser; the second pass is a code generator.
+The input of the compiler is a SUMMER source program; the output
+is a file containing abstract SUMMER machine code (henceforth called ic-code).
+This document is divided into two parts:
+.IP 1. 3
+Definition of the mapping from SUMMER to ic-code.
+.IP 2. 3
+Description of the programs which implement this mapping.
+.NH
+The mapping from SUMMER to ic-code.
+.NH 2
+Overview
+.PP
+In order to have any idea where we are going, we will first describe the
+overall organisation of the ic-file, and in very general terms describe
+its relation to the SUMMER source.
+The ic-file can be divided into a number of different segments:
+.IP 1. 3
+A class table.
+.IP 2.
+A field table.
+.IP 3.
+A sequence of global and procedure declarations;
+.IP 4.
+A program declaration, which can be subdivided in three parts:
+.RS
+.IP 4.1. 5
+Initialisation of case tables.
+.IP 4.2. 
+Initialisation of globals.
+.IP 4.3.
+The actual program body.
+.RE
+.IP 5. 3
+A list of string declarations.
+.PP
+Some of these segments (1, 5 and to a great extent 2) are produced directly
+by the parser, for the others the parser produces an intermediate stage
+which is processed further by the code generator.
+In the sequel, these segments will be frequently referred to by number.
+We will see how each source declaration influences segments of
+the ic-file.
+.PP
+.ul
+Globals.
+In the SUMMER source, globals can be initialized upon declaration. In
+the ic-file, declaration and initialisation are separated: the latter
+is moved to the main program; i.e. the program
+.sp 1
+var x := 3; program p() put(x)
+.sp 1
+is translated as if it reads
+.sp 1
+var x; program p() (x := 3; put(x))
+.sp 1
+This accounts for section 4.2. on the ic-file.
+.PP
+.ul
+Procedures and operators.
+Each procedure and each operator has its counterpart
+in section 3 of the ic-file. There is no distinction;
+user defined operators
+are declared and called as if they were procedures.
+.PP
+.ul
+Classes.
+For the SUMMER interpreter a class object is a data object with a number of
+fields, corresponding to the parameters and variables declared within the
+class (to be referred to as data fields in the sequel).
+A class declaration leads to the following items on the ic-file:
+.IP - 3
+An entry in the class table (segment 1),which contains the name and the number of
+data fields of the class.
+.IP -
+For each field (including procedures and operators), one entry in the
+field table (segment 2).
+.IP -
+A  global procedure declaration (segment 3) for each procedure and each operator,
+with a suffix attached to its name to guarantee uniqueness. (The association
+between external and internal names is contained in the field table).
+These procedures have the class data object with which they are associated
+as an additional parameter.
+.IP -
+A class creation procedure (segment 3), which executes all initialisations and returns
+the new data object. This procedure (which bears the name of the class)
+also has an additional argument, to which the new data object is assigned.
+.PP
+Note that on the ic-file all procedure declarations look alike.
+Only by inspecting the class and field tables their original role  can be
+determined.
+.PP
+.ul
+Initialisation of case tables (segment 4.1).
+A case statement 'case x of .... esac' is interpreted by evaluating x and using
+the result as a key in a global table which yields a label, and then jumping to
+that label. The compiler generates code to construct these tables and to assign
+them to specially invented global variables. These table constructions
+and assignments immediately follow the program header.
+.PP
+.ul
+String declarations (segment 5).
+Declaration of string constants are assembled at the end of the file; in
+the remainder of the code they are referenced by a label.
+.PP
+As can be seen, SUMMER constructs can influence more than one
+segment of the ic-file.
+To allow the code generator to generate
+all segments in the right order, the parser produces five files:
+.IP 1. 3
+The
+.ul
+declaration file
+(henceforth called the dc-file)
+contains the global symbol table, the class table and
+the field table.
+The code generator needs the global symbol table and the field table.
+The class table and field table are passed on to the ic-file as segments 1
+and 2.
+.IP 2.
+The
+.ul
+intermediate file
+(im-file) contains tuples representing the parsetrees of procedures,
+operators and classes and of the
+main program (used to produce segments 3 and 4.3 of the ic-file).
+.IP 3.
+The
+.ul
+case table file
+(cs-file) contains code to construct the (global) tables used to implement
+the case statements occurring in the source program (segment 4.1).
+.IP 4.
+The
+.ul
+global initialisation file
+(gl-file) contains tuples representing the parsetrees of expressions assigned
+to global variables on declaration (used to produce segment 4.2).
+.IP 5.
+The
+.ul
+string file
+(st-file) contains a symbolic representation of strings occurring in the source
+program (segment 5).
+.PP
+When the source contains at least one class declaration, the parser moreover
+uses a scratch file source.in, which is used to temporarily memorize the code
+for initialised fields; see .....
+.NH 2
+Syntax of all files concerned.
+.PP
+In this section context free grammars describing SUMMER and ic-code are given.
+The formats of the dc-file, the im-file, the cs-file, the gl-file and the st-file
+are also described by means of a context free grammar.
+.PP
+To all these grammars the same set of conventions applies:
+Terminals stand between quotes (''). Nonterminals stand in lowe case letters.
+Capitals are reserved for lexical units, for which we donot show production
+rules (IDENT, REAL, INT, OPNAME etc.).
+The * is the Kleene star (zero or more repetitions). All rules are terminated
+by a dot.
+.PP
+The syntaxes of the files produced by the parser partially overlap. In general,
+productions for a nonterminal are not shown twice; a reference to the first
+occurrence is included when the same nonterminal occurs a second time in
+another grammar.
+.NH 3
+The SUMMER syntax
+.PP
+We first of all give the SUMMER syntax.
+Numbers between parentheses following the terminal
+dot refer to the remarks made at the end.
+.LD
+
+program:        [  vars
+                 | consts
+                 | procedure
+                 | operator
+                 | classdecl
+                 | opnames
+                ]*              programme.
+
+programme:      'program' IDENT params [expr | empty] .              (1)
+
+opnames:        ['monadic' | 'dyadic'] OPNAME [',' OPNAME]* ';' .
+
+classdecl:      'class' IDENT params
+                'begin' ['subclass' 'of' IDENT | empty]
+                        ['fetch' assocs | empty]
+                        ['store' assocs | empty]
+                        [vars | consts | procedure | operator]*
+                        ['init' ':' block | empty]
+                'end' IDENT ';' .                                    (2)
+
+assocs:         [IDENT | OPNAME]
+                [',' [IDENT | OPNAME] [':' IDENT | empty]]* ';' .
+
+procedure:      'proc' IDENT params ['code' | expr | empty] ';' .
+
+operator:       'op' OPNAME params expr ';' .
+
+vars:           'var'      IDENT [':=' expr | empty] 
+                      [',' IDENT [':=' expr | empty]]* ';' .
+
+consts:         'const'    IDENT ':=' expr
+                      [',' IDENT ':=' expr]* ';' .                   (3)
+params:         '(' [ IDENT [',' IDENT]* | empty] ')' .
+
+expr:           unexpr [dyadic_op unexpr]* .
+
+unexpr:         [monadic_op]* operand.
+
+dyadic_op:        '+'  | '-' | '*'  | '/' | '%'  | '||' | '<' 
+                | '<=' | '>' | '>=' | '=' | '~=' | ':=' | '&' | '|'
+                | OPNAME .                                           (4)
+
+monadic_op:     '~' | '-' | OPNAME .                                 (4)
+
+operand:       [   IDENT [ call | empty]
+                | INTEGER
+                | REAL
+                | STRING
+                | 'undefined'
+                | 'freturn'
+                | 'self'
+                | 'subject'
+                | whiledo
+                | ret
+                | [ 'array' | empty] arinit
+                | [ 'table' | empty] tabinit
+                | iffi
+                | try_yrt
+                | scanfor
+                | forloop
+                | caseclause
+                | assertion
+                | parexpr
+              ]                 [ indic | field]* .
+
+field:          '.' IDENT [call | empty] .
+
+call:           '(' [')' | exprlist_c ')'] .
+
+indic:          '[' expr ']' .
+
+parexpr:        '     (' [block | exprlist_s | empty] ')' .          (5)
+
+assertion:      'assert' expr .
+
+caseclause:     'case' expr 'of'
+                       [ case_elems ]*
+                       [ 'default' ':' block | empty]
+                'esac' .
+
+case_elems:     [CONSTANT ':' ]* block [',' | empty] .
+
+forloop:        'for' IDENT 'in' expr 'do' block 'od' .
+
+scanfor:        'scan' expr 'for' block 'rof' .
+
+iffi:           'if' condexpr 'fi' .
+
+condexpr:       expr ['fails' | 'succeeds' | empty]
+                'then' block
+                ['elif' condexpr | 'else' block | empty]
+
+try_yrt:        'try' block 'yrt'
+
+tabinit:          sizedef 'init' '[' [tabelems | empty] ']'
+                | sizedef
+                | '[' [tabelems | empty] ']'  .
+
+tabelems:       [ expr [':' expr]* [',' expr [':' expr]* ]* .
+
+arinit:           sizedef 'init' '[' [exprlist_c | empty] ']'
+                | sizedef
+                | '[' [exprlist_c | empty] ']'  .
+
+sizedef:        '(' expr ',' expr ')' .
+
+ret:            'return' ['(' ')' | '(' exprlist_c ')' | empty] .
+
+whiledo:        'while' expr 'do' block 'od' .
+
+block:          [locvars | consts]* [exprlist_s | empty] .
+
+locvars:        vars .                                               (7)
+
+exprlist_c:     expr [',' expr]* .
+
+exprlist_s:     expr [';' expr] [';' | empty] .
+.DE
+.IP (1) 4
+A semicolon after the program declaration is accepted by the parser.
+.IP (2)
+The instances of IDENT should be equal; i.e. the class name should be
+repeated after the 'end'.
+.IP (3)
+The expression is parsed as any other expression but subsequently evaluated
+by the parser. It can be a string, an integer, a real, 'undefined',
+a previously declared constant, or an arithmetic expression in which all
+operands are integers, reals or constants with a numeric value.
+.IP (4)
+OPNAME in these cases refers to a name of any user defined operator. The
+distinction between built-in and user defined operators is relevant because
+they are mapped differently (see 3.2.1.1.).
+.IP (5)
+The alternatives 'exprlist_s' and 'empty' are superfluous
+here as 'block' produces both; they are included only because the parser
+makes the distinction at that point for efficiency reasons.
+.IP (6)
+The distinction between 'vars' and 'locvars' is made because they are mapped
+differently.
+.NH 3
+The syntax of the dc-file
+.PP
+The .dc file contains information about global variables,
+classes and fields. Its format is decribed by the following grammar:
+.LD
+
+dc_file:        glcnt syms classes fields .
+
+glcnt:          'glcnt\\t' INT .
+
+syms:           [gdecl]* 'endsyms' '\\n' .
+
+gdecl:          IDENT ':\\t' g_entry '\\n' .
+
+g_entry:        'g' | 'gp' INT | 'gb' INT | 'gb?' | 'ap' INT | 'ab' INT.
+
+classes:        'classes' '\\n' [cldecl]* 'endclasses' '\\n' .
+
+cldecl:         IDENT ',' INT '\\n' .
+
+fields:         'fields' '\\n' [fld_decl]* 'endfields' '\\n' .
+
+fld_decl:       'fld\t' IDENT '\\n' [f_entry]*
+
+f_entry:        IDENT ','
+                ['~var' ',' INT | '~proc' ',' pname] ','
+                assoc ','
+                assoc .
+
+assoc:          '~nil' | '~simple' | IDENT '.' INT .
+
+pname:          [IDENT | OPNAME '.1' | OPNAME '.2'] suffix .
+
+suffix:         '.' INT | empty .
+.DE
+.PP
+\'glcnt' is the number of global variables invented by the parser. The code
+generator has to generate declarations for these variables. It is not necessary
+to transfer their names, as long as parser and code generator generate the
+same names in the same sequence: now '_1', '_2',... etc.
+.PP
+\'syms'. The global entries in the symbol table are dumped as name value pairs.
+See for the meaning of the values .........
+.PP
+\'classes' contains pairs of a classname and the number of data fields
+in that class.
+.PP
+\'fields' consists of a sequence of individual field declarations.
+Such a declaration is headed by a line 'fld\\t' fieldname, followed by
+one or more lines containing fieldentries. Each entry has four elements:
+.IP - 3
+The name of the associated class, or the keyword '~global'. This last keyword
+appears as a separate entry for global operators which have a namesake within a class. (See ......)
+Such an entry is always the last one for the field concerned.
+.IP - 3
+For datafields, the keyword '~var' followed by an offset within the class object,
+for procedures and operators, the keyword '~proc' followed by their internal
+name.
+.IP - 3
+A fetch association. This can be either the keyword '~nil'
+(fetching forbidden),
+keyword '~simple', (fetching allowed), or the name of a procedure.
+.IP - 3
+A store association. The same three values are possible.
+.PP
+.NH 3
+The syntax of the im-file
+.PP
+The format of the intermediate file is described by the following grammar.
+.LD
+
+
+im_file:        [glob_decl | class_decl | proc_decl]* prog_decl .
+
+glob_decl:      'G:\\t' IDENT '\\n' .
+
+class_decl:     classbgn [proc_decl]* class_body 'classend' '\\n' .
+
+proc_decl:      [labeled_tuple]* proc_head .
+
+prog_decl:      [labeled_tuple]* prog_head .
+
+classbgn:       'class:' '\\t' IDENT ',' INT '\\n' .
+
+class_body:     [labeled_tuple]* class_head [init]* .
+
+labeled_tuple:  label ':' '\\t' operator '\\t' [operand ',']* '\\n' .
+
+proc_head:      'P:' '\\t' INT '\\t' pname ',' stringlabel ',' INT ','
+                INT ',' INT ',' INT '\\t' operand '\\n' .
+
+prog_head:      'M:' '\\t' IDENT ',' stringlabel ',' INT ',' INT ','
+                INT ',' INT '\\t' operand '\\n' .
+
+class_head:     'C:' '\\t' INT '\\t' IDENT ',' stringlabel ',' INT ','
+                INT ',' INT ',' INT '\\t' operand '\\n' .
+
+init:           [labeled_tuple]* init_head
+
+init_head:      'I:' '\\t' INT ',' label ',' INT ',' '\\n' .
+
+label:          'L' INT .
+
+stringlabel:    'S' INT .
+
+caselabel:      'C' INT .
+
+operator:        '-1'  | '~'   | '+'   | '-2'  | '*'   | '/'   | '%'
+               | '||'  | '<'   | '<='  | '>'   | '>='  | '='   | '~='
+               | ':='  | '&'   | '|'   | '?'   | 'wd'  | 'ift' | 'ife'
+               | 'fr'  | 'try' | 'tru' | 'as'  | 'ind' | 'rt'  | 'cs'
+               | ';'   | 'cl'  | 'clo' | 'fld' | 'ar'  | 'key' | 'tb'  .
+
+operand:          'g' IDENT
+                | 'a' IDENT
+                | 'o' OPNAME
+                | 'w' IDENT
+                | 'c' INT
+                | 'l' INT
+                | 'm' self
+                | 'n' INT
+                | 'r' REAL
+                | stringlabel
+                | 'b'
+                | 'u'
+                | 'z'
+                | 'f'
+                | caselabel
+                | 'i' INT
+                | label
+
+pname:          [IDENT | OPNAME '.1' | OPNAME '.2'] suffix .
+
+suffix:         '.' INT | empty .
+
+.DE
+.PP
+The im-file consists of a sequence of global declarations (one line)
+and procedure declarations. All procedures belonging to one class (including
+the class creation procedure) are surrounded by "parentheses" CLASSBGN and
+CLASSEND.
+A class creation procedure is followed by zero or more field initialisations,
+which consist of a sequence of labeled tuples followed by an initialisation header.
+In the source text these initialisations occur scattered throughout
+the class; on the im-file they need to be assembled along with the class
+initialisation statement. The parser uses a scratch file (with name extension .in) for
+this purpose. Compare the gl-file which plays a similar role for global
+initialisations.
+.PP
+The detailed function of constructs on the im-file will become clear in
+section 2.2.
+.NH 3
+The syntax of the cs-file
+.PP
+The cs-file contains ic-code instead of symbolic
+parsetree dump; its contents are copied directly onto the ic-file by
+the code generator.
+Stringlabels and caselabels are defined in the previous section.
+Its format is decribed by the following grammar:
+.br
+.LD
+
+cs_file:        [cstab_init]* .
+
+cstab_init:     tab_init [tabelems]* assign 'void' '\\\n' .
+
+tab_init:       'load\\t' caselabel '\\n' 'int\\t30' '\\n' 'tabinit' '\\n' .
+
+tabelems:       casejump [constant]* 'tabelems' INT '\\n' .
+
+casejump:       'load\\t' caselabel '\\n' .
+
+assign:         'asglob\t' '_' INT
+
+constant:         'load\\t' stringlabel
+                | 'int\\t' INT
+                | 'real\\t' REAL
+                | 'nullstr'
+                | 'undef'
+.DE
+.PP
+The integer in 'tabelems' is the number of constants associated with the
+case label.
+The '_INT' in 'assign' is a global name invented by the parser - not a
+SUMMER identifier to guarantee uniqueness.
+For further details see section .... and .....
+.NH 3
+The syntax of the gl-file
+.PP
+The intermediate code for assignments to globals upon initialisation is
+assembled on a
+separate file; the global initialisation file.
+The format of these initialisations is the same as that of
+the initialisation of fields in classes occurring on the im-file;
+productions for 'label' and 'labeled_tuple' are found in the section
+describing that file.
+.LD
+
+gl-file:        [init]* .
+
+init:           [labeled_tuple]* init_head .
+
+inithead:       'I:' '\\t' INT ',' label ',' INT .
+
+.DE
+.NH 3
+The syntax of the st-file
+.PP
+String operands are represented as stringlabels. Each
+stringlabel has a corresponding entry on the st-file, of the
+following format:
+.sp 1
+\'dclstr'\ '\\t'\ stringlabel\ ','\ INT\ ','\ OCTAL\ [','\ OCTAL]*
+.sp 1
+The number following the label is the number of characters in the string.
+Each following OCTAL is a three digit octal number inbetween 000 and 177:
+A symbolic representation of the ASCII value of the corresponding character.
+.NH 3
+The ic-file syntax
+.PP
+The ic-code is the machine code of an abstract, stack oriented machine.
+Its level is close to that of SUMMER. Some of its instructions (those
+occurring in the first, second asnd fifth segment of the ic-file) are purely
+declarative; most instructions in the remaining segments are executable.
+To clarify the mapping defined later on we will in brief comments describe
+the meaning of individual instructions.
+.LD
+
+ic-file:        classes fields [glob | proc]* program strings .
+
+classes:        'classes' '\\n' [cldecl]* 'endclasses' '\\n' .
+
+cldecl:         IDENT ',' INT '\\n' .
+
+fields:         'fields' '\\n' [fld_decl]* 'endfields' '\\n' .
+
+fld_decl:       'fld' IDENT '\\n' [f_entry]* .
+
+f_entry:        IDENT ','
+                ['~var' ',' INT | '~proc' ',' pname] ','
+                assoc ','
+                assoc .
+
+assoc:          '~nil' | '~simple' | IDENT '.' INT .
+
+pname:          [IDENT | OPNAME '.1' | OPNAME '.2'] suffix .
+
+suffix:         '.' INT | empty .
+
+glob:           'dclglob' '\\t' gname .                              (1)
+
+proc:           prochead [exec_ins]* procend .
+
+prochead:       'proc' '\\t' pname ',' stringlabel ',' INT ','
+                INT ',' INT ',' INT '\\n' .                          (2)
+
+procend:        'procend' '\\t' INT .
+
+program:        proghead
+                [cstab_init]* [gl_init]* [exec_ins]*                 (3)
+                progend .
+
+proghead:       'program' '\\t' IDENT ',' stringlabel ',' INT ','
+                INT ',' INT ',' INT .
+
+progend:        'procend' '\\t' '0' '\\n' .
+
+.DE
+.PP
+The remainder of the syntax lists and informally explains the executable
+instructions.
+We will use
+.LD
+
+exec_ins:
+    'int\\t'    INT                  # Push integer.                 #
+  | 'real\\t'   REAL                 # Push real.                    #
+  | 'load\\t'   stringlabel          # Push string.                  #
+  | 'glob\\t'   gname                # Push global.                  #
+  | 'asglob\\t' gname                # Assign top of stack to global #
+                                     # (top of stack unchanged).     #
+  | 'loc\\t'    INT                  # Push local.                   #
+  | 'asloc\\t'  INT                  # Assign top of stack to local  #
+                                    # (top of stack unchanged).     #
+  | 'ind'                           # Pop v1, pop v2, push v1[v2].  #
+  | 'asind'                         # Pop v1, pop v2, assign new top#
+                                    # of stack to v2[v1].           #
+  | 'nullstr'                       # Push the empty string.        #
+  | 'undef'                         # Push the value 'undefined'    #
+  | 'self'                          # Push the current class object #
+  | 'subject'                       # Push the current subject.     #
+
+  | 'void'                          # Pop stack.                    #
+
+  | 'lab\\t'    label                # Label.                        #
+  | 'go\\t'     label                # Goto label.                   #
+  | 'newfl\\t'  label                # Push label on faillabel stack #
+  | 'oldfl'                         # Pop faillabel stack.          #
+  | 'gofl'                          # Jump to the current top of the#
+                                    # faillabel stack (unless this  #
+                                    # is 'nil', which means an      #
+                                    # error). Pop the stack.        #
+  | 'gocase\\t' IDENT                # Pop v1 and use it as a key in #
+                                    # table IDENT, which yields a   #
+                                    # label L. Goto L.              #
+
+  | 'eq'                            # Pop v1, pop v2.               #
+                                    # If v2 = v1 then push(v1) else #
+                                    # pop F from the faillabel stack#
+                                    # and goto F.                   #
+  | 'ne'                            # Like 'eq', but for v2 ~= v1   #
+  | 'lt'                            # Like 'eq', but for v2 < v1    #
+  | 'gt'                            # Like 'eq', but for v2 > v1    #
+  | 'le'                            # Like 'eq', but for v2 <= v1   #
+  | 'ge'                            # Like 'eq', but for v2 >= v1   #
+
+  | 'add'                           # Pop v1, pop v2, push(v2 + v1) #
+  | 'sub'                           # Pop v1, pop v2, push(v2 - v1) #
+  | 'mul'                           # Pop v1, pop v2, push(v2 * v1) #
+  | 'div'                           # Pop v1, pop v2, push(v2 / v1) #
+                                    # (real result).                #
+  | 'idiv'                          # Pop v1, pop v2, push(v2 % v1) #
+                                    # (integer result).             #
+  | 'neg'                           # Pop v1, push -v1.             #
+  | 'conc'                          # Pop v1, pop v2, push v2 || v1 #
+  | 'arinit\\t' INT                  # Array intialisation.          #
+  | 'tabelem\\t' INT                 # Create table entries (several #
+                                    # keys with te same value).     #
+  | 'tabinit\\t' INT                 # Table initialisation.         #
+  | 'xar\\t'    INT                 # Pop v1, which is array with   #
+                                    # INT elements. Push these ele- #
+                                    # ments in reverse order.       #
+  | 'fld\\t'     IDENT ',' INT       # Field selection; class object #
+                                    # and parameters are popped,    #
+                                    # result is pushed.             #
+  | 'ifld\\t'    IDENT ',' INT       # Like 'fld', but used when a   #
+                                    # class object selects one of   #
+                                    # its own fields.               #
+  | 'asfld\t'   IDENT ',' 1         # Assignment to (data)field.    #
+                                    # the value yielded by the store#
+                                    # association is pushed.        #
+  | 'asifld\\t'  IDENT ',' 1         # Assignment by a class object  #
+                                    # to one of its own fields.     #
+  | 'call\\t'   pname ',' INT       # Procedure call. Actual para-  #
+                                    # meters are popped, pname is   #
+                                    # called, result is pushed.     #
+  | 'return\\t' INT                 # INT = '1' or '0'. If 0, then  #
+                                    # return to calling procedure   #
+                                    # without yielding value. If 1, #
+                                    # then yield top of stack.      #
+  | 'freturn'                       # return failure to calling     #
+                                    # procedure.                    #
+
+  | 'newrc'                         # Open recovery cache.          #
+  | 'oldrc'                         # Close recovery cache.         #
+  | 'resrc'                         # Restore environment from      #
+                                    # current recovery cache.       #
+  | 'newsubj'                       # Pop v1 and install as current #
+                                    # subject (push on subjectstack)#
+  | 'oldsubj'                       # Pop subjectstack.             #
+  | 'error\\t'   ERCODE              # Issue runtime error and stop  #
+  | 'line\\t'    INT                 # Denotes increase with INT of  #
+                                    # current linenumber.           #
+  | 'aline\\t'   INT                 # Current linenumber equals INT.#
+
+.DE
+.IP (1)
+The gname is either a SUMMER identifier or a name invented by the parser:
+an underline followed by a number ('_1', '-2', etc.). These 'invented
+variables' occur in case initialisations and sometimes in for statements.
+.IP (2)
+See for the meaning of these declarative instructions ......
+.IP (3)
+\'cs_tabinit' is as described in 2.2.4. (syntax of the cs-file).
+.NH 2
+Translating SUMMER to ic-code.
+.IP Note: 8
+This section is still missing. It is temporarily replaced by an overview
+of operators and operands on the im-file.
+.NH 3
+Operands
+.PP
+There are 18 different operand forms. 17 of them serve as leaves in
+the parsetree, the 18-th is a reference to another tuple in the form of
+a label.
+.in 4
+.ti -4
+\'g' followed by an identifier refers to a global variable; for example 'gx' for global x.
+.sp 1
+.ti -4
+\'a' followed by an identifier refers to a class creation procedure.
+.sp 1
+.ti -4
+\'o' followed by an internal operator name refers to a user defined operator.
+.sp 1
+.ti -4
+\'w' followed by an identifier refers to a name which could not be identified
+by the parser at that program point. This can be either a forward reference
+to a global variable or to a field, or it can be a field name occurring
+within the scope of a scan-for (see 3.2.1.2.).
+\'w' is also used to prefix fieldnames in field selections.
+.sp 1
+.ti -4
+\'c' followed by an indentifier refers to a field belonging to the
+current class.
+.sp 1
+.ti -4
+\'l' followed by a number refers to a local variable (or a formal parameter).
+Locals are numbered from 0 on.
+.sp 1
+.ti -4
+\'n' followed by a integer denotes that integer.
+.sp 1
+.ti -4
+\'m' denotes the object 'self', i.e. the current class object.
+.sp 1
+.ti -4
+\'r' followed by a real denotes that real.
+.sp 1
+.ti -4
+\'S' followed by a number is a stringlabel which denotes a string.
+This label refers to an entry in
+the stringfile, to be discussed later.
+.sp 1
+.ti -4
+\'b' denotes the current subject; (i.e. the translation of the keyword 'subject'
+in the source file).
+.sp 1
+.ti -4
+\'z' denotes the nullstring, which has a special associated instruction in
+the abstract summer machine.
+.sp 1
+.ti -4
+\'u' denotes the special value 'undefined'.
+.sp 1
+.ti -4
+\'f' denotes the leave 'freturn'.
+.sp 1
+.ti -4
+\'C' followed by a number is a caselabel, referring to an entry in a 
+casetable. It only occurs as an operand in case clauses.
+.sp 1
+.ti -4
+\'i' followed by a number denotes a line increment.
+From this a 'line' instruction is generated in the final code, used
+by the interpreter to reconstruct the source line number in case of
+runtime errors.
+These operands only occur on special, fixed places in the code.
+.sp 1
+.ti -4
+\'L' followed by a number is a label and denotes another tuple.
+Labels are unique to a procedure; when the operand Lxxx occurs there should
+be exactly one tuple labeled with Lxxx belonging to the same procedure
+declaration.
+.in -4
+.NH 3
+Operators
+.PP
+Each non primitive construct occurring in a summer procedure body is
+represented as a tuple; the operators hence include 'if_then_else_fi',
+\'call' etc.
+We give a list of all operators and the kind and type of operands they expect,
+with some comment if necessary.
+(Note: these are requirements on the format of the intermediate file;
+deviations will lead to a 'compiler error' in the code generator.)
+If nothing is said about the type of an operand, it can be any type
+with the exception of a line increment ('i' followed by a number).
+.IP - 3
+Monadic operators:
+.br
+\'-1' and '~' expect one operand.
+.IP - 3
+Dyadic operators:
+.br
+\'+', '-2', '*', '/', '%', '||', '<', '<=', '>', '>=', '~=', ':=', '&' and '|'
+expect two operands.
+.IP - 3
+Other operators and the constructs they correspond to:
+.in 9
+.ti -6
+\'?'\ \ \ (scan ... for ... rof)
+.br
+Two operands.
+.sp 1
+.ti -6
+\'wd'\ \ (while ... do ... od)
+.br
+Three operands, the first must be a line
+increment.
+.sp 1
+.ti -6
+\'ift'\ (if ... then ... fi)
+.br
+Three operands, the first must be a line
+increment.
+.sp 1
+.ti -6
+\'ife'\ (if .... then ... else ... fi)
+.br
+Four operands; the first must be a line increment.
+Note: There is no operator corresponding to 'if ... then ... elif ...' etc.
+This is translated as a normal 'ife', the third operand (the else part)
+is a reference to another 'ift' or 'ife'.
+.sp 1
+.ti -6
+\'fr'\ \ (for loop)
+.br
+The first operand should be a line increment, the
+second is a variable invented by the parser (a local when the
+for loop occurs within a procedure, a new global otherwise), the third
+is the expression determining the successive values of the control variable,
+the fourth is a second variable invented by the parser,
+the fifth is the control variable of the loop, the sixth is the loop body.
+.sp 1
+.ti -6
+\'tru'\ (try ... until ... yrt)
+.br
+The first operand is a line-increment. The second operand is a number, say n.
+There follow n+1 expressions, the last one is the expression following 'until'.
+.sp 1
+.ti -4
+\'try'\ (try .... yrt)
+.br
+Like 'tru', but the last expression is empty. The difference between 'try'
+and 'tru' is, that in the latter case all expressions between try and yrt
+should yield a value if the expression as a whole should yield a value.
+.sp 1
+.ti -6
+\'as'\ \ (assert ...)
+.br
+One operand.
+.sp 1
+.ti -6
+\'ind'\ (array or table indexing)
+.br
+Two operands.
+.sp 1
+.ti -6
+\'rt'\ \ (return)
+.br
+Followed by either a single comma (no value returned) or an operand
+(one value returned).
+.sp 1
+.ti -6
+\'cs'\ \ (case e of c1: e1, .... cn: en, default: ed esac)
+.br
+The first operand should be a line increment.
+The second operand is the code for the index expression e.
+The third operand is the global variable to which the case table is assigned
+(see introduction).
+The fourth operand should be a number, say n. After that exactly 2n+2 other
+operands follow. The first two n are formed by n pairs (case label, operand);
+they are the roots of the parsetrees for the n expressions and the corresponding
+case label.
+The last two entrys are formed by the default case label (the default
+value in _g) and either an operand for the default expression or, if that
+was absent, a single comma.
+.sp 1
+.ti -6
+\';'\ \ \ (an expression sequence)
+.br
+The first operand of ';' must be a number, say n.
+There should follow exactly n other operands.
+.sp 1
+.ti -6
+\'cl'\ \ (procedure call) and 'clo'\ \ (operator call).
+.br
+The first operand of 'cl' ('clo') is a number, say n. There should follow
+exactly n+1 other operands. The first n represent the arguments of the
+procedure called, the last one must be an
+identifier, declared in the source program as a procedure or
+an operator. There is no difference between 'cl' and 'clo' for the code
+generator; the parser has to distinguish
+between them because of a different operand order.
+.sp 1
+.ti -6
+\'fld'\ (field selection)
+.br
+The first argument is a 'w' followed by the name of the field to be selected.
+The second argument should be a number, say n. There follow n more operands.
+The first of these is the class object from which a field is taken;
+if n > 1 than the field selected is a procedure with arguments, the n-1
+remaining operands are those arguments.
+.sp 1
+.ti -6
+\'ar'\ \ (array initialisation).
+.br
+The first operand must be a number, say n. There should follow exactly n+2
+other operands. The first n correspond to
+the values to which the array was initialized. The (n+1)-th is the
+default value for non-initialized array elements; the (n+2)-th is the
+size of the array.
+If the array was initialized without explicit size and default information,
+the (n+1)-th operand is 'u' (for undefined) and the last operand is 'n0'.
+In that case, the number n of initialized elements is substituted for this 0
+as the size of the array.
+.sp 1
+.ti -6
+\'key'\ ("key1: ... keyn: value" sequence in table initialisation)
+.br
+The first operand should be a number, say n. There should follow exactly
+n+1 other operands. The first corresponds to the value to be inserted in
+the table, the remaining n correspond to the n keys with which that value
+is to be associated.
+This operator should occur only as a direct descendant of 'tab' (see below),
+but the code generator does not check this requirement.
+.sp 1
+.ti -6
+\'tb'\ \ (table initialisation)
+.br
+The first operand should be a number, say sumk. This corresponds to the
+total number of table entries created at initialisation.
+The second and third operand are the default value returned for keys not
+present in the table, and the (estimated) size of the table.
+If the table was initialized without explicit size and default information,
+the second opernd is 'u' (undefined) and the third is 'n0'. In that case,
+the number sumk is substituted as the estimated size of the table.
+The fourth operand should be a number, say n. There should follow
+exactly n other operands, each corresponding to one  
+sequence "key1: ..... keyn: value"; i.e. each of the remaining operands should be
+a label referring to a tuple with operator 'key'. The code generator contains
+no check for this requirement.
+.in -9
+.NH
+The parser
+.PP
+This chapter sketches the overall organisation of the parser. For detailed
+comment on individual procedures and the role of individual global variables,
+the program listing should be consulted. This chapter is subdivided into
+two subsections, reflecting the two more or less separate tasks of the
+parser:
+.IP 1. 3
+Parsing the source program, including the detection of and the recovery from
+syntactical errors;
+.IP 2. 3
+Producing output in the form of the files described in the previous chapter.
+.PP
+In this decription we will use the convention that all names
+of variables and procedures occurring in the program text of the parser are
+underlined.
+.NH 2
+Parsing.
+.NH 3
+The lexical analyzer
+.PP
+An obvious way to construct a parser using SUMMER would be to install the
+file containing the source program as a permanent scan object, and let
+the pattern matching process take care of reading symbols.
+A simple minded procedure which handles a "while ... do ... od" construct
+would look like
+.LD
+
+ proc whiledo()
+ (       lit('while') & layout() & expr() &
+         lit('do')    & layout() & expr() &
+         lit('od')    & layout() &
+         make_tuple('wd',2)
+ );
+.DE
+.PP
+Such an approach completely obviates the need for a lexical analyzer.
+The method of error recovery we chose however makes this in itself rather
+elegant solution unfeasible. It requires that a parser procedure, before
+returning to its caller, reads symbols until it encounters one contained
+in a set passed to it as an argument.
+This can not be handled in an efficient way by doing pattern matching
+directly on the file. Therefore, though on first sight rather unexpected,
+the parser contains a lexical analyzer to read in the next symbol.
+.PP
+The source program is read by the line. Theoretically it would have been
+possible (and probably cheaper) to do pattern matching directly on the
+file. In the original (PDP11/45) implementation this would however restrict
+the size of source programs to 2\ ^\ 15 characters (the integer capacity),
+which was considered unacceptable.
+.PP
+The current symbol and the current symbol type are kept in global variables
+.ul
+sy
+and
+.ul
+t_sy.
+.NH 3
+Syntax analysis.
+.PP
+The SUMMER syntax is LL(1) with the exception of two constructs:
+array/table initialisation when the keyword 'array' or 'table' is omitted,
+and a sequence 'constant: ..... constant: expression' in a case statement
+when the expression happens to start with a constant. To resolve these
+local ambiguities, the SUMMER backtracking facility is used.
+.PP
+The parsing method employed is recursive descent (a special case of top down
+parsing): each parser procedure corresponds to a syntax rule; each terminal
+is matched directly against the current symbol; for each nonterminal
+the corresponding procedure is called.
+.PP
+We refer to the grammar given in section 2.2.1. The order of the parser procedures 
+is the reverse of the order of those rules (the original version of the parser dates back to a
+time when procedures had to be declared before use; hence the
+bottom up order of declaration).
+A parser procedure bears the name of the corresponding nonterminal, and
+its form corresponds closely to that of the production
+rule for the nonterminal.
+There is one general difference: the right alternative is always
+chosen before the
+corresponding procedure is called. To be as close to the parsing
+procedures as possible, we would have to write for example
+.LD
+
+program:        'var' vars | 'proc' procedure | 'op' operator .... etc,
+
+and then
+
+procedure:      ident params .... etc.
+
+.DE
+.PP
+There is no parser procedure corrsponding to the rules for 'monadic_op' and
+\'dyadic_op. The distinction between built-in and user defined operators 
+is made elsewhere, see section 3.2.1.1.
+.PP
+As will be clear from the grammar, SUMMER is heavily expression oriented:
+most constructs can occur as operands. The syntax is far too permissive
+though; it allows for example a while-do to be followed by a field selection,
+though a while-do can never yield a value. The parser excludes this possibility
+by having each procedure corresponding to a nonterminal in the right hand side
+of 'operand' return a 0 or a 1, denoting whether or not it is capable of
+yielding a value.
+Most of the work in that area is however done by the code generator -
+the parser makes no objection against the expression
+.br
+\ \ \ '3 := while p do q od + 5'.
+.PP
+Operator priorities are not reflected in the syntax. The parsetree for
+operand-operator-operand sequences is built in a bottom up manner; see 3.3.
+for details.
+.NH 3
+Error recovery
+.PP
+The form of the actual procedures is largely determined by the need to
+recover from syntactic errors in the source program.
+The method adopted is that decribed by Amman for Pascal [..]. It can be
+summarized as follows:
+.sp 1
+.in 5
+Before a parser procedure returns to its caller, it makes sure that
+the current symbol is one that the caller can handle.
+Furthermore, no symbol that the caller should handle is skipped.
+.in -5
+.PP
+To achieve this, each parser procedure has an argument
+.ul
+dont_skip
+which contains the set of symbols that the procedure should not skip.
+When calling another procedure, a parser procedure adds to its
+own 'dont_skip' set,
+those symbols that it can certainly handle when that called procedure returns.
+Before returning itself, it makes sure that the current symbol type is a member
+of the set passed to it.
+.PP
+Testing of symbols is done by procedure
+.ul
+testsym,
+which is called (once) after each call to
+.ul
+nextsym.
+.ul
+testsym
+has three arguments:
+.IP - 3
+A set of expected symbols,
+.IP - 3
+A set of symbols not to be skipped,
+.IP - 3
+An error message.
+.PP
+First
+.ul
+testsym
+sees whether the current symbol type is one of the types to be
+expected. If so, everything is OK and
+.ul
+testsym
+returns to its caller.
+If not, then (negelecting the special case handled by
+.ul
+illkeyword),
+.ul
+testsym
+throws together the two sets of symbol types, tests whether the current
+symbol type is a member of that union, and if not, reads symbols until
+it finds one which is. 
+.ul
+(t_EOF
+is always a member of that union).
+If symbols are skipped, a message is printed stating that fact.
+If the final symbol is a member of the second but not of the first set,
+the message (in general of the form ".... missing") is printed.
+.PP
+For example, consider the parser procedure
+.ul
+iffi:
+.LD
+
+ proc iffi(dont_skip)
+ (       condexpr(UN(t_fi, dont_skip));
+         if t_sy ~= t_fi
+         then    error('fi missing', lnr)
+         else    nextsym(); testsym(dont_skip, emptyset, '')
+         fi;
+         return(1)
+ );
+
+.DE
+.PP
+.ul
+iffi
+calls
+.ul
+condexpr,
+with an argument denoting that
+.ul
+condexpr
+should not skip any of the symbols
+.ul
+iffi
+itself should not skip, and additionally should not skip 'fi'.
+After return from
+.ul
+condexpr,
+the current symbol is either 'fi' or a symbol
+the caller of
+.ul
+iffi
+can handle.
+In the first case,
+.ul
+iffi
+calls
+.ul
+nextsym
+to get the next symbol, and
+.ul
+testsym
+to ensure that it returns with a symbol from
+.ul
+dont_skip.
+In the second case, iffi issues a message "fi missing".
+.PP
+The success of this error recovery scheme depends upon a good choice for
+the sets of symbols not to be skipped. After some experimenting the recovery
+seems to work well; often all errors are detected in one parse.
+Only in cases where an error causes the parser to assume a premature end
+of a procedure body, (for example a superfluous right parenthesis matching
+the opening left parenthesis), a substantial amount of text is skipped.
+The disadvantage of this method is that it is expensive even for
+correct programs.
+.NH 2
+Production of the intermediate files
+.NH 3
+Declarations and references.
+.NH 4
+Classes.
+.DS
+This section is still missing.
+.DE
+.NH 4
+Operators
+.PP
+Operators should be declared before use, either in an
+operator declaration or in a 'monadic' or 'dyadic' statement.
+The reason for this requirement lies in the combination of the fact that
+(at least dyadic) operators have different priorities
+(even though all user defined operators
+get the same priority), and the fact that we allow operator sequences to
+be written without blanks.
+Suppose the parser encounters the expression 'a*-b+c'. If no dyadic operator
+\'*-' is declared, this is parsed as '(a * (-b)) + c'. Now if the declaration
+of '*-' is encountered later on, this parse was wrong: '+' has a higher
+priority than a user defined operator, and so the above expression should
+read 'a *- (b+c)'. Mending this was considered too difficult - building
+the parsetree is no work for the codegenerator. 
+.PP
+The scope of an operator, whether declared as a global or inside a class,
+is in principle the whole program: If there are namesakes, the one referred to
+is determined by the adicity (statically) and the type of the first operand (dynamically).
+.PP
+The distinction between a monadic and a dyadic version of the same operator
+is done by appending the suffix '.1' or '.2' to its name, both in the
+declaration and in references. If the expression '@x @ y' is encountered,
+the following output on the im-file is produced:
+.LD
+
+ L1:     clo     o@.1,1,gx,
+ L2:     clo     o@.2,2,L1,gy,
+.DE
+.PP
+Dynamic operator identification, for example in the expression 'x @ y', is
+done as follows.
+If '@.2' is defined as a global operator and nowhere else, there is no
+problem: the expression is translated as a call.
+If there is a declaration for a dyadic operator @ in at least one class,
+the expression is translated as a field selection: 'x. @.2(y)' where '@.2'
+is the field name. Identification is done by searching the field table
+entries for '@.2' (see 2.2.2.) for one wich has as class entry the type of x,
+and which is declared to be fetchable; its fetch association is
+the name under which the operator
+is declared, which is '@.2' followed by a class suffix consisting of a second
+dot followed by a class sequence number.
+If there is also a global declaration for a dyadic '@', that operator is
+found as the last entry in the class table which has the class indication
+\'~global', and the fetch association '@.2'.
+This entry is needed only for user defined operators; if for
+example, a dyadic '+' is defined within one class then the field table
+will contain only one entry for '+'.
+The parser composes the field table;
+the different treatment of built-in vs. user defined operators, and
+of operators defined globally, defined within a class or defined in both
+ways accounts for the 'declaration status indicator' in the operator
+tables.
+.NH 4
+Scope rules
+.PP
+At a given program point, situated within n nested blocks, inside a
+procedure or operator declared within a class,
+identifiers declared at the following levels
+are defined:
+.IP - 3
+The locals of the innermost block: level n+2.
+.br
+\ \ \ .
+.br
+\ \ \ .
+.IP - 3
+The locals of the outermost block: level 3.
+.IP - 3
+The parameters of the procedure (operator): level 2.
+.IP - 3
+The fields of the current class (parameters, other data fields and procedures
+are all on the same level): level 1.
+.IP - 3
+Global variables, procedures and classes: level 0.
+.IP - 3
+The fields of a "current" subject: level -1. This "current" has no
+static meaning; if execution reaches a program point where such a
+field is mentioned, there should be an appropriate (dynamically installed) subject.
+.PP
+If an identifier has namesakes at different levels,
+it is understood as a reference to the namesake which is
+declared at the highest level.
+.PP
+It may seem illogical that fields of the current subject are considered
+to be the outermost scope. This is however the only rule (short of
+forbidding all name hiding) which allows us to translate the following
+program:
+.LD
+
+        var a := 0;
+
+        proc q() put(a);
+
+        class c()
+        begin fetch a;
+              var a := 1;
+        end c;
+
+        program p()
+        (q; scan c for q rof);
+.DE
+.PP
+If fields of the current subject would go before globals; the "a" in
+procedure "q" would refer to the global during the first call and to the
+field of the subject (of type "c") during the second call. These two cases
+require however a different translation.
+.PP
+With the scope rules decided upon there is no difficulty; the "a" refers in
+both invocations to the global.
+From program readibility point of view it also seems desirable to be able to
+decide statically to which variable an identifier refers.
+.NH 4
+Declarations on the im-file
+.IP - 3
+Parameters and locals are declared in the procedure heading, which states
+their respective number.
+.IP - 3
+Data fields of the current class (the first parameter to procedures
+associated with a class) are declared in the class table, where their
+number is stated. 
+(NB: to retrieve a field referenced within a class, the field table is not
+accessed.)
+.IP - 3
+Procedure fields are declared as global procedures. A suffix consisting
+of a dot and a class sequence number is appended to their name. If such
+a procedure is declared fetchable, that name is also entered as the fetch
+association for the procedure in the field table.
+.IP - 3
+Global variables are declared explicitly, see for the form of global and
+procedure declarations 2.2.3.
+.NH 4
+Treatment of identifier references.
+.PP
+Locals declared within a procedure are numbered consecutively.
+For example ((10), (11) etc. are source line numbers):
+.LD
+
+ (10)    proc p(a,b)
+ (11)    if a > b
+ (12)    then    var a := 3*b; return(a)
+ (13)    else    var b := 3*a; return(b)
+ (14)    fi;
+.DE
+.PP
+If "p" is a global procedure, it has four locals,
+appearing on the im-file as 'l0', 'l1', 'l2' and 'l3'.
+This is one more than strictly necessary, the variables "a" and "b
+declared in the then-part and the else-part of the if-statement could
+share a location. This would however frustrate the tracer, which uses
+the position of an identifier in the string referred to in the procedure
+heading (see .....) to compute its local number. In this case, where
+there are two a's and 2 b's, that string 
+is "a(10,14),b(10,14),a(12,12),b(13,13)".
+.PP
+Variable declarations can only occur at the beginning of a block, locals
+are therefore always declared before use and can hence be always be
+identified by the parser.
+.PP
+Procedures and operators declared within a class, and the class creation
+procedure itself, have an additional local'l0': the associated class object.
+This local is not declared but it can be referenced by means of the
+keyword "self".
+.PP
+Fields of the current class, like locals, are entered in the symbol
+table but removed when their direct scope expires; after that they only
+survive in the field table.
+References to such fields are translated as selections fron the objcet 'self'.
+To sognal the interpreter that fetch and store associations have to be
+bypassed, instructions 'ifld' and 'iasfld' will be generated.
+from 0 on, but they have prefix 'c' instead of 'l'.
+Parameters of the class itself play a double role: they are locals
+of the class creation procedure and data fields of the created class
+object. Example:
+.LD
+
+ class c(a)
+ begin   var b;
+         init:   b := array(a,0)
+ end c;
+.DE
+.PP
+This declaration
+is translated as a procedure with two locals ('l0'\ =\ 'self', and 'l1'\ =\ 'a')
+and two datafields ('c0'\ =\ 'a', and 'c1'\ =\ 'b'). When the class creation
+procedure is called, the interpreter copies the values of parameter l1 to
+the data field c0.
+The reference to 'a' in the init-statement is arbitrarily translated
+as 'c0'.
+.PP
+Fields of a class can be referenced before declaration; see the end of this subsection.
+.PP
+A reference to a (previously declared) procedure "p" belonging to the
+current class is translated as "dp".
+Such a reference will be translated as a direct call; the code generator
+will have to add the class suffix to the name "p". In this case that suffix
+could have been added by the parser, but for forward references it has to
+be done by the code generator anyway; uniformity is easier there.
+.PP
+A reference to a global variable "p" or a global procedure "p" is translated
+as "gp". A references to a class "c" is translated as "ac".
+.PP
+A reference to an identifier "x" which does not occur in the symbol table,
+is translated as "wx". There are three possibilities:
+.IP 1. 3
+A declaration for "x" within the same scope (global or class) is encountered
+later.
+.IP 2. 3
+There is no global "x" nor a field "x" in the current class, but there is
+another class which has a field "x".
+.IP 3. 3
+Nowhere in the program is a declaration for an "x". This is detected
+by the parser after the parser is completed; by procedure
+.ul
+make_decls,
+which finds a 'forward' entry for "x" in the symbol table.
+.NH 2
+Production of tuples
+.PP
+Each time an operand is parsed its translation is pushed onto the
+operand stack; each time an operator is parsed its entry in
+.ul
+montab
+or
+.ul
+dytab
+is pushed on the operator stack.
+The main reason to introduce these stacks lies in the way operator
+priorities are handled. Top down parsing of operand-operator sequences
+taking into account the operator priorities is possible but clumsy, and
+the resulting grammar is not LL(1). Therefore the parsetree for
+such sequences is built bottom up, using the so called f-g scheme
+(see for example [..]), which we will explain now.
+.PP
+We will first assume that each operator has one priority. When a sequence
+operand\ [operator\ operand]* is parsed, the following happens:
+.IP - 3
+A dummy operator with a priority lower than that of any existing operator
+is pushed on the operator stack. The parser uses (for historical reasons)
+o_lp, the left parenthesis.
+.IP - 3
+Each time an operand is parsed, its translation is simply pushed onto
+the operand stack.
+.IP - 3
+Before an operator is pushed onto the operator stack, operators are popped
+until one is encountered which has a lower priority than the new one.
+When an operator is popped, the rquired number of operands is popped as well,
+a complex operand (a piece of parsetree) is formed, and the result is
+pushed back on the operand stack.
+.IP - 3
+After the last operand is parsed, the operator stack is popped 
+and complex operands are formed until the dummy operator is encountered,
+which is the last to be popped.
+.PP
+As an example, we show the parse of the expression "a + b * c | d".
+OPUSH and OPOP mean pushing and popping the operator stack, NDPUSH and
+NDPOP mean pushing and popping the operand stack. ^ denotes the cursor
+position.
+Priorities are in increasing order '|' < '+' < '*'.
+.LD
+
+  a + b * c | d          OPUSH: (.
+ ^
+  a + b * c | d                          NDPUSH: a.
+   ^
+  a + b * c | d          OPUSH: +.
+     ^
+  a + b * c | d                          NDPUSH: b
+       ^
+  a + b * c | d          OPUSH: *.                 (priority '+' < '*')
+         ^
+  a + b * c | d                          NDPUSH: c
+           ^
+  a + b * c | d          OPOP:  *.       NDPOP:  c
+             ^                           NDPOP:  b
+                                         NDPUSH: (b * c)
+                         OPOP:  +        NDPOP:  (b * c)
+                                         NDPOP:  a
+                                         NDPUSH: (a + (b * c))
+                         OPUSH: |
+  a + b * c | d                          NDPUSH: d
+               ^         OPOP: |         NDPOP:  d
+                                         NDPOP:  (a + (b * c))
+                                         NDPUSH: ((a + (b * c)) | d)
+                         OPOP:  (
+.DE
+.PP
+This scheme has two flaws:
+All operators are assumed to be left associative, with the result that
+for example "a := b := c" is parsed as "(a := b) := c", and monadic
+operators cannot be handled. When parsing '--p', the first '-' will
+be popped when the second is handled, before the operand 'p' is even pushed.
+.PP
+Two overcome these problems, each operator is assigned two priorities:
+the f- and the g-priority. Before a new operator is pushed, operators
+are popped until one is encountered of which the f-priority is lower
+than the g-priority of the new operator. For left associative dyadic operators,
+f\ =\ g, for right associative and monadic operators, g\ =\ f+1.
+For a right associative operator the scheme works fine, but for a monadic
+operator there is still one requirement:
+There should be no operator with higher priority. In SUMMER this
+requirement is fullfilled; all monadic operators have equal and highest
+priorities. This requirement is one of the reasons why users are not
+allowed to defined operator priorities at will.
+.PP
+In the parser, procedure
+.ul
+treatop
+handles the stack when a new operator is encountered,
+.ul
+emptystack
+does the same when an expression parse is finished, and
+.ul
+make_tuple
+constructs the complex operands.
+A left parenthesis causes a new invocation of
+.ul
+expr.
+We show a trace through the relevant portions of the parser when
+it parses the expression 'x := y := if a > 0 then a else -a fi + 1';
+the produced output is shown as well.
+.DS
+Example still missing
+.DE
+.NH
+The code generator
+.DS
+No documentation is yet available.
+.DE

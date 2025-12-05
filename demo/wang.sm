@@ -1,0 +1,104 @@
+#****************************************************************
+*								*
+* Wang's algorithm for the propositional calculus.		*
+* See:								*
+*	Wang, H., "Toward a mechanical mathematics",		*
+*	IBM Journal of research and development, 4 (1960) 2-22	*
+* or								*
+*	Griswold, et.al., "The SNOBOL4 programming language"	*
+*	(second edition), 183-187.				*
+*								*
+****************************************************************#
+
+
+proc unop ()
+  return(lit('not'));
+
+proc binop()
+  return(lit('and') | lit('imp') | lit('or') | lit('equ'));
+
+proc formula(e)
+( var ator, phi, psi, pre := '';
+
+  scan e
+  for 
+    while pre := break(' ') & lit(' ')
+    do
+       if ator := unop() & lit('(') & phi := bal(')', '(', ')') & lit(')') then
+          return([pre || rtab(0), ator, phi, psi])
+       elif ator := binop() & lit('(') & phi := bal(',', '(', ')') & lit(',') &
+            psi := bal(')', '(', ')') & lit(')') then
+            return([pre || rtab(0), ator, phi, psi])
+       fi
+    od
+  rof;
+  freturn
+);
+
+proc atom(e)
+( var a;
+
+  scan e
+  for 
+    while break(' ')
+    do if a := lit(' ') || bal(' ', '(', ')') || lit(' ') then
+          return([rtab(0), a])
+       else
+	 # skip #
+       fi
+    od
+  rof;
+  freturn
+);
+
+proc wang(ante, conseq)
+( var ator, phi, psi;
+
+  put(ante, ' -> ', conseq, '\n');
+  if [ante, ator, phi, psi] := formula(ante) then
+     case ator of
+     'not': return(wang(ante, conseq || ' ' || phi)),
+     'and': return(wang(ante || ' ' || phi || ' ' || psi, conseq)),
+     'or':
+           return(wang(ante || ' ' || phi, conseq) & wang(ante || ' ' || psi, conseq)),
+     'imp':
+           return(wang(ante || ' ' || psi, conseq) & wang(ante, conseq || ' ' || phi)),
+     'equ':
+           return(wang(ante || ' ' || phi || ' ' || psi, conseq) &
+           wang(ante, conseq || ' ' || phi || ' ' || psi))
+     esac
+  elif [conseq, ator, phi, psi] := formula(conseq) then
+     case ator of
+     'not': return(wang(ante || ' ' || phi, conseq)),
+     'and':
+          return(wang(ante, conseq || ' ' || phi) & wang(ante, conseq || ' ' || psi)),
+     'or': return(wang(ante, conseq || ' ' || phi || ' ' || psi)),
+     'imp': return(wang(ante || ' ' || phi, conseq || ' ' || psi)),
+     'equ':
+          return(wang(ante || ' ' || phi, conseq || ' ' || psi) &
+          wang(ante || ' ' || psi, conseq || ' ' || phi))
+     esac
+  else
+     var at;
+     ante := ante || ' ';
+     conseq := ' ' || conseq || ' ';
+     while [ante, at] := atom(ante)
+     do if scan conseq for find(at) rof then return('') fi od;
+     freturn
+  fi;
+);
+
+program theorems ()
+( var f, form := [
+      'imp(not(or(p,q)),not(p))',
+      'not(imp(not(or(p,q)),not(p)))',
+      'imp(and(not(p),not(q)),equ(p,q))',
+      'imp(imp(or(p,q),or(p,r)),or(p,imp(q,r)))'
+      ];
+
+  for f in form
+  do
+     put('\nFormula: ', f, '\n\n');
+     put(if wang('', ' ' || f) then 'VALID' else 'NOT VALID' fi, '\n');
+  od
+);

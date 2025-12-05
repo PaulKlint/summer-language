@@ -1,0 +1,2 @@
+<case-expression> ::=
+        CASE <expression> OF { <case-entry> ',' }* [ DEFAULT ':' <block>] ESAC .

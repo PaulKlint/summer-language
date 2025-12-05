@@ -1,0 +1,37 @@
+---------------------------------- RECOVERY
+
+
+subject_string: abc pattern: ("ab"|"a")--"bc"
+ match(0,("ab"|"a")--"bc")
+   match(0,("ab"|"a"))
+     match(0,"ab"|"a")
+       match(0,"ab")
+       returns 2
+     returns 2
+   returns 2
+   match(2,"bc")
+   fails
+ fails
+fails
+
+subject_string: abc pattern: try <> "ab", "a" until "bc" yrt
+ match(0,try <> "ab", "a" until "bc" yrt)
+   match(0,"ab")
+   returns 2
+   match(2,"bc" )
+   fails
+   match(0,"a" )
+   returns 1
+   match(1,"bc" )
+   returns 3
+ returns 3
+succeeds; cursor=3
+
+subject_string: abc pattern: try <> "", !@(x:="Z")--"Q", !@(x:="Y")--"abc" until "" yrt
+ match(0,try <> "", !@(x:="Z")--"Q", !@(x:="Y")--"abc" until "" yrt)
+   match(0,"")
+   returns 0
+   match(0,"" )
+   returns 0
+ returns 0
+succeeds; cursor=0

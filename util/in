@@ -1,0 +1,17 @@
+#{counter,SN,0}
+#{counter,FN,ROMAN(7)}
+#{chap 1=SN+}. INTRODUCTION
+#{preliminaries=SN>1}. Preliminaries
+	See section #{limitations} below.
+	Here we define first figure #{ugly fig=FN+}
+	We promise #{promise=SN;}that 
+	it is not as beatiful as figure #{beaty fig}.
+#{limitations=SN+}. Limitations of this work
+	Nothing interesting here.
+	Some remarks on this topic can be found
+	in section #{future}.
+#{conclusions=SN<+}. CONCLUSIONS
+#{results=SN>1}. Main results
+	At last here is that fantastic figure #{beaty fig=FN+},
+	we alluded to in section #{promise}
+#{future=SN+}. Future work

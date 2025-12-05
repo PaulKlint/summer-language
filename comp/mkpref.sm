@@ -1,0 +1,174 @@
+#****************************************************************
+*								*
+* mkprefix -- generate prefix file for codegenerator		*
+*								*
+* This program inspects the files 'summer.h' and 'operator.h'	*
+* and generates a list of assembler equates which are prefixed	*
+* to each file produced by the program expand.			*
+****************************************************************#
+
+var VAX;
+var long;
+var MAXINT;
+var layout := ' \t';
+
+# convert a string to lower case #
+
+proc lc(s)
+  return(s.replace('ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz') );
+
+proc dec(n)
+( return(if VAX = 0 then string(n) || '.' else string(n) fi)
+);
+
+proc equate(f, a, b)
+( if VAX = 0 then
+     f.put('\t''', a, '\t= ', b, '\\n'',\n')
+  else
+     f.put('\t''.set\t', a, ',', b, '\\n'',\n')
+  fi
+);
+
+#****************************************************************
+*								*
+* define -- recognizes lines of the form: "##define start ..."	*
+*								*
+****************************************************************#
+
+proc define(s, start)
+( var operator, num, tail;
+
+  if scan s
+     for
+       lit('#define') & span(layout) & lit(start) &
+       operator := break(layout) & span(layout) & num := (break(layout) | rtab(0)) &
+
+       tail := rtab(0)
+     rof
+  then
+     return([operator, num, tail])
+  else
+     freturn
+  fi;
+);
+
+var predef := table(10, 0) init [
+	'scan_string':	2,
+	'interval':	3];
+
+proc centry(s, n)
+  return('\t[' || string(s) ||
+         ',undefined,undefined,undefined,undefined,' || string(n) || ']');
+
+#****************************************************************
+*								*
+* Main program							*
+*								*
+****************************************************************#
+
+program mkpref (args)
+( var input, pref, icname, names, operator_h, line, cnt, operator, num, tail, a;
+  var classtab, csep := '', dt_last, nclasses := 0;
+
+  input := file('../int/operator.h','r');
+  pref:= file('prefix','w');
+  icname := file('icname.c','w');
+  names := file('names.c','w');
+  for a in args
+  do case a of
+
+     '-r':
+         operator_h := file('operator.h','w'),
+     'VAX':
+         if VAX = undefined then VAX := 1
+         else
+            put('machine type multiply defined\n')
+         fi,
+      'PDP11':
+         if VAX = undefined then VAX := 0
+         else
+            put('machine type multiply defined\n')
+         fi
+      default:
+	 (
+         put('Unknown arg: "', a, '"\n');
+         stop(1)
+	 )
+      esac;
+  od;
+  if VAX = undefined then VAX := 1 fi;
+
+  icname.put('char *icname [] = {\n');
+  pref.put('proc prefix()\n',
+	     '( f_s.put(\n');
+  
+  long := if VAX = 1 then '.long ' else '' fi;
+  MAXINT := if VAX = 1 then '2147483647' else '16383' fi;
+  cnt := 0;
+  while line := input.get 
+  do if [operator, num, tail] := define(line, 'IC_') then
+	if operator_h ~= undefined then
+	   var tabs;
+	   num := cnt;
+	   tabs := if operator.size < 5 then '\t\t' else '\t' fi;
+           operator_h.put('#define IC_', operator, tabs, cnt, tail, '\n')
+	fi;
+        if operator = 'LAST' then
+           if integer(num) ~= cnt then
+              put('MISMATCH IN IC COUNT ', num, ',', cnt);
+           fi;
+	else
+	   if VAX = 1 & operator = 'HALT' then operator := 'IHALT' fi;
+	   equate(pref, lc(operator), dec(num));
+           icname.put('\t"', lc(operator), '",\n');
+           cnt := cnt + 1;
+	fi
+     elif operator_h ~= undefined then
+       operator_h.put(line, '\n')
+     fi
+  od;
+  icname.put('};\n');
+  icname.close ;
+  input.close ;
+
+  input := file('../int/summer.h','r');
+  names.put('\nchar *dtname [] = {\n');
+  classtab := 'var classtab := table(20, undefined) init [\n';
+  while line := input.get 
+  do
+     if [operator, num, tail] := define(line, 'DT_') then
+	names.put('\t"', lc(operator), '",\n');
+        equate(pref, 'dt_' || lc(operator), dec(num));
+	if operator = 'LAST' then
+	   dt_last := dec(num)
+	else
+	   var n := integer(num);
+	   if n > nclasses then nclasses := n fi;
+	   classtab := classtab || csep || '\t''' || lc(operator) || ''':' ||
+		   centry(predef[lc(operator)], num);
+	   csep := ',\n';
+	fi;
+     elif [operator, num, tail] := define(line, 'ER_') then
+	equate(pref, 'er_' || lc(operator), dec(num))
+     fi
+  od;
+  names.put('};\n');
+  names.close ;
+  equate(pref, 'nil', dec(0));		# fundamental constant #
+  pref.put('\t''.data\\n'',\n');	# start of data section #
+  pref.put('\t''', long, '0\\n''\n');	# prevents adrress 0 from being used #
+  pref.put(');\n');
+  pref.put('\n);');
+
+  pref.put(classtab, '];\n');
+  pref.put('var nclasses := ', nclasses+1, ';\n');
+  pref.put('const long := ''', long, ''';\n');
+  pref.put('const MAXINT := ''', MAXINT, ''';\n');
+  
+  pref.close ;
+  put('mv icname.c ../int/icname.c\n\n');
+  put('mv names.c ../int/names.c\n\n');
+  if operator_h ~= undefined then
+     put('mv operator.h ../int/operator.h\n\n')
+  fi;
+)

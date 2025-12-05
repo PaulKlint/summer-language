@@ -1,0 +1,80 @@
+
+program tstack(arg)
+( var s, i, j, u, v, w, sp, n , sz;
+     for sz in interval(1, 20, 1)
+     do
+        put('sz=', sz, '\n');
+	for n in interval(0, sz, 1)
+	do
+     
+        put('\tn=', n, '\n');
+
+	s := array(sz, undefined);
+	for i in interval(0, sz-1, 1)
+	do  s[i] := 3 * i;
+	    if s[i] ~= 3 * i then
+	       put('wrong retrieve after update\n')
+	    fi
+	od;
+	for i in interval(0, sz-1, 1)
+	do if s[i] ~= 3 *i then
+	      put('wrong retrieve\n')
+	   fi
+	od;
+	s := array(sz, undefined);
+	for i in interval(sz-1, 0, -1)
+	do s[i] := 3 * i;
+	od;
+	for i in interval(sz-1, 0, -1)
+	do if s.size ~= i + 1 then put('wrong size\n') fi;
+	   if s[i] ~= 3 * i then put('wrong retrieve') fi;
+	   if s.delete ~= 3 * i then put('wrong delete') fi;
+	od;
+
+	s := array(sz, undefined);
+	if s.size ~= sz then put('Wrong size 1\n') fi;
+
+	s.append(17);if s.last ~= 17 then put('wrong last\n') fi;
+	if s.size ~= sz + 1 then put('wrong size 2\n') fi;
+	s.append(57);if s.last ~= 57 then put('wrong last\n') fi;
+	if s.size ~= sz + 2 then put('wrong size 3\n') fi;
+	v := s.delete; if v ~= 57 then put('wrong value deleted\n') fi;
+	if s.size ~= sz + 1 then put('wrong size 4\n') fi;
+	s := array(sz, undefined);
+	for i in s.index do s[i] := i * 5 od;
+        j := 0;
+	for v in s
+	do if v ~= j * 5 then put('wrong value in for\n') fi;
+	   j := j + 1;
+	od;
+
+	while j < sz + n do s.append(j * 5); j := j + 1 od;
+
+	j := 0;
+	for v in s
+	do if v ~= j * 5 then put('wrong value in for after append\n') fi;
+           j := j + 1
+	od;
+
+	s := array(sz, undefined);
+	for i in interval(1, n, 1)
+	do s.append(i*i);
+	   if s.size ~= sz + i then
+	      put('wrong size after append\n');
+	   fi;
+	   if s[sz + i - 1] ~= i * i then
+	      put('wrong value after append\n')
+	   fi
+	od;
+	for i in interval(1, n, 1)
+        do 
+	   w := s[s.size - 1];
+	   u := (s.size - sz) * (s.size - sz);
+	   v := s.delete;
+	   if  v ~= u | v ~= w then
+	      put('wrong value deleted\n');
+	   fi;
+        od;
+     od
+   od
+)

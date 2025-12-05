@@ -1,0 +1,59 @@
+#					#
+# scans -- basic scanning functions	#
+#					#
+
+proc error(n) put('ERROR: ', n, '\n');
+
+program scans()
+( var x, y, n, digit := '0123456789';
+
+  x := y := '';
+  n := 0;
+  if ~ scan 'abc' for lit('abc') rof then error(n+0) fi;
+  if ~ scan 'abc' for lit('a') & lit('b') rof then error(n+1) fi;
+  if ~ scan 'abc' for x := lit('ab') & y := lit('c') rof then error(n+2) fi;
+  if x ~= 'ab' | y ~= 'c' then error(n+3) fi;
+
+  n := 10;
+  if ~ scan 'abc' for pos(0) rof then error(n+0) fi;
+  if ~ scan 'abc' for lit('a') & pos(1) rof then error(n+1) fi;
+  if ~ scan 'abc' for lit('abc') & rpos(0) rof then error(n+2) fi;
+  if ~ scan 'abc' for pos(0) & lit('a') & pos(1) & lit('b') & lit('c') & rpos(0) rof
+  then error(n+3) fi;
+
+  n := 20;
+  if ~ scan 'abc' for tab(1) & lit('bc') rof then error(n+0) fi;
+  if ~ scan 'abc' for lit('a') & x := tab(2) & lit('c') rof then error(n+1) fi;
+  if x ~= 'b' then error(n+2) fi;
+  if ~ scan 'abc' for rtab(0) rof then error(n+3) fi;
+  if ~ scan 'abc' for x := rtab(0) rof then error(n+4) fi;
+  if x ~= 'abc' then error(n+5) fi;
+  if ~ scan 'abc' for x := rtab(1) & lit('c') & rpos(0) rof then error(n+6) fi;
+  if x ~= 'ab' then error(n+7) fi;
+
+  n := 30;
+  if ~ scan 'a1' for lit('a') & any(digit) rof then error(n+0) fi;
+  if ~ scan '123' for x := any(digit) & y := any(digit) rof then error(n+1) fi;
+  if x ~= '1' | y ~= '2' then error(n+2) fi;
+  if scan 'a1234b' for lit('a') & span(digit) rof then else error(n+3) fi;
+  if ~ scan 'a1234b' for lit('a') & x := span(digit) & lit('b') rof then error(n+4) fi;
+  if x ~= '1234' then error(n+5) fi;
+
+  n := 40;
+  if ~ scan 'abcd1efg' for break(digit) rof then error(n+0) fi;
+  if ~ scan 'abcd1efg' for x := break(digit) rof then error(n+1) fi;
+
+  n := 50;
+  if ~ scan 'abcde' for move(1) rof then error(n+0) fi;
+  if ~ scan 'abcde' for x := move(1) rof then error(n+1) fi;
+  if x ~= 'a' then error(n+2) fi;
+  if ~ scan 'abcde' for lit('ab') & x := move(-1) & lit('bcde') rof then error(n+3) fi;
+  if x ~= 'b' then error(n+4) fi;
+
+  n := 60;
+  if scan 'ab' for x := find('b') rof fails then error(n+0) fi;
+  if x ~= 'a' then error(n+1) fi;
+  if scan 'b' for x := find('b') rof fails then error(n+2) fi;
+  if x ~= '' then error(n+3) fi;
+
+)

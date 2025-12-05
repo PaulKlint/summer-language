@@ -1,0 +1,91 @@
+.{{
+    \jg\fBproc\fR \jh\fImatch\fR\^(\fIcurs\fR, \fIpat\fR)
+\h'|\ngu'(  \ji\fBvar\fR \jj\fIcurs\fR1, \fIcurs\fR2, \fIP\fR, \fIP\fR1, \fIQ\fR, \fIQ\fR1, \fIpats\fR, \fIval\fR;
+\h'|\niu'\fBvar\fR \jj\fIstr\fR, \fIexpr\fR, \fIid\fR, \fIwindowvars\fR, \fISAVED\*_ENV\fR;
+\h'|\niu'
+\*#a\jk\*#\h'|\niu'\fBif\fR \jl{{ \fIpat\fR =\h'-0.3m'= \jm\fIP\fR:\*<pattern-primary\*> \*`\fI|\fR\^\*' \fIQ\fR:\*<pattern-primary\*> }}
+\h'|\niu'\fBthen\fR
+\h'|\nlu'\fBif\fR \jn\fIcurs\fR1 := \fImatch\fR\^(\fIcurs\fR, \fIP\fR)
+\h'|\nlu'\fBthen\fR
+\h'|\nnu'\fIreturn\fR\^(\fIcurs\fR1)
+\h'|\nlu'\fBelif\fR \jo\fIcurs\fR2 := \fImatch\fR\^(\fIcurs\fR, \fIQ\fR)
+\h'|\nlu'\fBthen\fR
+\h'|\nnu'\fIreturn\fR\^(\fIcurs\fR2)
+\h'|\nlu'\fBelse\fR
+\h'|\nnu'\fIfreturn\fR
+\h'|\nlu'\fBfi\fR
+\*#b\jk\*#\h'|\niu'\fBelif\fR \jp{{ \fIpat\fR =\h'-0.3m'= \jq\fIP\fR:\*<pattern-primary\*> \*`\fI\(mi\h'-0.2m'\(mi\fR\^\*' \fIQ\fR:\*<pattern-primary\*> }}
+\h'|\niu'\fBthen\fR
+\h'|\nlu'\fBif\fR \jn\fIcurs\fR1 := \fImatch\fR\^(\fIcurs\fR, \fIP\fR)
+\h'|\nlu'\fBthen\fR
+\h'|\nnu'\fBif\fR \jr\fIcurs\fR2 := \fImatch\fR\^(\fIcurs\fR1, \fIQ\fR)
+\h'|\nnu'\fBthen\fR
+\h'|\nru'\fIreturn\fR\^(\fIcurs\fR2)
+\h'|\nnu'\fBelse\fR
+\h'|\nru'\fIfreturn\fR
+\h'|\nnu'\fBfi\fR
+\h'|\nlu'\fBfi\fR;
+\h'|\nlu'\fIfreturn\fR
+\*#c\jk\*#\h'|\niu'\fBelif\fR \jp{{ \fIpat\fR =\h'-0.3m'= \jq\*`\fI\z( \js\fR\^\*' \fIP\fR:\*<pattern\*> \*`\fI)\fR\^\*' }}
+\h'|\niu'\fBthen\fR
+\h'|\nlu'\fIreturn\fR\^(\fImatch\fR\^(\fIcurs\fR, \fIP\fR))
+\*#d\jk\*#\h'|\niu'\fBelif\fR \jp{{ \fIpat\fR =\h'-0.3m'= \jq\fIstr\fR:\*<string-literal\*> }}
+\h'|\niu'\fBthen\fR
+\h'|\nlu'\fBif\fR \jn\fIcurs\fR1 := \fIlitmatch\fR\^(\fIcurs\fR, \fIstr\fR)
+\h'|\nlu'\fBthen\fR
+\h'|\nnu'\fIreturn\fR\^(\fIcurs\fR1)
+\h'|\nlu'\fBelse\fR
+\h'|\nnu'\fIfreturn\fR
+\h'|\nlu'\fBfi\fR
+\*#e\jk\*#\h'|\niu'\fBelif\fR \jp{{ \fIpat\fR =\h'-0.3m'= \jq\fIid\fR:\*<identifier\*> }}
+\h'|\niu'\fBthen\fR
+\h'|\nlu'\fBif\fR \jn\fIcurs\fR1 := \fImatch\fR\^(\fIcurs\fR, \fIINITIAL\*_ENV\fR.\fIbinding\fR\^(\fIid\fR\|))
+\h'|\nlu'\fBthen\fR
+\h'|\nnu'\fIreturn\fR\^(\fIcurs\fR1)
+\h'|\nlu'\fBelse\fR
+\h'|\nnu'\fIfreturn\fR
+\h'|\nlu'\fBfi\fR
+\*#f\jk\*#\h'|\niu'\fBelif\fR \jp{{ \fIpat\fR =\h'-0.3m'= \jq\*`\fI\v'0.25m'*\v'-0.25m'\fR\^\*' \fIid\fR:\*<identifier\*> }}
+\h'|\niu'\fBthen\fR
+\h'|\nlu'\fBif\fR \jn\fIcurs\fR1 := \fImatch\fR\^(\fIcurs\fR, \fICURRENT\*_ENV\fR.\fIbinding\fR\^(\fIid\fR\|))
+\h'|\nlu'\fBthen\fR
+\h'|\nnu'\fIreturn\fR\^(\fIcurs\fR1)
+\h'|\nlu'\fBelse\fR
+\h'|\nnu'\fIfreturn\fR
+\h'|\nlu'\fBfi\fR
+\*#g\jk\*#\h'|\niu'\fBelif\fR \jp{{ \fIpat\fR =\h'-0.3m'= \jq\s-2SBAS\s0 \jt\*`\fI\z( \js\fR\^\*' \fIP\fR:\*<pattern-primary\*> \*`\fI,\fR\^\*' \fIid\fR:\*<identifier\*> \*`\fI)\fR\^\*' }}
+\h'|\niu'\fBthen\fR
+\h'|\nlu'\fBif\fR \jn\fIcurs\fR1 := \fImatch\fR\^(\fIcurs\fR, \fIP\fR)
+\h'|\nlu'\fBthen\fR
+\h'|\nnu'\fICURRENT\*_ENV\fR.\fIbind\fR\^(\fIid\fR, \fImk\*_string\fR\^(\fIcurs\fR, \fIcurs\fR1));
+\h'|\nnu'\fIreturn\fR\^(\fIcurs\fR1)
+\h'|\nlu'\fBelse\fR
+\h'|\nnu'\fIfreturn\fR
+\h'|\nlu'\fBfi\fR
+\*#h\jk\*#\h'|\niu'\fBelif\fR \jp{{ \fIpat\fR =\h'-0.3m'= \jq\s-2ACT\s0 \ju\*`\fI\z( \js\fR\^\*' \fIexpr\fR:\*<expression\*> \*`\fI)\fR\^\*' }}
+\h'|\niu'\fBthen\fR
+\h'|\nlu'\fIeval\fR\^(\fIexpr\fR);
+\h'|\nlu'\fIreturn\fR\^(\fIcurs\fR)
+\*#i\jk\*#\h'|\niu'\fBelif\fR \jp{{ \fIpat\fR =\h'-0.3m'= \jq\s-2TRY\s0 \ju\*`\fI<\fR\^\*' \fIwindowvars\fR: { \*<identifier\*> \*`\fI,\fR\^\*' }\v'0.25m'*\v'-0.25m' \*`\fI>\fR\^\*'
+\h'|\nqu'\fIpats\fR:{\*<pattern\*> \*`\fI,\fR\^\*'}+
+\h'|\nqu'\s-2UNTIL\s0 \jv\fIQ\fR: \*<pattern\*> \s-2YRT\s0 \jw}}
+\h'|\niu'\fBthen\fR
+\h'|\nlu'\fISAVED\*_ENV\fR := \fIcopy\fR\^(\fICURRENT\*_ENV\fR\|);
+\h'|\nlu'\fBfor\fR \jx\fIP\fR \fBin\fR \jy\fIpats\fR
+\h'|\nlu'\fBdo\fR \jn\fBif\fR \jr\fIcurs\fR1 := \fImatch\fR\^(\fIcurs\fR, \fIP\fR)
+\h'|\nnu'\fBthen\fR
+\h'|\nru'\fBif\fR \jy\fIcurs\fR2 := \fImatch\fR\^(\fIcurs\fR1, \fIQ\fR)
+\h'|\nru'\fBthen\fR
+\h'|\nyu'\fIreturn\fR\^(\fIcurs\fR2)
+\h'|\nru'\fBfi\fR
+\h'|\nnu'\fBfi\fR;
+\h'|\nnu'\fBfor\fR \jz\fIid\fR \fBin\fR \jA\fIwindowvars\fR
+\h'|\nnu'\fBdo\fR \jr\fISAVED\*_ENV\fR.\fIbind\fR\^(\fIid\fR, \fICURRENT\*_ENV\fR.\fIbinding\fR\^(\fIid\fR\|)) \fBod\fR;
+\h'|\nnu'\fICURRENT\*_ENV\fR := \fIcopy\fR\^(\fISAVED\*_ENV\fR\|);
+\h'|\nlu'\fBod\fR;
+\h'|\nlu'\fIfreturn\fR
+\*#j\jk\*#\h'|\niu'\fBelse\fR
+\h'|\nlu'\fIERROR\fR
+\h'|\niu'\fBfi\fR
+\h'|\ngu');
+.}}

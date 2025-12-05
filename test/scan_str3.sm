@@ -1,0 +1,45 @@
+proc error(n) put('\nERROR: ', n, '\n');
+
+program scan_str3 ()
+( var x;
+
+  x := scan_string('abcd');
+  try scan x for lit('ab') & lit('ef') rof yrt | 'TRUE';
+  if x.lit('ab') fails then error(1) fi;
+  x := scan_string('123456');
+  if scan x 
+     for lit('123') &
+         (try lit('4') & lit('ZZ') yrt | lit('456'))
+     rof
+     fails
+  then
+     error(2)
+  fi;
+  x := scan_string('abcdefghijkl');
+  if scan x
+     for lit('abc') &
+         (try lit('d') &
+              (try lit('e') & lit('F') yrt | lit('ef')) &
+              lit('G')
+          yrt | lit('defg')) &
+          lit('hijkl')
+     rof
+     fails
+  then
+     error(3)
+  fi;
+  x := scan_string('123456789');
+  scan x
+  for
+      lit('12') &
+      (try lit('345') & lit('ZZZ') yrt | 'TRUE');
+      if cursor ~= 2 then error(4) fi;
+      if subject.cursor ~= 2 then error(5) fi;
+  rof;
+  x := scan_string('abcdef');
+  x.lit('a');
+  if try ( var c := x.move(1); c = ',') yrt fails
+  then
+     if x.lit('b') fails then error(6) fi
+  fi;
+)

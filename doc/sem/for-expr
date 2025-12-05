@@ -1,0 +1,55 @@
+.iy I DO
+.iy I ENV
+.iy I ERROR
+.iy I FOR
+.iy I IN
+.iy I N
+.iy I OD
+.iy I STATE
+.iy I a_integer
+.iy I a_undefined
+.iy I binding
+.iy I dereference
+.iy I eval
+.iy I eval_field_selection
+.iy I is_loc
+.iy I modify
+.{{
+\fBif\fR \jg{{\fIe\fR =\h'-0.3m'= \jh\s-2FOR\s0 \ji\fIid\fR:\*<identifier\*> \s-2IN\s0 \jj\fIexpr\fR:\*<expression\*> \s-2DO\s0 \jk\fIb\fR:\*<block\*> \s-2OD\s0 \jl}}
+\fBthen\fR
+\h'|\ngu'\fBvar\fR \jm\fIgen\fR, \fIv\fR, \fIsig\fR, \fIstate\fR;
+.sp 0.5
+\h'|\ngu'\fBif\fR \jn\(ap \fIis\*_loc\fR\^(\fIENV\fR.\fIbinding\fR\^(\fIid\fR\|)) \fBthen\fR \jo\fIERROR\fR \fBfi\fR;
+\h'|\ngu'[\^\fIgen\fR, \fIsig\fR] := \fIeval\fR\^(\fIexpr\fR);
+\h'|\ngu'\fBif\fR \jn\fIsig\fR \(ap\h'-0.2m'= \fIN\fR \fBthen\fR \jp\fIreturn\fR\^(\^[\fIgen\fR, \fIsig\fR]\^) \fBfi\fR;
+\h'|\ngu'\fIgen\fR := \fIdereference\fR\^(\^\fIgen\fR);
+\h'|\ngu'\fIstate\fR := \fIa\*_undefined\fR;
+\h'|\ngu'\fBwhile\fR \jq[\fIstate\fR, \fIsig\fR] := \fIeval\*_field\*_selection\fR\^(\*`\fI\h'-0.1m'fetch\fR\^\*', \fIgen\fR, \*`\fI\h'-0.1m'next\fR\^\*', [\fIstate\fR]\^) & \fIsig\fR = \fIN\fR
+\h'|\ngu'\fBdo\fR
+\h'|\nnu'[\fIv\fR, \fIsig\fR] := \fIeval\*_field\*_selection\fR\^(\*`\fI\h'-0.1m'fetch\fR\^\*', \fIstate\fR, \*`\fI\h'-0.1m'retrieve\fR\^\*', [\fIa\*_integer\fR\^(0)]\^);
+\h'|\nnu'\fBif\fR \jq\fIsig\fR \(ap\h'-0.2m'= \fIN\fR \fBthen\fR \jr\fIERROR\fR \fBfi\fR;
+\h'|\nnu'\fISTATE\fR.\fImodify\fR\^(\fIENV\fR.\fIbinding\fR\^(\fIid\fR\|), \fIv\fR);
+\h'|\nnu'[\fIstate\fR, \fIsig\fR] := \fIeval\*_field\*_selection\fR\^(\*`\fI\h'-0.1m'fetch\fR\^\*', \fIstate\fR, \*`\fI\h'-0.1m'retrieve\fR\^\*', [\fIa\*_integer\fR\^(1)]\^);
+\h'|\nnu'\fBif\fR \jq\fIsig\fR \(ap\h'-0.2m'= \fIN\fR \fBthen\fR \jr\fIERROR\fR \fBfi\fR;
+\h'|\nnu'[\fIv\fR, \fIsig\fR] := \fIeval\fR\^(\fIb\fR);
+\h'|\nnu'\fBif\fR \jq\fIsig\fR \(ap\h'-0.2m'= \fIN\fR \fBthen\fR \jr\fIreturn\fR\^(\^[\fIv\fR, \fIsig\fR]\^) \fBfi\fR;
+\h'|\ngu'\fBod\fR;
+\h'|\ngu'\fIreturn\fR\^(\^[\fIa\*_undefined\fR, \fIN\fR\|]\^);
+\fBfi\fR;
+.}}
+.iy I DO
+.iy I ENV
+.iy I ERROR
+.iy I FOR
+.iy I IN
+.iy I N
+.iy I OD
+.iy I STATE
+.iy I a_integer
+.iy I a_undefined
+.iy I binding
+.iy I dereference
+.iy I eval
+.iy I eval_field_selection
+.iy I is_loc
+.iy I modify

@@ -1,0 +1,50 @@
+:
+: RUN -- SUMMER installation file
+:
+N=${N-}
+MACHINE=${MACHINE-VAX}
+DESTDIR=${DESTDIR-`pwd`/bin}
+if test $MACHINE = PDP11
+then
+	CC=pcc
+	S=-S
+elif test $MACHINE = VAX
+then
+	CC=cc
+else
+	echo MACHINE has illegal value viz. "$MACHINE"
+	exit
+fi
+if test x${N}x != xx -a x${N}x != x-nx
+then
+	echo N has illegal value viz. "$N"
+	exit
+fi
+case $1 in
+int)
+	shift
+	echo "cd int"; cd int
+	make $N DESTDIR=$DESTDIR MACHINE=$MACHINE CC=$CC $@
+	;;
+comp)	shift
+	echo "cd comp"; cd comp
+	make $N DESTDIR=$DESTDIR MACHINE=$MACHINE CC=$CC S=$S $@
+	;;
+compbootPDP11)
+	shift
+	echo "cd comp/bootPDP11"; cd comp/bootPDP11
+	make $N DESTDIR=$DESTDIR MACHINE=$MACHINE CC=pcc $@
+        echo "cd comp"; cd ..
+	make $N DESTDIR=$DESTDIR MACHINE=PDP11 CC=pcc sumc
+	;;
+compbootVAX)
+	shift
+	echo "cd comp/bootVAX"; cd comp/bootVAX
+	make $N DESTDIR=$DESTDIR $@
+	echo "cd comp"; cd ..
+	make $N DESTDIR=$DESTDIR CC=cc  sumc
+	;;
+*)	echo Illegal argument \"$1\"
+	echo Legal arguments are \"int\", \"comp\", \"compbootPDP11\" or \"compbootVAX\"
+	;;
+esac

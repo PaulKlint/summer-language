@@ -1,0 +1,2 @@
+<real-constant>    ::=  <integer-constant> <real-exponent> |
+                        [<integer-constant>] '.' <digit>+ [<real-exponent>] .

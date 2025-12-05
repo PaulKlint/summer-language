@@ -1,0 +1,2334 @@
+var digit := '0123456789',
+      letter:= 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
+      letgit:= letter || digit,
+      alpha := letter || '_',
+      alphanum := alpha || digit;
+proc L ()
+   (span(' \t\n') | '' ) &
+   while lit('#') & break('#') & move(1) & (span(' \t\n') | '')
+   do od;
+
+proc identifier ()
+( var x;
+   L & x := (any(alpha) || (span(alphanum) | '')) &
+   if keyword[x] ~= undefined then
+      move(-x.size ) & freturn
+   fi
+);
+
+proc empty () ();
+
+proc integer_constant ()
+   span(digit);
+
+proc real_constant ()
+   (span(digit) | '') & lit('.') & (span(digit) | '') &
+   ((lit('e') & (any('+-') | '') & span(digit)) | '') ;
+
+proc string_constant ()
+   lit('''') & break('''') & move(1) &
+   while lit('''') do break('''') & move(1) od;
+proc operator_symbol ()
+   (lit('_') & span(letgit) & lit('_')) |
+   span('*+-/:<=>|$&~!\\@?') ;
+#<summer-program> ::=
+        (  <variable-declaration> | <constant-declaration> |
+           <procedure-declaration> | <operator-declaration> |
+           <class-declaration> | <operator-symbol-declaration>
+        )*
+        <program-declaration> .
+#
+
+proc summer_program()
+( while (variable_declaration|constant_declaration|procedure_declaration|operator_declaration|class_declaration|operator_symbol_declaration) do  od &program_declaration);
+#
+
+<program-declaration> ::=
+        PROGRAM <identifier> '(' [<identifier>] ')' [<expression>] .
+#
+
+proc program_declaration()
+(L&lit('program')&L&identifier&L&lit('(')&L&(identifier | empty) &L&lit(')')&L&(expression | empty) );
+#
+
+<operator-symbol-declaration> ::=
+        (MONADIC | DYADIC) { <operator-symbol> ',' }+ ';' .
+#
+
+proc operator_symbol_declaration()
+((L&lit('monadic')&L|L&lit('dyadic')&L)&operator_symbol& while L&lit(',')&L do operator_symbol od &L&lit(';')&L);
+#
+
+<class-declaration> ::=
+        CLASS <identifier> <formals>
+        BEGIN <subclass-declaration>
+              <fetch-associations> <store-associations>
+              (  <procedure-declaration> | <operator-declaration> |
+                 <variable-declaration> | <constant-declaration>
+              )*
+              [ INIT ':' <block> ]
+        END <identifier> ';' .
+#
+
+proc class_declaration()
+(L&lit('class')&L&identifier&formals&L&lit('begin')&L&subclass_declaration&fetch_associations&store_associations& while (procedure_declaration|operator_declaration|variable_declaration|constant_declaration) do  od &(L&lit('init')&L&L&lit(':')&L&block | empty) &L&lit('end')&L&identifier&L&lit(';')&L);
+#
+
+<subclass-declaration> ::= [ SUBCLASS OF <identifier> ';' ] .
+#
+
+proc subclass_declaration()
+((L&lit('subclass')&L&L&lit('of')&L&identifier&L&lit(';')&L | empty) );
+#
+
+<fetch-associations> ::= [ FETCH <associations> ';' ] .
+#
+
+proc fetch_associations()
+((L&lit('fetch')&L&associations&L&lit(';')&L | empty) );
+#
+
+<store-associations> ::= [ STORE <associations> ';' ] .
+#
+
+proc store_associations()
+((L&lit('store')&L&associations&L&lit(';')&L | empty) );
+#
+
+<associations> ::= { <association> ',' }+ .
+#
+
+proc associations()
+(association& while L&lit(',')&L do association od );
+#
+
+<association> ::= <field-identifier> [ ':' <identifier> ] .
+#
+
+proc association()
+(field_identifier&(L&lit(':')&L&identifier | empty) );
+#
+
+<field-identifier> ::= <identifier> | <operator-symbol> .
+#
+
+proc field_identifier()
+(identifier|operator_symbol);
+#
+
+<procedure-declaration> ::=
+        PROC <identifier> <formals> [ <expression> ] ';' .
+#
+
+proc procedure_declaration()
+(L&lit('proc')&L&identifier&formals&(expression | empty) &L&lit(';')&L);
+#
+
+<operator-declaration> ::=
+        OP <operator-symbol> <formals> [ <expression> ] ';' .
+#
+
+proc operator_declaration()
+(L&lit('op')&L&operator_symbol&formals&(expression | empty) &L&lit(';')&L);
+#
+
+<variable-declaration> ::=
+        VAR { <variable-initialization> ',' }+ ';' .
+#
+
+proc variable_declaration()
+(L&lit('var')&L&variable_initialization& while L&lit(',')&L do variable_initialization od &L&lit(';')&L);
+#
+
+<variable-initialization> ::= <identifier> [ ':=' <expression> ] .
+#
+
+proc variable_initialization()
+(identifier&(L&lit(':=')&L&expression | empty) );
+#
+
+<constant-declaration> ::=
+        CONST { <constant-initialization> ',' }+ ';' .
+#
+
+proc constant_declaration()
+(L&lit('const')&L&constant_initialization& while L&lit(',')&L do constant_initialization od &L&lit(';')&L);
+#
+
+<constant-initialization> ::=
+        <identifier> ':=' <constant-expression> .
+#
+
+proc constant_initialization()
+(identifier&L&lit(':=')&L&constant_expression);
+#
+
+<formals> ::= '(' { <identifier> ',' }* ')' .
+#
+
+proc formals()
+(L&lit('(')&L&if identifier then  while L&lit(',')&L do identifier od fi &L&lit(')')&L);
+#
+
+<constant> ::= <string-constant> | <integer-constant> | <real-constant> .
+#
+
+proc constant()
+(string_constant|integer_constant|real_constant);
+#
+
+<constant-operator> ::= '+' | '-' | '*' | '/' | '%' | '||' .
+#
+
+proc constant_operator()
+(L&lit('+')&L|L&lit('-')&L|L&lit('*')&L|L&lit('/')&L|L&lit('%')&L|L&lit('||')&L);
+#
+
+<constant-expression> ::=
+        <simple-constant-expression>
+        (<constant-operator> <constant-expression>)* .
+#
+
+proc constant_expression()
+(simple_constant_expression& while (constant_operator&constant_expression) do  od );
+#
+
+<simple-constant-expression> ::=
+        <constant> | <identifier> | '(' <constant-expression> ')' |
+        '-' <simple-constant-expression> .
+#
+
+proc simple_constant_expression()
+(constant|identifier|L&lit('(')&L&constant_expression&L&lit(')')&L|L&lit('-')&L&simple_constant_expression);
+#
+
+<expression> ::= <dyadic-expression> .
+#
+
+proc expression()
+(dyadic_expression);
+#
+
+<monadic-expression> ::= (<monadic-operator>)* <primary> .
+#
+
+proc monadic_expression()
+( while (monadic_operator) do  od &primary);
+#
+
+<monadic-operator> ::= '~' | '-' | <operator-symbol> .
+#
+
+proc monadic_operator()
+(L&lit('~')&L|L&lit('-')&L|operator_symbol);
+#
+
+<dyadic-operator> ::=
+          '+'  | '-'   | '*'  | '/'   | '%'   | '||' | '<' | '<='
+        | '>'  | '>='  | '='  | '~='  | ':='  | '&'  | '|'
+        | <operator-symbol> .
+#
+
+proc dyadic_operator()
+(L&lit('+')&L|L&lit('-')&L|L&lit('*')&L|L&lit('/')&L|L&lit('%')&L|L&lit('||')&L|L&lit('<')&L|L&lit('<=')&L|L&lit('>')&L|L&lit('>=')&L|L&lit('=')&L|L&lit('~=')&L|L&lit(':=')&L|L&lit('&')&L|L&lit('|')&L|operator_symbol);
+#
+
+<dyadic-expression> ::=
+        <monadic-expression> (<dyadic-operator> <monadic-expression>)* .
+#
+
+proc dyadic_expression()
+(monadic_expression& while (dyadic_operator&monadic_expression) do  od );
+#
+
+<primary> ::= <unit> ( <subscript> | <select> )* .
+#
+
+proc primary()
+(unit& while (subscript|select) do  od );
+#
+
+<unit> ::=
+          <constant> | <identifier-or-call> | <return-expression>
+        | <if-expression> | <case-expression> | <while-expression>
+        | <for-expression> | <scan-expression> | <try-expression>
+        | <assert-expression> | <parenthesized-expression>
+        | <array-expression> | <table-expression> .
+#
+
+proc unit()
+(constant|identifier_or_call|return_expression|if_expression|case_expression|while_expression|for_expression|scan_expression|try_expression|assert_expression|parenthesized_expression|array_expression|table_expression);
+#
+
+<identifier-or-call> ::= <identifier> [ <actuals> ] .
+#
+
+proc identifier_or_call()
+(identifier&(actuals | empty) );
+#
+
+<actuals> ::= '(' { <expression> ',' }* ')' .
+#
+
+proc actuals()
+(L&lit('(')&L&if expression then  while L&lit(',')&L do expression od fi &L&lit(')')&L);
+#
+
+<subscript> ::= '[' <expression> ']' .
+#
+
+proc subscript()
+(L&lit('[')&L&expression&L&lit(']')&L);
+#
+
+<select> ::= '.' <identifier> [ <actuals> ] .
+#
+
+proc select()
+(L&lit('.')&L&identifier&(actuals | empty) );
+#
+
+<return-expression> ::= FRETURN | RETURN [ '(' <expression> ')' ] .
+#
+
+proc return_expression()
+(L&lit('freturn')&L|L&lit('return')&L&(L&lit('(')&L&expression&L&lit(')')&L | empty) );
+#
+
+<while-expression> ::= WHILE <test> DO <block> OD .
+#
+
+proc while_expression()
+(L&lit('while')&L&test&L&lit('do')&L&block&L&lit('od')&L);
+#
+
+<try-expression> ::=
+        TRY { <expression> ',' }+ [UNTIL <block>] YRT .
+#
+
+proc try_expression()
+(L&lit('try')&L&expression& while L&lit(',')&L do expression od &(L&lit('until')&L&block | empty) &L&lit('yrt')&L);
+#
+
+<scan-expression> ::= SCAN <expression> FOR <block> ROF .
+#
+
+proc scan_expression()
+(L&lit('scan')&L&expression&L&lit('for')&L&block&L&lit('rof')&L);
+#
+
+<for-expression> ::=
+        FOR <identifier> IN <expression> DO <block> OD .
+#
+
+proc for_expression()
+(L&lit('for')&L&identifier&L&lit('in')&L&expression&L&lit('do')&L&block&L&lit('od')&L);
+#
+
+<case-expression> ::=
+        CASE <expression> OF { <case-entry> ',' }*
+        [ DEFAULT ':' <block>] ESAC .
+#
+
+proc case_expression()
+(L&lit('case')&L&expression&L&lit('of')&L&if case_entry then  while L&lit(',')&L do case_entry od fi &(L&lit('default')&L&L&lit(':')&L&block | empty) &L&lit('esac')&L);
+#
+
+<case-entry> ::= { <constant-expression> ':' }+ <block> .
+#
+
+proc case_entry()
+(constant_expression& while L&lit(':')&L do constant_expression od &block);
+#
+
+<assert-expression> ::= ASSERT <expression> .
+#
+
+proc assert_expression()
+(L&lit('assert')&L&expression);
+#
+
+<if-expression> ::=
+        IF <test> THEN <block> ( ELIF <test> THEN <block> )*
+        [ELSE <block>] FI .
+#
+
+proc if_expression()
+(L&lit('if')&L&test&L&lit('then')&L&block& while (L&lit('elif')&L&test&L&lit('then')&L&block) do  od &(L&lit('else')&L&block | empty) &L&lit('fi')&L);
+#
+
+<test> ::= <expression> [ FAILS | SUCCEEDS ] .
+#
+
+proc test()
+(expression&(L&lit('fails')&L|L&lit('succeeds')&L | empty) );
+#
+
+<parenthesized-expression> ::= '(' <block> ')' .
+#
+
+proc parenthesized_expression()
+(L&lit('(')&L&block&L&lit(')')&L);
+#
+
+<block> ::=  (<variable-declaration> | <constant-declaration> )*
+             { [<expression>] ';' }* .
+#
+
+proc block()
+( while (variable_declaration|constant_declaration) do  od &if (expression | empty)  then  while L&lit(';')&L do (expression | empty)  od fi );
+#
+
+<array-expression> ::=
+        ARRAY <size-definition> [ INIT <array-initialization> ] |
+        <array-initialization> .
+#
+
+proc array_expression()
+(L&lit('array')&L&size_definition&(L&lit('init')&L&array_initialization | empty) |array_initialization);
+#
+
+<size-definition> ::= '(' <expression> ',' <expression> ')' .
+#
+
+proc size_definition()
+(L&lit('(')&L&expression&L&lit(',')&L&expression&L&lit(')')&L);
+#
+
+<array-initialization> ::= '[' { <expression> ',' }* ']' .
+#
+
+proc array_initialization()
+(L&lit('[')&L&if expression then  while L&lit(',')&L do expression od fi &L&lit(']')&L);
+#
+
+<table-expression> ::=
+        TABLE <size-definition> [ INIT <table-initialization> ] |
+        <table-initialization> .
+#
+
+proc table_expression()
+(L&lit('table')&L&size_definition&(L&lit('init')&L&table_initialization | empty) |table_initialization);
+#
+
+<table-initialization> ::= '[' { <table-element> ',' }* ']' .
+#
+
+proc table_initialization()
+(L&lit('[')&L&if table_element then  while L&lit(',')&L do table_element od fi &L&lit(']')&L);
+#
+
+<table-element> ::= {<expression> ':'}+ ':' <expression> .
+#
+
+proc table_element()
+(expression& while L&lit(':')&L do expression od &L&lit(':')&L&expression);
+
+var keyword := table(20, undefined) init[
+'!filler!':	'array':
+	'assert':
+	'begin':
+	'case':
+	'class':
+	'const':
+	'default':
+	'do':
+	'dyadic':
+	'elif':
+	'else':
+	'end':
+	'esac':
+	'fails':
+	'fetch':
+	'fi':
+	'for':
+	'freturn':
+	'if':
+	'in':
+	'init':
+	'monadic':
+	'od':
+	'of':
+	'op':
+	'proc':
+	'program':
+	'return':
+	'rof':
+	'scan':
+	'store':
+	'subclass':
+	'succeeds':
+	'table':
+	'then':
+	'try':
+	'until':
+	'var':
+	'while':
+	'yrt':
+	1];
+#****************************************************************
+*                                                               *
+* A formal definition of the SUMMER programming language.       *
+* PART I: miscellaneous procedures and classes required for     *
+*         the complete operationalization of the definition.    *
+*         This includes the notion of "locations" and           *
+*         environments, procdecls, classdecls, instances, etc.  *
+* PART II:                                                      *
+*         formal definition, in the form of the declarations:   *
+*         eval_call, eval_field_selection and eval              *
+*         a_string, a_integer, a_array, eval_array_init,        *
+*         eval_table_init, has_field.                           *
+* PART III:
+          a small driver to apply the operational definition to *
+*         some examples.                                        *
+*                                                               *
+* This definition is written in a subset of SUMMER except the   *
+* expr == syntax-rule                                           *
+* (enclosed in double braces { and } )                          *
+* statements which are expanded in to appropriate SUMMER        *
+* statements by means of a preprocessor.                        *
+* Here follows PART I.                                          *
+*                                                               *
+PRO MEMORIE:
+- expand_super_class.
+- files ?
+- programma argumenten
+- standard names stand_in, stand_out, stand_er
+- scope van formelen en procedure body dienen samen te vallen.
+****************************************************************#
+
+const N := 0,   # evaluation terminates Normally #
+      F := 1,   # evaluation Fails #
+      NR := 2,  # Normal Return required for result of evaluation #
+      FR := 3;  # Failure Return required for result of evaluation #
+var   pre, post;        # pre and post cursor values during parsing #
+var   ENV,      # current environment #
+      ENVglobal,        # global environment #
+      STATE,    # the current state #
+      varinit;  # text of variable initialization encountered so far #
+
+var   ruletrace := 0;
+var   ENVtrace    := 0;
+var   EVALtrace   := 0;
+
+# flex -- flexible arrays #
+
+class flex ()
+begin fetch update, retrieve, append, size, next, index;
+
+      var mem, size;
+
+      proc retrieve(i)
+      if 0 <= i < size then return(mem[i]) else stop(-1) fi;
+
+      proc update(i, v)
+      if 0 <= i < size then return(mem[i] := v) else stop(-1) fi;
+
+      proc append(v)
+      ( if size >= mem.size then
+           var i, m1 := array(mem.size + 10, undefined);
+           for i in mem.index do m1[i] := mem[i] od;
+           mem := m1
+        fi;
+        mem[size] := v;
+        size := size + 1;
+        return(v)
+      );
+
+      proc next(state)
+      ( if state = undefined then
+         state := 0
+        fi;
+        if state < size then
+           return([mem[state], state + 1])
+        else
+           freturn
+        fi
+      );
+
+      proc index()
+      return(interval(0, size - 1, 1));
+
+init: mem := array(10, undefined);
+      size := 0;
+end flex;
+
+# environments realize the mapping between names and values.    #
+# Names can be mapped on:                                       #
+#       a_loc   a location, which models memory cells           #
+#       a_proc                                          #
+#               describes a procedure declaration               #
+#       a_class                                         #
+#               describes a class declaration                   #
+#       a_composite_instance                                              #
+#               a class instance, i.e. one particular           #
+#               occurrence of an object belonging to that class #
+#                                                               #
+# Environments can be copied in two ways:                       #
+#       name_copy                                               #
+#               only copies the name parts of the environment   #
+#               and hence the value parts are shared beteen the #
+#               original and the new environment. This type of  #
+#               copy is used, to switch to a new environment    #
+#               in procedure calls, field selection etc.        #
+#       partial_state_copy                                      #
+#               copies all the name parts and all value parts   #
+#               with a scope greater than the scope of the      #
+#               current procedure. This is used to implement    #
+#               the "try-construct". The values of variables    #
+#               declared inside the current procedure are never #
+#               restored if the try fails, but the values of    #
+#               global variables are restores in that case.     #
+#                                                               #
+# The scope rules are also realised by environments:            #
+#       new_inner_scope                                         #
+#               start the scope of an inner block               #
+#       new_proc_scope                                          #
+#               starts a new procedure scope                    #
+#                                                               #
+
+class environment (proc_scope, inner_scope)
+begin fetch bind, binding, has_binding, print, name_copy, partial_state_copy,
+            names, proc_scope, inner_scope, new_proc_scope, new_inner_scope;
+      store t;  # a pity; necessary to make copies of envs #
+      var t := flex;
+
+      proc lookup(name)
+      ( var i;
+        for i in interval(t.size-1, 0, -1)
+        do var nm, k;
+           [nm, k] := t[i];
+           if #{{ nm  ==  <identifier> }}#
+scan nm  for 
+identifier& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  <identifier>  }\n')fi
+ fails then
+              put('Illegal id in env\n');
+              print();
+              stop(-1);
+           fi;
+           if nm = name then return(i) fi
+        od;
+        freturn;
+      );
+
+      proc bind(name, value)
+      ( var i;
+        if i := lookup(name) & i > inner_scope
+        then
+           put('\n"', name, '" redeclared\n"');
+        else
+           t.append([name, value])
+        fi
+       );
+
+      proc binding(name)
+      ( var i;
+        if i := lookup(name) fails then put('\nname "', name, '" has no binding\n') fi;
+        return(t[i][1])
+      );
+
+      proc has_binding(name) return(lookup(name));
+
+      proc new_inner_scope() inner_scope := t.size;
+
+      proc new_proc_scope() proc_scope := inner_scope := t.size;
+
+      proc names()
+      ( var i, a := array(t.size, undefined);
+        for i in t.index do a[i] := t[i][0] od;
+        return(a)
+      );
+
+      proc print ()
+      ( var name, val, i, tp;
+        put('\nENVIRONMENT:');
+        put(' proc_scope: ', proc_scope, ' inner_scope: ', inner_scope, '\n');
+        for i in t.index
+        do [name, val] := t[i]; tp := type(val);
+           put(name, '\t');
+           if tp = 'string' then put('"', val, '"')
+           elif tp = 'integer' then put('#', string(val))
+           else
+                val.print;
+           fi;
+           put('\n');
+        od;
+      );
+
+      proc name_copy ()
+      ( var r, cenv, entry;
+        cenv := environment(proc_scope, inner_scope);
+        r := flex;
+        for entry in t do r.append(entry) od;
+        cenv.t := r;
+        return(cenv)
+      );
+
+      proc partial_state_copy()
+      ( var r, cenv, i;
+        cenv := environment(proc_scope, inner_scope);
+        r := flex;
+        put('Partial_state_copy:\n');
+        for i in t.index
+        do var name, value;
+           [name, value] := t[i];
+           put(name);
+           if is_loc(value) & i <= proc_scope
+           then
+              value := STATE.extend(STATE.contents(value));
+              put('\t new location\n');
+           else
+              put('\tshared\n');
+           fi;
+           r.append([name, value])
+        od;
+        cenv.t := r;
+        return(cenv)
+       );
+
+end environment;
+
+# locations, i.e. cells capable of holding one value #
+
+class a_loc(contents)
+begin fetch contents, print; store contents;
+      proc print()
+      ( put('a_loc('); put(contents.print, ')'); return(''));
+end a_loc;
+
+proc is_loc(l) return(type(l) = 'a_loc');
+
+# state -- map locations into values #
+
+class state ()
+begin fetch extend, contents, modify;
+
+      proc extend(v)
+      ( return(a_loc(v)) );
+
+      proc contents(l)
+      ( return(l.contents) );
+
+      proc modify(l, v)
+      ( l.contents := v; return(l) );
+
+end state;
+# proc, i.e. describes one procedure declaration #
+
+class a_proc(text, env)
+begin fetch text, env, print;
+      store env;
+      proc print() (put('a_proc'); return(''));
+end a_proc;
+
+proc is_proc(a) return(type(a) = 'a_proc');
+
+# class, i.e. describes one class declaration #
+class a_class(name, text)
+begin fetch name, text, print;
+    proc print() (put('a_class(', name, ')'); return(''));
+end a_class;
+
+proc is_class(a) return(type(a) = 'a_class');
+
+proc expand_super_class(c) return(c);
+
+# instance, i.e. describes one class instance #
+
+class a_composite_instance(class_decl, env)
+begin fetch class_decl, env, print, same_as;
+
+      proc print() (put('a_composite_instance'); return(''));
+      proc same_as(x)
+         return(is_composite_instance(x) & x = self);
+end a_composite_instance;
+
+proc is_composite_instance(v) return(type(v) = 'a_composite_instance');
+
+proc is_basic_instance(v)
+   return(is_integer(v) | is_string(v) | is_undefined(v));
+
+proc is_instance(v)
+   return(is_basic_instance(v) | is_composite_instance(v));
+
+proc get_program_arguments() return(a_undefined);
+proc string_equal(s1, s2) return(s1 = s2);
+
+proc substring(s1, base, length) return(s1.substr(base, length));
+
+#! ***** <equal> ***** #
+proc equal(a, b)
+( if is_integer(a) & is_integer(b)
+  then
+     return(a.intval = b.intval)
+  elif is_string(a) & is_string(b)
+  then
+     return(string_equal(a.stringval, b.stringval))
+  elif is_composite_instance(a) & is_composite_instance(b) & 
+       string_equal(a.class_decl.name, b.class_decl.name)
+  then
+     return(a.same_as(b))
+  else
+     freturn
+  fi
+);
+#!#
+#!******* <dereference> ********#
+proc dereference(val)
+( if is_loc(val)
+  then
+     return(STATE.contents(val))
+  else
+     return(val)
+  fi
+);
+#!#
+
+proc ERROR()
+( put('\nERROR\n'); ENV.print; stop(-1) );
+
+#****************************************************************
+*                                                               *
+* PART II: the formal definition.                               *
+*                                                               *
+****************************************************************#
+
+class a_undefined()
+begin fetch operation, print, has;
+
+      proc print() (put('a_undefined'); return(''));
+
+      proc has(oper) freturn;
+
+      proc operation(oper) ERROR;
+end a_undefined;
+
+proc is_undefined(v) return(type(v) = 'a_undefined');
+
+class a_string(stringval)
+begin fetch operation, stringval, print, has;
+
+      proc print() (put('a_string(''', stringval, ''')'); return(''));
+
+      proc has(oper)
+        case oper of
+        '||': '=': 'retrieve':
+            return('')
+        default:
+            freturn
+        esac;
+
+      proc operation(oper, actuals)
+      ( case oper of
+                'size':
+                if actuals.size ~= 0 then ERROR fi;
+                return([a_integer(stringval.size), N]),
+        '||':
+                if actuals.size ~= 1 | ~ is_string(actuals[0]) then ERROR fi;
+                return([a_string(stringval || actuals[0].stringval), N]),
+        '=':
+                if actuals.size ~= 1 | ~ is_string(actuals[0]) then ERROR fi;
+                if stringval = actuals[0].stringval then
+                   return([actuals[0], N])
+                else
+                   return([a_undefined, F])
+                fi,
+        'retrieve':
+                if actuals.size ~= 1 | ~is_integer(actuals[0]) |
+                   actuals[0].intval < 0 | actuals[0] >= stringval.size
+                then
+                   ERROR
+                fi;
+                return([a_string(stringval[actuals[0].intval]), N])
+        default:
+                put('Undefined string operations'); ERROR
+        esac
+     );
+end a_string;
+
+proc is_string(s) return(type(s) = 'a_string');
+
+class a_integer(intval)
+begin fetch operation, intval, print, has;
+
+      proc print() (put('a_integer(', string(intval), ')'); return(''));
+
+      proc has(oper)
+        case oper of
+        '+': '-': '*': '/': '%':
+        '<': '<=': '=': '~=': '>': '>=':
+           return('')
+        default:
+           freturn
+        esac;
+
+      proc operation(oper, actuals)
+      ( var m, res;
+        if oper = '-' & actuals.size = 0 then
+           return([a_integer(-intval), N])
+        else
+           if actuals.size ~= 1 | ~ is_integer(actuals[0]) then ERROR fi;
+           m := actuals[0].intval;
+           case oper of
+           '+':  res := intval + m,
+           '-':  res := intval - m,
+           '*':  res := intval * m,
+           '/':  res := intval / m,
+           '%':  res := intval % m,
+           '<':  if intval < m then res := m else return([a_undefined, F]) fi,
+           '<=': if intval <= m then res := m else return([a_undefined, F]) fi,
+           '=':  if intval = m then res := m else return([a_undefined, F]) fi,
+           '~=': if intval ~= m then res := m else return([a_undefined, F]) fi,
+           '>=': if intval >= m then res := m else return([a_undefined, F]) fi,
+           '>':  if intval > m then res := m else return([a_undefined, F]) fi
+           default:
+                put('Undefined operation on integer'); ERROR
+           esac;
+           return([a_integer(res), N])
+        fi
+      );
+init: if type(intval) = 'string' then
+         if scan intval for span('0123456789') & rpos(0) rof fails then ERROR fi;
+         intval := integer(intval)
+      elif type(intval) ~= 'integer' then ERROR fi;
+end a_integer;
+
+proc is_integer(n) return(type(n) = 'a_integer');
+
+class a_array(n, def)
+begin fetch operation, print, has;
+      var ar;
+
+      proc print()
+      ( var a;
+        put('a_array[');
+        for a in ar do a.print; put(' ') od;
+        put(']');
+        return('')
+      );
+
+      proc has(oper)
+        case oper of 'update': 'retrieve': 'size': return('')
+        default: freturn
+        esac;
+
+      proc operation(oper, actuals)
+      ( var v;
+        case oper of
+        'update': v := ar[actuals[0].intval] := actuals[1],
+        'retrieve': v := ar[actuals[0].intval],
+        'size': v := a_integer(n)
+        esac;
+        return([v, N])
+      );
+init: ar := array(n.intval, def)
+end a_array;
+
+proc is_array(a) return(type(a) = 'a_array');
+#! ***** <eval_standard_procedure> *****#
+proc eval_standard_procedure(procname, actuals)
+( case procname
+  of 'string':
+         if actuals.size ~= 1 | ~is_string(actuals[0]) then ERROR fi;
+         return(a_string(actuals[0].stringval)),
+     'integer':
+         if actuals.size ~= 1 | ~is_integer(actuals[0]) then ERROR fi;
+         return(a_integer(actuals[0].intval)),
+#-#  'array':
+#-#      if actuals.size ~= 2 then ERROR fi;
+#-#      return(a_array(actuals[0], actuals[1])),
+     'undefined':
+         if actuals.size ~= 0 then ERROR fi;
+         return(a_undefined),
+     'type':
+         if actuals.size ~= 1 then ERROR fi;
+         if is_string(actuals[0])
+         then
+            return(a_string('string'))
+         elif is_integer(actuals[0])
+         then
+            return(a_string('integer'))
+#-#      elif is_array(actuals[0])
+#-#      then
+#-#         return(a_string('array'))
+         elif is_undefined(actuals[0])
+         then
+            return(a_string('undefined'))
+         else
+            # is_composite_instance(actuals[0]) #
+            return(a_string(actuals[0].class_decl.name))
+         fi
+     esac
+);
+
+#! ***** <eval_call> *****#
+proc eval_call(procname, actuals)
+( var procdef;
+
+  if procname = 'string' | procname = 'integer' |
+     procname = 'undefined' | procname = 'type'
+#-#  | procname = 'array'
+  then
+     return([eval_standard_procedure(procname, actuals), N])
+  fi;
+  procdef := ENV.binding(procname);
+  if is_proc(procdef)
+  then
+     var body, ENV1, formals, i, v, sig;
+
+     #{{ procdef.text  == 
+             PROC  <identifier> '(' formals: {<identifier> ','}* ')'
+             body: [<expression>] ';'
+     }}#
+scan procdef.text  for 
+L&lit('proc')&L&
+identifier&
+L&lit('(')&L&
+formals:=flex& if pre:=cursor&(identifier)&post:=cursor&formals.append(tab(pre)) & tab(post) then  while L&lit(',')&L do pre:=cursor&(identifier)&post:=cursor&formals.append(tab(pre)) & tab(post) od  fi &
+L&lit(')')&L&
+pre:=cursor&((expression | empty) )&post:=cursor&body:=tab(pre)&tab(post)&
+L&lit(';')&L& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  ... }\n')fi
+;
+     if actuals.size ~= formals.size then ERROR fi;
+     ENV1 := ENV;
+     ENV := procdef.env.name_copy;
+     ENV.new_proc_scope;
+     for i in actuals.index
+     do ENV.bind(formals[i], STATE.extend(actuals[i])) od;
+     [v, sig] := eval(body);
+     ENV := ENV1;
+     case sig
+     of N: NR:  return([v, N]),
+        F: FR:  return([v, F])
+     esac
+  else
+     # is_class(procdef) #
+     var formals, decls, initexpr, ENV1, varinit1;
+     var name, instance, d, v, sig, expr, i;
+
+     #{{ procdef.text  == 
+           CLASS <identifier> '(' formals:{<identifier> ','}* ')'
+           BEGIN <fetch-associations> <store-associations>
+           decls:  (  <variable-declaration> | <constant-declaration> |
+                      <procedure-declaration> | <operator-declaration>
+                   )*
+           initexpr:  [INIT ':' <block>]
+           END <identifier> ';'
+     }}#
+scan procdef.text  for 
+pre:=cursor&(variable_declaration|constant_declaration|procedure_declaration|operator_declaration)&post:=cursor&decls:=tab(pre)&tab(post) & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  ... }\n')fi
+;
+     ENV1 := ENV;
+     ENV := ENVglobal.name_copy;
+     ENV.new_inner_scope;
+     varinit1 := varinit;
+     varinit := '';
+     if actuals.size ~= formals.size then ERROR fi;
+     for i in actuals.index
+     do ENV.bind(formals[i], STATE.extend(actuals[i])) od;
+
+     for d in decls
+     do [v, sig] := eval(d);
+        if sig ~= N then ERROR fi
+     od;
+     for name in ENV.names
+     do var b := ENV.binding(name);
+        if is_proc(b) & b.env = undefined then b.env := ENV fi
+     od;
+
+     instance := a_composite_instance(procdef, ENV);
+     ENV.bind('self', instance);
+     [v, sig] := eval(varinit);
+     varinit := varinit1;
+     if sig ~= N
+     then
+        ENV := ENV1;
+        case sig
+        of F:   ERROR,
+           FR:  return([v, F]),
+           NR:  return([v, N])
+        esac
+     fi;
+     if #{{ initexpr  ==  INIT ':' expr:<block> }}#
+scan initexpr  for 
+L&lit('init')&L&
+L&lit(':')&L&
+pre:=cursor&(block)&post:=cursor&expr:=tab(pre)&tab(post)& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  INIT '':'' expr:<block>  }\n')fi
+
+     then
+        ENV.new_proc_scope;
+        [v, sig] := eval(expr);
+     else
+        [v, sig] := [a_undefined, N]
+     fi;
+     ENV := ENV1;
+     case sig
+     of F: FR:  return([v, F]),
+        N: NR:  return([instance, N])
+     esac
+  fi
+);
+#! ***** <has_field> *****#
+proc has_field(access_type, instance, field)
+( var flist, slist, list, f, p, a;
+
+  if is_basic_instance(instance)
+#-#  | is_array(instance)
+  then
+     return(instance.has(field))
+  fi;
+  if ~ is_composite_instance(instance) then freturn fi;
+  #{{ instance.class_decl.text  == 
+           CLASS <identifier> <formals>
+           BEGIN FETCH flist:{<association> ','}+ ';'
+                 STORE slist:{<association> ','}+ ';'
+                 (  <variable-declaration> | <constant-declaration> |
+                    <procedure-declaration> | <operator-declaration>
+                 )*
+                 [INIT ':' <block>]
+           END <identifier> ';'
+  }}#
+scan instance.class_decl.text  for 
+L&lit('class')&L&
+identifier&
+formals&
+L&lit('begin')&L&
+L&lit('fetch')&L&
+flist:=flex&pre:=cursor&(association)&post:=cursor&flist.append(tab(pre)) & tab(post)& while L&lit(',')&L do pre:=cursor&(association)&post:=cursor&flist.append(tab(pre)) & tab(post) od &
+L&lit(';')&L&
+L&lit('store')&L&
+slist:=flex&pre:=cursor&(association)&post:=cursor&slist.append(tab(pre)) & tab(post)& while L&lit(',')&L do pre:=cursor&(association)&post:=cursor&slist.append(tab(pre)) & tab(post) od &
+L&lit(';')&L&
+ while (variable_declaration|constant_declaration|procedure_declaration|operator_declaration) do  od &
+(L&lit('init')&L&L&lit(':')&L&block | empty) &
+L&lit('end')&L&
+identifier&
+L&lit(';')&L& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  ... }\n')fi
+;
+  list := if access_type = 'fetch' then flist else slist fi;
+  for a in list
+  do if #{{ a  ==  f:<field-identifier> [':' <identifier> ] }}#
+scan a  for 
+pre:=cursor&(field_identifier)&post:=cursor&f:=tab(pre)&tab(post)&
+(L&lit(':')&L&identifier | empty) & L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  f:<field-identifier> ['':'' <identifier> ]  }\n')fi
+ &
+        string_equal(field, f)
+     then
+        return
+#-# ('');
+     fi
+  od;
+  freturn
+);
+
+#! ***** <eval_field_selection> *****#
+proc eval_field_selection(access_type, instance, field, actuals)
+( var flist, slist, list, v, sig, f, ENV1, p, a;
+
+  if is_basic_instance(instance)
+#-#  | is_array(instance)
+  then
+     return(instance.operation(field, actuals))
+  fi;
+  if ~ is_composite_instance(instance) then ERROR fi;
+  #{{ instance.class_decl.text  == 
+           CLASS <identifier> <formals>
+           BEGIN FETCH flist:{<association> ','}+ ';'
+                 STORE slist:{<association> ','}+ ';'
+                 (  <variable-declaration> | <constant-declaration> |
+                    <procedure-declaration> | <operator-declaration>
+                 )*
+                 [INIT ':' <block>]
+           END <identifier> ';'
+  }}#
+scan instance.class_decl.text  for 
+L&lit('class')&L&
+identifier&
+formals&
+L&lit('begin')&L&
+L&lit('fetch')&L&
+flist:=flex&pre:=cursor&(association)&post:=cursor&flist.append(tab(pre)) & tab(post)& while L&lit(',')&L do pre:=cursor&(association)&post:=cursor&flist.append(tab(pre)) & tab(post) od &
+L&lit(';')&L&
+L&lit('store')&L&
+slist:=flex&pre:=cursor&(association)&post:=cursor&slist.append(tab(pre)) & tab(post)& while L&lit(',')&L do pre:=cursor&(association)&post:=cursor&slist.append(tab(pre)) & tab(post) od &
+L&lit(';')&L&
+ while (variable_declaration|constant_declaration|procedure_declaration|operator_declaration) do  od &
+(L&lit('init')&L&L&lit(':')&L&block | empty) &
+L&lit('end')&L&
+identifier&
+L&lit(';')&L& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  ... }\n')fi
+;
+  ENV1 := ENV;
+  ENV := instance.env;
+  list := if access_type = 'fetch' then flist else slist fi;
+  for a in list
+  do if #{{ a  ==  f:<field-identifier> }}#
+scan a  for 
+pre:=cursor&(field_identifier)&post:=cursor&f:=tab(pre)&tab(post)& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  f:<field-identifier>  }\n')fi
+ & string_equal(field, f)
+     then
+        if is_loc(ENV.binding(f))
+        then
+           if access_type = 'fetch'
+           then
+              if actuals.size ~= 0 then ERROR fi;
+              v := dereference(ENV.binding(f));
+              ENV := ENV1;
+              return([v, N])
+           else
+              if actuals.size ~= 1 then ERROR fi;
+              v := actuals[0];
+              STATE.modify(ENV.binding(f), v);
+              ENV := ENV1;
+              return([v, N])
+           fi
+        else
+           if access_type = 'fetch'
+           then
+              [v, sig] := eval_call(f, actuals);
+              ENV := ENV1;
+              return([v, sig])
+           else
+              ERROR
+           fi
+        fi;
+     elif #{{ a  ==  f:<field-identifier> ':' p:<identifier> }}#
+scan a  for 
+pre:=cursor&(field_identifier)&post:=cursor&f:=tab(pre)&tab(post)&
+L&lit(':')&L&
+pre:=cursor&(identifier)&post:=cursor&p:=tab(pre)&tab(post)& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  f:<field-identifier> '':'' p:<identifier>  }\n')fi
+ &
+          string_equal(field, f)
+     then
+          [v, sig] := eval_call(p, actuals);
+          ENV := ENV1;
+          return([v, sig])
+     fi
+  od;
+  ERROR
+);
+#! ***** <eval_array_init> *****#
+proc eval_array_init(sz, def, initexpr)
+( var ar, exprlist, i, v, v1, sig;
+
+  [ar, sig] := eval_call('array', [sz, def]);
+  if sig ~= N then return([ar, sig]) fi;
+  #{{ initexpr  ==  INIT '[' exprlist:{<expression> ',' }* ']' }}#
+scan initexpr  for 
+L&lit('init')&L&
+L&lit('[')&L&
+exprlist:=flex& if pre:=cursor&(expression)&post:=cursor&exprlist.append(tab(pre)) & tab(post) then  while L&lit(',')&L do pre:=cursor&(expression)&post:=cursor&exprlist.append(tab(pre)) & tab(post) od  fi &
+L&lit(']')&L& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  INIT ''['' exprlist:{<expression> '','' }* '']''  }\n')fi
+;
+  for i in exprlist.index
+  do [v,sig] := eval(exprlist[i]);
+     if sig ~= N then return([v, sig]) fi;
+     v := dereference(v);
+     [v1, sig] := eval_field_selection('fetch', ar, 'update', [a_integer(i), v]);
+     if sig ~= N then return([v1, sig]) fi;
+  od;
+  return([ar, N])
+);
+#! ***** <eval_table_init> *****#
+proc eval_table_init(sz, def, initexpr)
+( var tb, sig, v, expr, exprlist;
+
+  [tb, sig] := eval_call('table', [sz, def]);
+  if sig ~= N then return([tb, sig]) fi;
+  #{{ initexpr  ==  INIT '[' exprlist:{<table-element> ',' }* ']' }}#
+scan initexpr  for 
+L&lit('init')&L&
+L&lit('[')&L&
+exprlist:=flex& if pre:=cursor&(table_element)&post:=cursor&exprlist.append(tab(pre)) & tab(post) then  while L&lit(',')&L do pre:=cursor&(table_element)&post:=cursor&exprlist.append(tab(pre)) & tab(post) od  fi &
+L&lit(']')&L& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  INIT ''['' exprlist:{<table-element> '','' }* '']''  }\n')fi
+;
+  for expr in exprlist
+  do var ar, k, key, keylist, expr1, v1;
+
+     #{{ expr  ==  keylist:{<expression> ':'}+ ':' expr1:<expression> }}#
+scan expr  for 
+keylist:=flex&pre:=cursor&(expression)&post:=cursor&keylist.append(tab(pre)) & tab(post)& while L&lit(':')&L do pre:=cursor&(expression)&post:=cursor&keylist.append(tab(pre)) & tab(post) od &
+L&lit(':')&L&
+pre:=cursor&(expression)&post:=cursor&expr1:=tab(pre)&tab(post)& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  keylist:{<expression> '':''}+ '':'' expr1:<expression>  }\n')fi
+;
+     ar := array(keylist.size, undefined);
+     for k in keylist.index
+     do [v, sig] := eval(keylist[k]);
+        if sig ~= N then return([v, sig]) fi;
+        ar[k] := dereference(v);
+     od;
+     [v1, sig] := eval(expr1);
+     if sig ~= N then return([v1, sig]) fi;
+     v1 := dereference(v1);
+     for key in ar
+     do [v, sig] := eval_field_selection('fetch', tb, 'update', [key, v1]);
+        if sig ~= N then return([v, sig]) fi;
+     od
+  od;
+  return([tb, N])
+);
+#!#
+# require_constant_expression                                   #
+# check that all identifiers occurring in a <constant-expression> #
+# are indeed declared by constant declarations                  #
+
+#! ***** <req_constant_expression> ***** #
+proc require_constant_expression(e)
+( var se1, se2, name, tail, ce, c;
+
+  #{{ e  ==   se1:   <simple-constant-expression>
+           tail:  (<constant-operator> <constant-expression>)*
+  }}#
+scan e  for 
+pre:=cursor&(constant_operator&constant_expression)&post:=cursor&tail:=tab(pre)&tab(post) & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{   se1:   <simple-constant-expression> ... }\n')fi
+;
+  if #{{ se1  ==  <constant> }}#
+scan se1  for 
+constant& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  <constant>  }\n')fi
+
+  then
+     # ok #
+  elif #{{ se1  ==  name:<identifier> }}#
+scan se1  for 
+pre:=cursor&(identifier)&post:=cursor&name:=tab(pre)&tab(post)& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  name:<identifier>  }\n')fi
+
+  then
+     if ~is_integer(ENV.binding(name)) & ~is_string(ENV.binding(name))
+     then
+        ERROR
+     fi
+  elif #{{ se1  ==  '-' se2: <simple-constant-expression> }}#
+scan se1  for 
+L&lit('-')&L&
+pre:=cursor&(simple_constant_expression)&post:=cursor&se2:=tab(pre)&tab(post)& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  ''-'' se2: <simple-constant-expression>  }\n')fi
+
+  then
+     require_constant_expression(se2)
+  elif #{{ se1  ==  '(' ce:<constant-expression> ')' }}#
+scan se1  for 
+L&lit('(')&L&
+pre:=cursor&(constant_expression)&post:=cursor&ce:=tab(pre)&tab(post)&
+L&lit(')')&L& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  ''('' ce:<constant-expression> '')''  }\n')fi
+
+  then
+     require_constant_expression(ce)
+  fi;
+  for c in tail
+  do #{{ c  ==  <constant-operator> ce:<constant-expression> }}#
+scan c  for 
+constant_operator&
+pre:=cursor&(constant_expression)&post:=cursor&ce:=tab(pre)&tab(post)& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  <constant-operator> ce:<constant-expression>  }\n')fi
+ ;
+     require_constant_expression(ce)
+  od
+);
+#!#
+#                                                               #
+# eval -- main interpreter routine                              #
+#                                                               #
+# eval evaluates its argument "e" and delivers the tuple        #
+# [value, signal] as value. "value" is the result of evaluation #
+# of expression or program "e". "signal" is a succeed/fail flag #
+# with the following possible values:                           #
+#       N       evaluation terminated normally                  #
+#       F       evaluation failed                               #
+#       NR      normal return from procedure                    #
+#       FR      fail return from procedure                      #
+# The signal is tested after each invocation of eval.           #
+# In most cases eval performs an immediate return if signal is  #
+# not equal to N after the evaluation of a subexpression.       #
+# Exceptions are cases as <if-expression>, <while-expression> in which  #
+# signals are manipulated explicitly. This organization has the #
+# advantage, that aborting the evaluation of the current        #
+# expression (necessary if failure occurs in a deeply nested    #
+# subexpression) can be achieved by passing "signal" upwards to #
+# that incarnation of eval that feels like taking appropriate   #
+# counter measures.                                             #
+
+
+proc eval(e)
+(
+#
+  var e0, e1, e2, e3, ei, ex, elist;
+  var p, body, k, field, x,
+      f, b, l, dop, mop, cname, left, right, name,
+      c, d, dlist, s, slist, sz, t;
+  var a, a1, alist;
+  var v, v0, v1, v2, v3, vi;
+  var ENV1, i, sig;
+#
+
+  var varlist, constlist;
+  var decllist, progdecl;
+  var id;
+  var act;
+  var cname1, cname2;
+  var expr;
+  var elsepart, elifpart, sf;
+  var def, caselist;
+  var b, t;
+  var u;
+  var expr1, expr2, initexpr;
+  var field;
+  var mop, dop;
+  var exprlist;
+
+
+  if EVALtrace ~= 0 then put('EVAL: ', e, '\n') fi;
+  if ENVtrace ~= 0 then ENV.print; fi;
+
+
+#!****** <operator-symbol-declaration> ***********#
+if #{{ e  ==  (MONADIC | DYADIC) { <operator-symbol> ',' }+ ';' }}#
+scan e  for 
+(L&lit('monadic')&L|L&lit('dyadic')&L)&
+operator_symbol& while L&lit(',')&L do operator_symbol od &
+L&lit(';')&L& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  (MONADIC | DYADIC) { <operator-symbol> '','' }+ '';''  }\n')fi
+
+then
+   return([a_undefined, N])
+
+#!***** <var-decl> **************#
+
+elif #{{ e  ==  VAR varlist:{<variable-initialization> ',' }+ ';' }}#
+scan e  for 
+L&lit('var')&L&
+varlist:=flex&pre:=cursor&(variable_initialization)&post:=cursor&varlist.append(tab(pre)) & tab(post)& while L&lit(',')&L do pre:=cursor&(variable_initialization)&post:=cursor&varlist.append(tab(pre)) & tab(post) od &
+L&lit(';')&L& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  VAR varlist:{<variable-initialization> '','' }+ '';''  }\n')fi
+
+then
+   var name, onevar;
+
+   for onevar in varlist
+   do if #{{ onevar  ==  name:<identifier> ':=' <expression> }}#
+scan onevar  for 
+pre:=cursor&(identifier)&post:=cursor&name:=tab(pre)&tab(post)&
+L&lit(':=')&L&
+expression& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  name:<identifier> '':='' <expression>  }\n')fi
+
+      then
+         varinit := varinit || onevar || ';'
+      else
+         #{{ onevar  ==  name:<identifier> }}#
+scan onevar  for 
+pre:=cursor&(identifier)&post:=cursor&name:=tab(pre)&tab(post)& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  name:<identifier>  }\n')fi
+
+      fi;
+      ENV.bind(name, STATE.extend(a_undefined))
+   od;
+   return([a_undefined, N])
+#!***** <constant-declaration> ************#
+
+elif #{{ e  ==  CONST constlist:{<constant-initialization> ',' }+ ';' }}#
+scan e  for 
+L&lit('const')&L&
+constlist:=flex&pre:=cursor&(constant_initialization)&post:=cursor&constlist.append(tab(pre)) & tab(post)& while L&lit(',')&L do pre:=cursor&(constant_initialization)&post:=cursor&constlist.append(tab(pre)) & tab(post) od &
+L&lit(';')&L& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  CONST constlist:{<constant-initialization> '','' }+ '';''  }\n')fi
+
+then
+   var cexpr, name, oneconst, v, sig;
+
+   for oneconst in constlist
+   do #{{ oneconst  ==  name:<identifier> ':=' cexpr:<constant-expression> }}#
+scan oneconst  for 
+pre:=cursor&(identifier)&post:=cursor&name:=tab(pre)&tab(post)&
+L&lit(':=')&L&
+pre:=cursor&(constant_expression)&post:=cursor&cexpr:=tab(pre)&tab(post)& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  name:<identifier> '':='' cexpr:<constant-expression>  }\n')fi
+;
+      require_constant_expression(cexpr);
+      [v, sig] := eval(cexpr);
+      if sig ~= N then ERROR fi;
+      ENV.bind(name, v);
+   od;
+   return([a_undefined, N])
+#!****** <procedure-declaration> | <operator-declaration> #
+
+elif #{{ e  ==  PROC id:<identifier> <formals> [<expression>] ';' }}#
+scan e  for 
+L&lit('proc')&L&
+pre:=cursor&(identifier)&post:=cursor&id:=tab(pre)&tab(post)&
+formals&
+(expression | empty) &
+L&lit(';')&L& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  PROC id:<identifier> <formals> [<expression>] '';''  }\n')fi
+ |
+   #{{ e  ==  OP id:<operator-symbol> <formals> [<expression>] ';' }}#
+scan e  for 
+L&lit('op')&L&
+pre:=cursor&(operator_symbol)&post:=cursor&id:=tab(pre)&tab(post)&
+formals&
+(expression | empty) &
+L&lit(';')&L& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  OP id:<operator-symbol> <formals> [<expression>] '';''  }\n')fi
+
+then
+   ENV.bind(id, a_proc(e, undefined));
+   return([a_undefined, N])
+#!****** <class-declaration> ***********#
+
+elif #{{ e  ==  CLASS cname1:<identifier> <formals>
+           BEGIN <subclass-declaration>
+                 <fetch-associations> <store-associations>
+                 (  <variable-declaration> | <constant-declaration> |
+                    <procedure-declaration> | <operator-declaration>
+                 )*
+                 [INIT ':'  <block>]
+           END cname2:<identifier> ';' }}#
+scan e  for 
+L&lit('class')&L&
+pre:=cursor&(identifier)&post:=cursor&cname1:=tab(pre)&tab(post)&
+formals&
+L&lit('begin')&L&
+subclass_declaration&
+fetch_associations&
+store_associations&
+ while (variable_declaration|constant_declaration|procedure_declaration|operator_declaration) do  od &
+(L&lit('init')&L&L&lit(':')&L&block | empty) &
+L&lit('end')&L&
+pre:=cursor&(identifier)&post:=cursor&cname2:=tab(pre)&tab(post)&
+L&lit(';')&L& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  CLASS cname1:<identifier> <formals> ... }\n')fi
+
+then
+   var e1;
+
+   e1 := expand_super_class(e);
+   if ~string_equal(cname1, cname2) then ERROR fi;
+   ENV.bind(cname1, a_class(cname1, e1));
+   return([a_undefined, N])
+#!****** <summer-program> *******#
+
+elif #{{ e  ==  decllist:  (  <variable-declaration> | <constant-declaration> |
+                         <procedure-declaration> | <operator-declaration> |
+                         <class-declaration> | <operator-symbol-declaration>
+                      )*
+           progdecl:  <program-declaration> }}#
+scan e  for 
+pre:=cursor&(variable_declaration|constant_declaration|procedure_declaration|operator_declaration|class_declaration|operator_symbol_declaration)&post:=cursor&decllist:=tab(pre)&tab(post) & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  decllist:  (  <variable-declaration> | <constant-declaration> | ... }\n')fi
+
+then
+   var body, decl, name, progargs, v, sig;
+
+   varinit := '';
+   for decl in decllist
+   do [v, sig] := eval(decl);
+      if sig ~= N then ERROR fi
+   od;
+   for name in ENV.names
+   do var b := ENV.binding(name);
+      if is_proc(b) then b.env := ENV fi
+   od;
+   ENVglobal := ENV;
+   [v, sig] := eval(varinit);
+   if sig ~= N then ERROR fi;
+   #{{ progdecl  ==  PROGRAM <identifier> '(' progargs:[<identifier>] ')'
+                  body:[<expression>]
+   }}#
+scan progdecl  for 
+L&lit('program')&L&
+identifier&
+L&lit('(')&L&
+pre:=cursor&((identifier | empty) )&post:=cursor&progargs:=tab(pre)&tab(post)&
+L&lit(')')&L&
+pre:=cursor&((expression | empty) )&post:=cursor&body:=tab(pre)&tab(post)& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  PROGRAM <identifier> ''('' progargs:[<identifier>] '')'' ... }\n')fi
+;
+   ENV.new_proc_scope;
+   if #{{ progargs  ==  <identifier> }}#
+scan progargs  for 
+identifier& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  <identifier>  }\n')fi
+
+   then
+      ENV.bind(progargs, STATE.extend(get_program_arguments))
+   fi;
+   [v, sig] := eval(body);
+   return([v, sig]);
+#!****** <if-expression> ******#
+
+elif #{{ e  ==  IF t:<test> THEN b:<block>
+           elifpart: (ELIF <test> THEN <block>)*
+           elsepart: [ELSE <block>] FI }}#
+scan e  for 
+pre:=cursor&(L&lit('elif')&L&test&L&lit('then')&L&block)&post:=cursor&elifpart:=tab(pre)&tab(post) & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  IF t:<test> THEN b:<block> ... }\n')fi
+
+then
+   var v, sig;
+
+   [v, sig] := eval(t);
+   if sig = N
+   then
+      return(eval(b))
+   elif sig = NR | sig = FR
+   then
+      return([v, sig])
+   else
+      var oneelif;
+
+      for oneelif in elifpart
+      do #{{ oneelif  ==  ELIF t:<test> THEN b:<block> }}#
+scan oneelif  for 
+L&lit('elif')&L&
+pre:=cursor&(test)&post:=cursor&t:=tab(pre)&tab(post)&
+L&lit('then')&L&
+pre:=cursor&(block)&post:=cursor&b:=tab(pre)&tab(post)& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  ELIF t:<test> THEN b:<block>  }\n')fi
+ ;
+         [v, sig] := eval(t);
+         if sig = N
+         then
+            return(eval(b))
+         elif sig = NR | sig = FR
+         then
+            return([v, sig])
+         fi
+      od;
+      if #{{ elsepart  ==  ELSE b:<block> }}#
+scan elsepart  for 
+L&lit('else')&L&
+pre:=cursor&(block)&post:=cursor&b:=tab(pre)&tab(post)& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  ELSE b:<block>  }\n')fi
+
+      then
+         return(eval(b))
+      else
+         return([a_undefined, N])
+      fi
+   fi
+#!******* <while-expression> **#
+
+elif #{{ e  ==  WHILE t:<test> DO b:<block> OD }}#
+scan e  for 
+L&lit('while')&L&
+pre:=cursor&(test)&post:=cursor&t:=tab(pre)&tab(post)&
+L&lit('do')&L&
+pre:=cursor&(block)&post:=cursor&b:=tab(pre)&tab(post)&
+L&lit('od')&L& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  WHILE t:<test> DO b:<block> OD  }\n')fi
+
+then
+   var v, sig;
+
+   [v, sig] := eval(t);
+   case sig
+   of N:         # do nothing #,
+      F:         return([v, N]),
+      NR: FR:    return([v, sig])
+   esac;
+   [v, sig] := eval(b);
+   if sig ~= N then return([v, sig]) fi;
+   return(eval(e))
+#!******* <for-expression> ****#
+
+elif #{{ e  ==  FOR id:<identifier> IN expr:<expression> DO b:<block> OD }}#
+scan e  for 
+L&lit('for')&L&
+pre:=cursor&(identifier)&post:=cursor&id:=tab(pre)&tab(post)&
+L&lit('in')&L&
+pre:=cursor&(expression)&post:=cursor&expr:=tab(pre)&tab(post)&
+L&lit('do')&L&
+pre:=cursor&(block)&post:=cursor&b:=tab(pre)&tab(post)&
+L&lit('od')&L& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  FOR id:<identifier> IN expr:<expression> DO b:<block> OD  }\n')fi
+
+then
+   var gen, v, sig, state;
+
+   if ~ is_loc(ENV.binding(id)) then ERROR fi;
+   [gen, sig] := eval(expr);
+   if sig ~= N then return([gen, sig]) fi;
+   gen := dereference(gen);
+   state := a_undefined;
+   while [state, sig] := eval_field_selection('fetch', gen, 'next', [state]) &
+         sig = N
+   do
+      [v, sig] := eval_field_selection('fetch', state, 'retrieve', [a_integer(0)]);
+      if sig ~= N then ERROR fi;
+      STATE.modify(ENV.binding(id), v);
+      [state, sig] := eval_field_selection('fetch', state, 'retrieve', [a_integer(1)]);
+      if sig ~= N then ERROR fi;
+      [v, sig] := eval(b);
+      if sig ~= N then return([v, sig]) fi;
+   od;
+   return([a_undefined, N]);
+#!******* <case-expression> ***#
+
+elif #{{ e  ==  CASE expr:  <expression> OF
+           caselist:   {<case-entry> ','}*
+           def:        [DEFAULT ':' <block>] ESAC }}#
+scan e  for 
+L&lit('case')&L&
+pre:=cursor&(expression)&post:=cursor&expr:=tab(pre)&tab(post)&
+L&lit('of')&L&
+caselist:=flex& if pre:=cursor&(case_entry)&post:=cursor&caselist.append(tab(pre)) & tab(post) then  while L&lit(',')&L do pre:=cursor&(case_entry)&post:=cursor&caselist.append(tab(pre)) & tab(post) od  fi &
+pre:=cursor&((L&lit('default')&L&L&lit(':')&L&block | empty) )&post:=cursor&def:=tab(pre)&tab(post)&
+L&lit('esac')&L& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  CASE expr:  <expression> OF ... }\n')fi
+
+then
+   var b, onecase, v1, v2, sig;
+
+   [v1, sig] := eval(expr);
+   if sig ~= N then return([v1, sig]) fi;
+   v1 := dereference(v1);
+   for onecase in caselist
+   do var onekey, keylist;
+
+      #{{ onecase  ==  keylist:{<constant-expression> ':'}+ b:<block> }}#
+scan onecase  for 
+keylist:=flex&pre:=cursor&(constant_expression)&post:=cursor&keylist.append(tab(pre)) & tab(post)& while L&lit(':')&L do pre:=cursor&(constant_expression)&post:=cursor&keylist.append(tab(pre)) & tab(post) od &
+pre:=cursor&(block)&post:=cursor&b:=tab(pre)&tab(post)& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  keylist:{<constant-expression> '':''}+ b:<block>  }\n')fi
+;
+      for onekey in keylist
+      do require_constant_expression(onekey);
+         [v2, sig] := eval(onekey);
+         if sig ~= N then ERROR fi;
+         if equal(v1, v2) then return(eval(b)) fi
+      od
+   od;
+   if #{{ def  ==  DEFAULT ':' b:<block> }}#
+scan def  for 
+L&lit('default')&L&
+L&lit(':')&L&
+pre:=cursor&(block)&post:=cursor&b:=tab(pre)&tab(post)& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  DEFAULT '':'' b:<block>  }\n')fi
+
+   then
+      return(eval(b))
+   else
+      ERROR
+   fi
+#!******* <scan-expression> ***#
+
+elif #{{ e  ==  SCAN expr:<expression> FOR b:<block> ROF }}#
+scan e  for 
+L&lit('scan')&L&
+pre:=cursor&(expression)&post:=cursor&expr:=tab(pre)&tab(post)&
+L&lit('for')&L&
+pre:=cursor&(block)&post:=cursor&b:=tab(pre)&tab(post)&
+L&lit('rof')&L& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  SCAN expr:<expression> FOR b:<block> ROF  }\n')fi
+
+then
+   var ENV1, v, sig;
+
+   [v, sig] := eval(expr);
+   if sig ~= N then return([v, sig]) fi;
+   v := dereference(v);
+   if is_string(v)
+   then
+      [v, sig] := eval_call('scan_string', [v])
+   fi;
+   ENV1 := ENV;
+   ENV := ENV.name_copy;
+   ENV.new_inner_scope;
+   ENV.bind('subject', v);
+   [v, sig] := eval(b);
+   ENV := ENV1;
+   return([v, sig])
+#!******* <try-expression> ****#
+
+elif #{{ e  ==  TRY exprlist:{<expression> ','}+ u:[UNTIL <block>] YRT }}#
+scan e  for 
+L&lit('try')&L&
+exprlist:=flex&pre:=cursor&(expression)&post:=cursor&exprlist.append(tab(pre)) & tab(post)& while L&lit(',')&L do pre:=cursor&(expression)&post:=cursor&exprlist.append(tab(pre)) & tab(post) od &
+pre:=cursor&((L&lit('until')&L&block | empty) )&post:=cursor&u:=tab(pre)&tab(post)&
+L&lit('yrt')&L& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  TRY exprlist:{<expression> '',''}+ u:[UNTIL <block>] YRT  }\n')fi
+
+then
+   var b, ENV1, expr, v, sig;
+
+   ENV1 := ENV;
+   for expr in exprlist
+   do ENV := ENV.partial_state_copy;
+      [v, sig] := eval(expr);
+      case sig
+      of F:   ENV := ENV1,
+         FR:  ENV := ENV1; return([v, FR]),
+         NR:  return([v, NR]),
+         N:   if #{{ u  ==  UNTIL b:<block> }}#
+scan u  for 
+L&lit('until')&L&
+pre:=cursor&(block)&post:=cursor&b:=tab(pre)&tab(post)& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  UNTIL b:<block>  }\n')fi
+
+              then
+                 [v, sig] := eval(b);
+                 case sig
+                 of F:   ENV := ENV1,
+                    FR:  ENV := ENV1; return([v, FR]),
+                    NR:  return([v, NR]),
+                    N:   return([v, N])
+                 esac
+              else
+                 return([v, N])
+              fi
+      esac
+   od;
+   return([a_undefined, F])
+#!******* <assert-expression> *#
+
+elif #{{ e  ==  ASSERT expr:<expression> }}#
+scan e  for 
+L&lit('assert')&L&
+pre:=cursor&(expression)&post:=cursor&expr:=tab(pre)&tab(post)& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  ASSERT expr:<expression>  }\n')fi
+
+then
+   var v, sig;
+
+   [v, sig] := eval(expr);
+   if sig ~= N then ERROR fi;
+   return([v, sig])
+#!#
+
+#****************************************************************
+*                                                               *
+*       E X P R E S S I O N    E V A L U A T I O N              *
+*                                                               *
+****************************************************************#
+#! ***** <expr:undefined> *****#
+elif #{{ e  ==  UNDEFINED }}#
+scan e  for 
+L&lit('undefined')&L& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  UNDEFINED  }\n')fi
+
+then
+   return([a_undefined, N])
+#! ***** <expr:integer> *****#
+elif #{{ e  ==  expr:<integer-constant> }}#
+scan e  for 
+pre:=cursor&(integer_constant)&post:=cursor&expr:=tab(pre)&tab(post)& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  expr:<integer-constant>  }\n')fi
+
+then
+   return([a_integer(expr), N])
+#! ***** <expr:string> *****#
+elif #{{ e  ==  expr:<string-constant> }}#
+scan e  for 
+pre:=cursor&(string_constant)&post:=cursor&expr:=tab(pre)&tab(post)& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  expr:<string-constant>  }\n')fi
+
+then
+   expr := substring(expr, 1, expr.size - 2);
+   return([a_string(expr), N])
+#! ***** <expr:real> *****#
+elif #{{ e  ==  expr:<real-constant> }}#
+scan e  for 
+pre:=cursor&(real_constant)&post:=cursor&expr:=tab(pre)&tab(post)& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  expr:<real-constant>  }\n')fi
+
+then
+   return(eval_call('real', a_string(expr)))
+#! ***** <select> ***** #
+elif #{{ e  ==  expr1:<identifier> '.' field:<identifier> act: [<actuals>] }}#
+scan e  for 
+pre:=cursor&(identifier)&post:=cursor&expr1:=tab(pre)&tab(post)&
+L&lit('.')&L&
+pre:=cursor&(identifier)&post:=cursor&field:=tab(pre)&tab(post)&
+pre:=cursor&((actuals | empty) )&post:=cursor&act:=tab(pre)&tab(post)& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  expr1:<identifier> ''.'' field:<identifier> act: [<actuals>]  }\n')fi
+
+then
+   var actual_vals, v1, sig;
+
+   [v1, sig] := eval(expr1);
+   if sig ~= N then return([v1, sig]) fi;
+   v1 := dereference(v1);
+   if #{{ actuals  ==  '(' exprlist: {<expression> ','}* ')' }}#
+scan actuals  for 
+L&lit('(')&L&
+exprlist:=flex& if pre:=cursor&(expression)&post:=cursor&exprlist.append(tab(pre)) & tab(post) then  while L&lit(',')&L do pre:=cursor&(expression)&post:=cursor&exprlist.append(tab(pre)) & tab(post) od  fi &
+L&lit(')')&L& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  ''('' exprlist: {<expression> '',''}* '')''  }\n')fi
+
+   then
+      var i, exprlist, v;
+
+      actual_vals := array(exprlist.size, undefined);
+      for i in exprlist.index
+      do [v, sig] := eval(exprlist[i]);
+         if sig ~= N then return([v, sig]) fi;
+         actual_vals[i] := dereference(v)
+      od
+   else
+      actual_vals := array(0, undefined)
+   fi;
+   return(eval_field_selection('fetch', v1, field, actual_vals));
+#! ***** <subscript> *****#
+elif #{{ e  ==  expr1:<identifier> '[' expr2:<expression> ']' }}#
+scan e  for 
+pre:=cursor&(identifier)&post:=cursor&expr1:=tab(pre)&tab(post)&
+L&lit('[')&L&
+pre:=cursor&(expression)&post:=cursor&expr2:=tab(pre)&tab(post)&
+L&lit(']')&L& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  expr1:<identifier> ''['' expr2:<expression> '']''  }\n')fi
+
+then
+   var v1, v2, sig;
+
+   [v1, sig] := eval(expr1);
+   if sig ~= N then return([v1, sig]) fi;
+   v1 := dereference(v1);
+   [v2, sig] := eval(expr2);
+   if sig ~= N then return([v2, sig]) fi;
+   v2 := dereference(v2);
+   return(eval_field_selection('fetch', v1, 'retrieve', [v2]))
+#!#
+
+#********************* C A L L ******************************#
+
+#! ***** <call> *****#
+elif #{{ e  ==  id:<identifier> act:[<actuals>] }}#
+scan e  for 
+pre:=cursor&(identifier)&post:=cursor&id:=tab(pre)&tab(post)&
+pre:=cursor&((actuals | empty) )&post:=cursor&act:=tab(pre)&tab(post)& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  id:<identifier> act:[<actuals>]  }\n')fi
+
+then
+   var actual_vals, exprlist;
+
+   if #{{ act  ==  '(' exprlist:{<expression> ',' }* ')' }}#
+scan act  for 
+L&lit('(')&L&
+exprlist:=flex& if pre:=cursor&(expression)&post:=cursor&exprlist.append(tab(pre)) & tab(post) then  while L&lit(',')&L do pre:=cursor&(expression)&post:=cursor&exprlist.append(tab(pre)) & tab(post) od  fi &
+L&lit(')')&L& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  ''('' exprlist:{<expression> '','' }* '')''  }\n')fi
+
+   then
+      var i, v, sig;
+
+      actual_vals := array(exprlist.size, undefined);
+      for i in exprlist.index
+      do [v, sig] := eval(exprlist[i]);
+         if sig ~= N then return([v, sig]) fi;
+         actual_vals[i] := dereference(v);
+      od;
+   else
+      actual_vals := array(0, undefined);
+   fi;
+   if ENV.has_binding(id)
+   then
+      var idbinding := ENV.binding(id);
+
+      if is_instance(idbinding) | is_loc(idbinding) 
+      then
+         if #{{ e  ==  <identifier> }}#
+scan e  for 
+identifier& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  <identifier>  }\n')fi
+
+         then
+            return([idbinding, N])
+         else
+            ERROR
+         fi
+      elif is_proc(idbinding) | is_class(idbinding)
+      then
+         return(eval_call(id, actual_vals))
+      else
+         ERROR
+      fi
+   else
+      return(eval_field_selection('fetch',
+                      ENV.binding('subject'), id, actual_vals))
+   fi
+#! ***** <return1> *****#
+elif #{{ e  ==  RETURN '(' expr:<expression> ')' }}#
+scan e  for 
+L&lit('return')&L&
+L&lit('(')&L&
+pre:=cursor&(expression)&post:=cursor&expr:=tab(pre)&tab(post)&
+L&lit(')')&L& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  RETURN ''('' expr:<expression> '')''  }\n')fi
+
+then
+   var v, sig;
+
+   [v, sig] := eval(expr);
+   v := dereference(v);
+   case sig
+   of N: NR:  return([v, NR]),
+      F: FR:  return([v, FR])
+   esac
+#! ***** <return0> *****#
+elif #{{ e  ==  RETURN }}#
+scan e  for 
+L&lit('return')&L& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  RETURN  }\n')fi
+
+then
+   return([a_undefined, NR])
+#! ***** <freturn> *****#
+elif #{{ e  ==  FRETURN }}#
+scan e  for 
+L&lit('freturn')&L& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  FRETURN  }\n')fi
+
+then
+   return([a_undefined, FR])
+#!#
+#**************** D Y A D I C   O P E R A T O R S ********************#
+
+#! ***** <dyadic-expr> *****#
+elif #{{ e  ==  expr1:  <monadic-expression> 
+           dop:    <dyadic-operator> expr2: <monadic-expression> }}#
+scan e  for 
+pre:=cursor&(monadic_expression)&post:=cursor&expr1:=tab(pre)&tab(post)&
+pre:=cursor&(dyadic_operator)&post:=cursor&dop:=tab(pre)&tab(post)&
+pre:=cursor&(monadic_expression)&post:=cursor&expr2:=tab(pre)&tab(post)& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  expr1:  <monadic-expression>  ... }\n')fi
+
+then
+   var left, right, sig;
+
+   if #{{ dop  ==  ':=' }}#
+scan dop  for 
+L&lit(':=')&L& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  '':=''  }\n')fi
+
+   then
+      var exprlist, field, sub, u, vu, vs;
+
+      [right, sig] := eval(expr2);
+      if sig ~= N then return([right, sig]) fi;
+      right := dereference(right);
+      if #{{ expr1  ==  u:<unit> '.' field:<identifier> }}#
+scan expr1  for 
+pre:=cursor&(unit)&post:=cursor&u:=tab(pre)&tab(post)&
+L&lit('.')&L&
+pre:=cursor&(identifier)&post:=cursor&field:=tab(pre)&tab(post)& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  u:<unit> ''.'' field:<identifier>  }\n')fi
+
+      then     # Case 2a. (field selection) #
+         [vu, sig] := eval(u);
+         if sig ~= N then return([vu, sig]) fi;
+         vu := dereference(vu);
+         return(eval_field_selection('store', vu, field, [right]));
+      elif #{{ expr1  ==  u:<unit> '[' sub:<expression> ']' }}#
+scan expr1  for 
+pre:=cursor&(unit)&post:=cursor&u:=tab(pre)&tab(post)&
+L&lit('[')&L&
+pre:=cursor&(expression)&post:=cursor&sub:=tab(pre)&tab(post)&
+L&lit(']')&L& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  u:<unit> ''['' sub:<expression> '']''  }\n')fi
+
+      then     # Case 2b. (subscription) #
+         [vu, sig] := eval(u);
+         if sig ~= N then return([vu, sig]) fi;
+         vu := dereference(vu);
+         [vs, sig] := eval(sub);
+         if sig ~= N then return([vs, sig]) fi;
+         vs := dereference(vs);
+         return(eval_field_selection('fetch', vu, 'update', [vs, right]))
+      elif #{{ expr1  ==  '[' exprlist:{<expression> ','}+ ']' }}#
+scan expr1  for 
+L&lit('[')&L&
+exprlist:=flex&pre:=cursor&(expression)&post:=cursor&exprlist.append(tab(pre)) & tab(post)& while L&lit(',')&L do pre:=cursor&(expression)&post:=cursor&exprlist.append(tab(pre)) & tab(post) od &
+L&lit(']')&L& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  ''['' exprlist:{<expression> '',''}+ '']''  }\n')fi
+
+      then     # Case 2c. (multiple assignment) #
+         var i, vi, v;
+
+         for i in exprlist.index
+         do [vi, sig] := eval(exprlist[i]);
+            if sig ~= N then return([vi, sig]) fi;
+            if ~ is_loc(vi) then ERROR fi;
+            [v, sig] :=
+            eval_field_selection('fetch', right, 'retrieve', [a_integer(i)]);
+            if sig ~= N then return([v, sig]) fi;
+            STATE.modify(vi, v);
+         od;
+         return([vi, N])
+      else     # Case 2d. (simple assignment) #
+         [left, sig] := eval(expr1);
+         if sig ~= N then return([left, sig]) fi;
+         if ~is_loc(left) then ERROR fi;
+         STATE.modify(left, right);
+         return([right, N])
+      fi
+   else        # Case 3. operator unequal `:=' #
+      [left, sig] := eval(expr1);
+      if string_equal(dop, '|')
+      then
+         if sig ~= F then return([left, sig]) fi
+      else
+         if sig ~= N then return([left, sig]) fi
+      fi;
+      [right, sig] := eval(expr2);
+      if sig ~= N | string_equal(dop, '|') | string_equal(dop, '&')
+      then
+         return([right, sig])
+      fi;
+      left := dereference(left);
+      right := dereference(right);
+      if has_field('fetch', left, dop)
+      then     # Case 3a. #
+         return(eval_field_selection('fetch', left, dop, [right]))
+      elif ENV.has_binding(dop) & is_proc(ENV.binding(dop))
+      then     # Case 3b. #
+         return(eval_call(dop, [left, right]))
+      elif dop = '=' | dop = '~='
+      then     # Case 3c. #
+         sig := if equal(left, right) then N else F fi;
+         if dop = '~='
+         then
+            sig := if sig = N then F else N fi
+         fi;
+         return([right, sig])
+      else
+         ERROR
+      fi
+   fi
+#!#
+
+#**************** M O N A D I C  O P E R A T O R S *******************#
+
+#! ***** <monadic-expr> *****#
+elif #{{ e  ==  mop:<monadic-operator> expr:<primary> }}#
+scan e  for 
+pre:=cursor&(monadic_operator)&post:=cursor&mop:=tab(pre)&tab(post)&
+pre:=cursor&(primary)&post:=cursor&expr:=tab(pre)&tab(post)& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  mop:<monadic-operator> expr:<primary>  }\n')fi
+
+then
+   var v, sig;
+
+   [v, sig] := eval(expr);
+   if string_equal(mop, '~')
+   then
+      case sig
+      of N:         return([a_undefined, F]),
+         F:         return([a_undefined, N]),
+         FR: NR:    return([v, sig])
+      esac
+   elif sig ~= N
+   then
+      return([v, sig])
+   fi;
+   v := dereference(v);
+   if has_field('fetch', v, mop)
+   then
+      return(eval_field_selection('fetch', v, mop, []))
+   elif ENV.has_binding(mop) & is_proc(ENV.binding(mop))
+   then
+      return(eval_call(mop, [v]))
+   else
+      ERROR
+   fi
+#! ***** <array1> *****#
+elif #{{ e  ==  ARRAY '(' expr1:<expression> ',' expr2:<expression> ')' 
+           initexpr:  [INIT <array-initialization> ] }}#
+scan e  for 
+L&lit('array')&L&
+L&lit('(')&L&
+pre:=cursor&(expression)&post:=cursor&expr1:=tab(pre)&tab(post)&
+L&lit(',')&L&
+pre:=cursor&(expression)&post:=cursor&expr2:=tab(pre)&tab(post)&
+L&lit(')')&L&
+pre:=cursor&((L&lit('init')&L&array_initialization | empty) )&post:=cursor&initexpr:=tab(pre)&tab(post)& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  ARRAY ''('' expr1:<expression> '','' expr2:<expression> '')''  ... }\n')fi
+
+then
+   var def, sz, sig;
+
+   [sz, sig] := eval(expr1);
+   if sig ~= N then return([sz, sig]) fi;
+   sz := dereference(sz);
+   [def, sig] := eval(expr2);
+   if sig ~= N then return([def, sig]) fi;
+   def := dereference(def);
+   return(eval_array_init(sz, def, initexpr));
+#! ***** <array2> *****#
+elif #{{ e  ==  '[' exprlist:{<expression> ','}* ']' }}#
+scan e  for 
+L&lit('[')&L&
+exprlist:=flex& if pre:=cursor&(expression)&post:=cursor&exprlist.append(tab(pre)) & tab(post) then  while L&lit(',')&L do pre:=cursor&(expression)&post:=cursor&exprlist.append(tab(pre)) & tab(post) od  fi &
+L&lit(']')&L& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  ''['' exprlist:{<expression> '',''}* '']''  }\n')fi
+
+then
+   return(eval_array_init(a_integer(exprlist.size), a_undefined, 'init' || e));
+#! ***** <table1> *****#
+elif #{{ e  ==  TABLE '(' expr1:<expression> ',' expr2:<expression> ')'
+           initexpr: [INIT <table-initialization>] }}#
+scan e  for 
+L&lit('table')&L&
+L&lit('(')&L&
+pre:=cursor&(expression)&post:=cursor&expr1:=tab(pre)&tab(post)&
+L&lit(',')&L&
+pre:=cursor&(expression)&post:=cursor&expr2:=tab(pre)&tab(post)&
+L&lit(')')&L&
+pre:=cursor&((L&lit('init')&L&table_initialization | empty) )&post:=cursor&initexpr:=tab(pre)&tab(post)& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  TABLE ''('' expr1:<expression> '','' expr2:<expression> '')'' ... }\n')fi
+
+then
+   var def, sig, sz;
+
+   [sz, sig] := eval(expr1);
+   if sig ~= N then return([sz, sig]) fi;
+   sz := dereference(sz);
+   [def, sig] := eval(expr2);
+   if sig ~= N then return([def, sig]) fi;
+   def := dereference(def);
+   return(eval_table_init(sz, def, initexpr));
+#! ***** <table2> *****#
+elif #{{ e  ==  '[' exprlist:{<table-element> ','}* ']' }}#
+scan e  for 
+L&lit('[')&L&
+exprlist:=flex& if pre:=cursor&(table_element)&post:=cursor&exprlist.append(tab(pre)) & tab(post) then  while L&lit(',')&L do pre:=cursor&(table_element)&post:=cursor&exprlist.append(tab(pre)) & tab(post) od  fi &
+L&lit(']')&L& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  ''['' exprlist:{<table-element> '',''}* '']''  }\n')fi
+
+then
+   return(eval_table_init(a_integer(exprlist.size), a_undefined, 'init' || e))
+#!******* <empty> *******#
+
+elif #{{ e  ==  <empty> }}#
+scan e  for 
+empty& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  <empty>  }\n')fi
+
+then
+   return([a_undefined, N])
+#!******* <parenthesized-expression> ****#
+
+elif #{{ e  ==  '(' b:<block> ')' }}#
+scan e  for 
+L&lit('(')&L&
+pre:=cursor&(block)&post:=cursor&b:=tab(pre)&tab(post)&
+L&lit(')')&L& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  ''('' b:<block> '')''  }\n')fi
+
+then
+   return(eval(b))
+#!******* <block> *******#
+
+elif #{{ e  ==  decllist:  (<variable-declaration>|<constant-declaration>)*
+           exprlist:  {[<expression>] ';'}* }}#
+scan e  for 
+pre:=cursor&(variable_declaration|constant_declaration)&post:=cursor&decllist:=tab(pre)&tab(post) & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  decllist:  (<variable-declaration>|<constant-declaration>)* ... }\n')fi
+
+then
+   var decl, expr, ENV1, v, varinit1, sig;
+
+   ENV1 := ENV;
+   ENV  := ENV.name_copy;
+   ENV.new_inner_scope;
+   varinit1 := varinit;
+   varinit := '' ;
+   for decl in decllist do [v, sig] := eval(decl) od;
+   [v, sig] := eval(varinit);
+   varinit := varinit1;
+   if sig ~= N
+   then
+      ENV := ENV1;
+      if sig = F then ERROR else return([v, sig]) fi
+   fi;
+   if exprlist.size = 0
+   then
+      ENV := ENV1;
+      return([a_undefined, N])
+   else
+      var i;
+
+      for i in exprlist.index
+      do [v, sig] := eval(exprlist[i]);
+         case sig
+         of N:         # do nothing #,
+            F:         if i ~= exprlist.size - 1 then ERROR fi,
+            NR: FR:    ENV := ENV1; return([v, sig])
+         esac
+      od;
+      ENV := ENV1;
+      return([v, sig])
+   fi
+#!******* <test> ********#
+
+elif #{{ e  ==  expr:<expression> sf: (SUCCEEDS | FAILS) }}#
+scan e  for 
+pre:=cursor&(L&lit('succeeds')&L|L&lit('fails')&L)&post:=cursor&sf:=tab(pre)&tab(post) & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  expr:<expression> sf: (SUCCEEDS | FAILS)  }\n')fi
+
+then
+   if #{{ sf  ==  SUCCEEDS }}#
+scan sf  for 
+L&lit('succeeds')&L& L  & rpos(0)
+rof &  if ruletrace ~= 0 then put('	{  SUCCEEDS  }\n')fi
+
+   then
+      return(eval(expr))
+   else
+      var v, sig;
+
+      [v, sig] := eval(expr);
+      case sig
+      of F:         return([v, N]),
+         N:         return([v, F]),
+         FR: NR:    return([v, sig])
+      esac
+   fi
+#!#
+else
+   ERROR
+fi
+); # end of eval #
+#****************************************************************
+*                                                               *
+* PART III: the driver.                                         *
+*                                                               *
+****************************************************************#
+
+program summer_interpreter (args)
+(  var p := '', a, f := stand_in;
+   for a in args
+   do
+      case a of
+      '-T': ruletrace := 1,
+      '-ENV': ENVtrace := 1,
+      '-EVAL': EVALtrace := 1
+      default: f := file(a, 'r')
+      esac
+   od;
+   if f = undefined then
+      put('No program\n')
+   else
+      while p := p || f.get || '\n' do od;
+      ENVglobal := ENV := environment(0, 0);
+      STATE := state;
+      varinit := '';
+      ENV.bind('subject', a_undefined);
+      eval(p);
+      ENV.print;
+   fi;
+)

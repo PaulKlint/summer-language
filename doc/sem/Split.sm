@@ -1,0 +1,58 @@
+# split -- split formdef in number of files #
+proc short(syl)
+(
+  return( case syl of
+	     'constant': 'const',
+	     'declaration': 'decl',
+	     'variable': 'var',
+	     'identifier': 'id',
+	     'procedure': 'proc',
+	     'operator': 'op',
+	     'expression': 'expr',
+	     'initialization': 'init',
+	     'parenthesized': 'par',
+	     'association': 'assoc',
+	     'associations': 'assocs'
+	     default: syl
+	     esac
+    )
+);
+proc abbreviate(name)
+(var r := '', sep := '', syl;
+  scan name
+  for
+     while syl := break('-') & move(1)
+     do
+	r := r || sep || short(syl);
+	sep := '-';
+     od;
+     r := r || sep || short(rtab(0));
+  rof;
+  return(r)
+);
+program split(args)
+( var formdef;
+
+  formdef := file(if args.size=0 then 'formdef.sm' else args[0] fi, 'r');
+  scan formdef
+  for var line, out, name, pre;
+      while find('#!')
+      do break('<'); move(1);
+         name := break('>');
+	 name := abbreviate(name);
+	 stand_er.put(name, '\n');
+	 break('\n'); move(1);
+         out := file(name, 'w');
+	 span(' \t\n') | '';
+	 if lit('if') | lit('elif') then pre := 'if' else pre := '' fi;
+	 line := '';
+	 while line := line || find('#!') & lit('#!-')
+	 do break('\n') & move(1) od;
+	 out.put(pre);
+	 out.put(line);
+	 if pre = 'if' then out.put('fi;\n') fi;
+         out.close;
+	 if lit('#!#') then break('\n') fi;
+      od
+   rof
+)

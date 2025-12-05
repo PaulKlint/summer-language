@@ -1,0 +1,886 @@
+# pgen input file:
+-rw-r--r--  1 paulk        7992 Mar 10 13:49 xpg.syn
+#
+const
+	lower := 'abcdefghijklmnopqrstuvwxyz',
+	upper := 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+	digit := '0123456789',
+	ASCII := ' !"#$%&''()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~';
+
+var
+	lnr := 0, sy, t_sy, line := scan_string(' '), errcnt := 0;
+
+proc SET(syms)
+(	var i, b := bits(SETSIZE,0);
+
+	for i in syms
+	do
+		b[i] := 1;
+	od;
+	return(b);
+);
+
+
+proc UN2(s1,s2)
+(	
+	return(s1.disj(s2))
+);
+
+
+proc UN3(s1,s2,s3)
+(
+	return((s1.disj(s2)).disj(s3))
+);
+
+
+proc error(mess,ln)
+(
+	ermsg(mess || ' expected', ln);
+);
+
+
+proc testsymee(exp1, exp2, dont_skip, message)
+(	testsym(UN2(exp1, exp2), dont_skip, message);
+);
+
+proc testsymeee(exp1, exp2, exp3, dont_skip, message)
+(	testsym(UN3(exp1, exp2, exp3), dont_skip, message);
+);
+proc testsymdd(exp, dont_skip1, dont_skip2, message)
+(	testsym(exp, UN2(dont_skip1, dont_skip2), message);
+);
+
+proc testsym(exp,dont_skip,message)
+(	if exp[t_sy] = 0
+	then	var mess := '  ',
+		    nskipped := 0,
+		    erlnr := lnr,
+		    both := UN2( exp,dont_skip);
+
+
+		 	while both[t_sy] = 0
+			do	if nskipped < 6
+				then	if nskipped < 5
+					then mess := mess || sy || ' '
+					else mess := mess || sy || ' ...';
+					fi;
+					nskipped := nskipped + 1;
+				fi;
+				nextsym;
+			od;
+                        if mess ~= '  ' 
+                        then    mess := ' "'|| mess || '"' || ' skipped.';
+				if lnr - erlnr > 2 then
+					mess := mess ||
+						'\n       scan resumed at "' ||
+						sy || '", in line '||string(lnr)
+				fi
+			fi;
+                        if  message ~= ''
+			then error(message,erlnr);
+			fi;
+			if mess ~= '  '
+			then ermsg(mess,erlnr);
+			fi;
+	fi;
+);
+	var
+	 	keytab := table(20,undefined) init [
+	],
+
+
+	kartab := table(20,undefined) init [
+		')' : 0,
+		'*' : 1,
+		'+' : 2,
+		',' : 3,
+		'.' : 4,
+		'/' : 5,
+		':' : 6,
+		'::=' : 7,
+		'<' : 8,
+		'>' : 9,
+		'EXIT' : 10,
+		'INIT' : 11,
+		'LEXICAL' : 12,
+		'[' : 13,
+		']' : 14,
+		'{' : 15,
+		'|' : 16,
+		'}' : 17,
+		'('  : 18
+	],
+
+
+	predef := table(10,undefined) init [
+		'ident' : 19,
+		'keyword' : 20,
+		'string' : 21,
+		'summer_text' : 22,
+		'EOF' : 23
+	],
+
+
+
+	SETSIZE := 24,
+	f_alternative := SET([18,5,8,13,19,20,21,15]),
+	f_code_spec := SET([5,10,11]),
+	f_list_0_3_0 := SET([20,21]),
+	f_list_0_3 := SET([8,20,21]),
+	f_list_0_6 := SET([1,2]),
+	f_nothing := SET([]),
+	f_pgentext := SET([8,12]),
+	f_primary_0_0_0_0_0 := SET([20,21]),
+	f_primary_0_0_0_0_1 := SET([8,19]),
+	f_primary_0_0_0_0 := SET([18,8,19,20,21]),
+	f_primary_0_0_0_1_2 := SET([]),
+	f_primary_0_0_0_1 := SET([1,2]),
+	f_primary_0_0_0 := SET([18,8,19,20,21]),
+	f_primary_0_0 := SET([18,8,13,19,20,21,15]),
+	f_primary := SET([18,8,13,19,20,21,15]),
+	f_rule_0_1 := SET([5,10,11]),
+	f_rule_body := SET([18,5,8,13,19,20,21,15]),
+	f_rule_call := SET([8,19]),
+	f_terminal_symbol := SET([20,21]),
+	s_0 := SET([0]),
+	s_1 := SET([1]),
+	s_2 := SET([2]),
+	s_3 := SET([3]),
+	s_4 := SET([4]),
+	s_5 := SET([5]),
+	s_6 := SET([6]),
+	s_7 := SET([7]),
+	s_8 := SET([8]),
+	s_9 := SET([9]),
+	s_10 := SET([10]),
+	s_11 := SET([11]),
+	s_12 := SET([12]),
+	s_13 := SET([13]),
+	s_14 := SET([14]),
+	s_15 := SET([15]),
+	s_16 := SET([16]),
+	s_17 := SET([17]),
+	s_18 := SET([18]),
+	s_19 := SET([19]),
+	s_20 := SET([20]),
+	s_21 := SET([21]),
+	s_22 := SET([22]),
+	s_23 := SET([23]),
+	EMPTY := SET([]),
+	r_alternative_0_1 := f_primary,
+	r_alternative_0_0 := UN2(f_primary,r_alternative_0_1),
+	r_alternative_0_0_0_0 := r_alternative_0_0,
+	r_code_spec_0_1 := UN2(s_10,s_5),
+	r_code_spec_0_0 := UN2(s_5,r_code_spec_0_1),
+	r_code_spec_0_0_0_2 := r_code_spec_0_0,
+	r_code_spec_0_0_0_1 := UN2(s_22,r_code_spec_0_0_0_2),
+	r_code_spec_0_0_0_0 := UN2(s_6,r_code_spec_0_0_0_1),
+	r_code_spec_0_1_0_2 := r_code_spec_0_1,
+	r_code_spec_0_1_0_1 := UN2(s_22,r_code_spec_0_1_0_2),
+	r_code_spec_0_1_0_0 := UN2(s_6,r_code_spec_0_1_0_1),
+	r_code_spec_0_2_0_1 := s_22,
+	r_code_spec_0_2_0_0 := UN2(s_6,r_code_spec_0_2_0_1),
+	r_compound_0_1 := s_0,
+	r_compound_0_0 := UN2(f_rule_body,r_compound_0_1),
+	r_label_0_1 := s_5,
+	r_label_0_0 := UN2(s_19,r_label_0_1),
+	r_lexicals_0_1 := UN2(s_4,s_19),
+	r_lexicals_0_0 := UN2(s_19,r_lexicals_0_1),
+	r_lexicals_0_1_0_1 := r_lexicals_0_1,
+	r_lexicals_0_1_0_0 := UN2(s_3,r_lexicals_0_1_0_1),
+	r_list_0_5 := f_list_0_6,
+	r_list_0_4 := UN2(s_17,r_list_0_5),
+	r_list_0_3 := UN2(s_5,r_list_0_4),
+	r_list_0_2 := UN2(f_list_0_3,r_list_0_3),
+	r_list_0_1 := UN2(f_primary,r_list_0_2),
+	r_list_0_0 := UN2(s_5,r_list_0_1),
+	r_list_0_1_0_0 := r_list_0_1,
+	r_list_0_3_0_0 := r_list_0_3,
+	r_list_0_3_1_0 := r_list_0_3,
+	r_list_0_4_0_0 := r_list_0_4,
+	r_name_0_1 := s_9,
+	r_name_0_0 := UN2(s_19,r_name_0_1),
+	r_option_0_1 := s_14,
+	r_option_0_0 := UN2(f_rule_body,r_option_0_1),
+	r_pgentext_0_1 := s_8,
+	r_pgentext_0_0 := UN2(s_8,r_pgentext_0_1),
+	r_pgentext_0_0_0_0 := r_pgentext_0_0,
+	r_primary_0_0 := s_5,
+	r_primary_0_0_0_1 := r_primary_0_0,
+	r_primary_0_0_0_0 := UN2(f_primary_0_0_0_1,r_primary_0_0_0_1),
+	r_primary_0_0_0_0_0_0 := r_primary_0_0_0_0,
+	r_primary_0_0_0_0_1_0 := r_primary_0_0_0_0,
+	r_primary_0_0_0_0_2_0 := r_primary_0_0_0_0,
+	r_primary_0_0_0_1_0_0 := r_primary_0_0_0_1,
+	r_primary_0_0_0_1_1_0 := r_primary_0_0_0_1,
+	r_primary_0_0_0_1_2_0 := r_primary_0_0_0_1,
+	r_primary_0_0_1_0 := r_primary_0_0,
+	r_primary_0_0_2_0 := r_primary_0_0,
+	r_rule_0_0 := f_rule_0_1,
+	r_rule_body_0_0 := f_rule_body,
+	r_rule_body_0_0_0_1 := r_rule_body_0_0,
+	r_rule_body_0_0_0_0 := UN2(s_16,r_rule_body_0_0_0_1),
+	r_rule_call_0_0 := s_8,
+	r_rule_call_0_0_0_1 := r_rule_call_0_0,
+	r_rule_call_0_0_0_0 := UN2(s_6,r_rule_call_0_0_0_1),
+	r_rule_def_0_2 := s_4,
+	r_rule_def_0_1 := UN2(f_rule_body,r_rule_def_0_2),
+	r_rule_def_0_0 := UN2(s_7,r_rule_def_0_1);
+
+
+
+proc  p_alternative(dont_skip)
+(
+  var l ;
+  # line: 131#
+  var curnode := alt(parent_node, UNDECIDED_STATE),
+  my_parent := parent_node;
+  parent_node := curnode;
+  if f_alternative[t_sy]=0 then testsym(f_alternative,dont_skip,'<alternative>') fi;
+  if f_alternative[t_sy] = 1
+  then
+    if t_sy = 5
+    then
+      l := p_label(dont_skip.disj(r_alternative_0_0_0_0));
+      # line: 135#
+      place_label(curnode, l);
+    fi;
+    p_primary(dont_skip.disj(r_alternative_0_1));
+    while f_primary[t_sy] = 1
+    do p_primary(dont_skip.disj(r_alternative_0_1));
+    od;
+  fi;
+  # line: 137#
+  # Check whether the information for this alternative
+  can be assembled. #
+  scan curnode
+  for	if first_UND = 0
+  then	get_first(subject);
+  if state = UNDECIDED_STATE
+  then	state := EMPTY_STATE
+  fi
+  fi
+  rof;
+  backpatch(curnode);
+  parent_node := my_parent;
+);
+
+
+proc  p_code_spec(dont_skip)
+(
+  var label ;
+  # line: 23#
+  var deflabels := table(10, undefined);
+  if f_code_spec[t_sy]=0 & dont_skip[t_sy]=0 then testsymee(f_code_spec,dont_skip,EMPTY, '') fi;
+      if t_sy = 11
+    then
+      nextsym;
+      if dont_skip[t_sy]=0 & r_code_spec_0_0_0_0[t_sy]=0 then testsymee(dont_skip,r_code_spec_0_0_0_0,EMPTY,'') fi;
+      if t_sy = 6
+      then
+        # line: 25#
+        in_code_spec := TRUE;
+        nextsym;
+        if dont_skip[t_sy]=0 & r_code_spec_0_0_0_1[t_sy]=0 then testsymee(dont_skip,r_code_spec_0_0_0_1,EMPTY,'') fi;
+      else error('":"',lnr);
+      fi;
+      if t_sy = 22
+      then
+        # line: 28#
+        # Add the statements to the initcode field of	#
+        # the rootnode of the current production.	#
+        treetab[rule_name].root.initcode :=
+        treetab[rule_name].root.initcode || sy;
+        nextsym;
+        if dont_skip[t_sy]=0 & r_code_spec_0_0_0_2[t_sy]=0 then testsymee(dont_skip,r_code_spec_0_0_0_2,EMPTY,'') fi;
+      else error('"summer_text"',lnr);
+      fi;
+    fi;
+    while s_5[t_sy] = 1
+    do
+      if t_sy = 5
+      then
+        label := p_label(dont_skip.disj(r_code_spec_0_1_0_0));
+        if t_sy = 6
+        then
+          # line: 25#
+          in_code_spec := TRUE;
+          nextsym;
+          if dont_skip[t_sy]=0 & r_code_spec_0_1_0_1[t_sy]=0 then testsymee(dont_skip,r_code_spec_0_1_0_1,EMPTY,'') fi;
+        else error('":"',lnr);
+        fi;
+        if t_sy = 22
+        then
+          # line: 34#
+          deflabels[label] := 1;
+          # Store the collection of statements in the	#
+          # 'action'-field of every node to which		#
+          # the label was related. If a label is specified#
+          # twice, then the last specification is saved.	#
+          if labeltab[label] ~= undefined
+          then var i;
+          for i in interval(0,labeltab[label].size -1,1)
+          do
+          if labeltab[label][i] ~= undefined
+          then
+          labeltab[label][i].action := sy;
+          fi
+          od;
+          else
+          ermsg('Label /' || label ||
+          '/ does not occur in <rule-def>.\n', lnr)
+          fi;
+          nextsym;
+          if dont_skip[t_sy]=0 & r_code_spec_0_1_0_2[t_sy]=0 then testsymee(dont_skip,r_code_spec_0_1_0_2,EMPTY,'') fi;
+        else error('"summer_text"',lnr);
+        fi;
+      fi;
+    od;
+    if t_sy = 10
+    then
+      nextsym;
+      if dont_skip[t_sy]=0 & r_code_spec_0_2_0_0[t_sy]=0 then testsymee(dont_skip,r_code_spec_0_2_0_0,EMPTY,'') fi;
+      if t_sy = 6
+      then
+        # line: 25#
+        in_code_spec := TRUE;
+        nextsym;
+        if dont_skip[t_sy]=0 & r_code_spec_0_2_0_1[t_sy]=0 then testsymee(dont_skip,r_code_spec_0_2_0_1,EMPTY,'') fi;
+      else error('":"',lnr);
+      fi;
+      if t_sy = 22
+      then
+        # line: 55#
+        # store the statements in the exitcode field	#
+        # of the root node.				#
+        treetab[rule_name].root.exitcode := sy;
+        nextsym;
+        if dont_skip[t_sy]=0 then testsym(dont_skip,EMPTY,'') fi;
+      else error('"summer_text"',lnr);
+      fi;
+    fi;
+  # line: 60#
+  for label in labeltab.index
+  do if deflabels[label] = undefined
+  then
+  ermsg('No statements for label /' || label || '/.\n', lnr)
+  fi
+  od;
+);
+
+
+proc  p_compound(dont_skip)
+(
+  # line: 261#
+  var curnode := body(parent_node, UNDECIDED_STATE),
+  my_parent := parent_node;
+  parent_node := curnode;
+  if t_sy ~= 18 then testsym(s_18,dont_skip,'<compound>') fi;
+  if t_sy = 18
+  then
+    nextsym;
+    if dont_skip[t_sy]=0 & r_compound_0_0[t_sy]=0 then testsymee(dont_skip,r_compound_0_0,EMPTY,'') fi;
+    p_rule_body(dont_skip.disj(r_compound_0_1));
+    if t_sy = 0
+    then
+      nextsym;
+      if dont_skip[t_sy]=0 then testsym(dont_skip,EMPTY,'') fi;
+    else error('")"',lnr);
+    fi;
+  fi;
+  # line: 265#
+  curnode.subtype := 'compound';
+  parent_node := my_parent;
+  return(curnode);
+);
+
+
+proc  p_label(dont_skip)
+(
+  # line: 333#
+  var l;
+  if t_sy ~= 5 then testsym(s_5,dont_skip,'<label>') fi;
+  if t_sy = 5
+  then
+    nextsym;
+    if dont_skip[t_sy]=0 & r_label_0_0[t_sy]=0 then testsymee(dont_skip,r_label_0_0,EMPTY,'') fi;
+    if t_sy = 19
+    then
+      # line: 335#
+      l := sy;
+      nextsym;
+      if dont_skip[t_sy]=0 & r_label_0_1[t_sy]=0 then testsymee(dont_skip,r_label_0_1,EMPTY,'') fi;
+    else error('"ident"',lnr);
+    fi;
+    if t_sy = 5
+    then
+      nextsym;
+      if dont_skip[t_sy]=0 then testsym(dont_skip,EMPTY,'') fi;
+    else error('"/"',lnr);
+    fi;
+  fi;
+  # line: 337#
+  return(l);
+);
+
+
+proc  p_lexicals(dont_skip)
+(
+  if t_sy ~= 12 then testsym(s_12,dont_skip,'<lexicals>') fi;
+  if t_sy = 12
+  then
+    nextsym;
+    if dont_skip[t_sy]=0 & r_lexicals_0_0[t_sy]=0 then testsymee(dont_skip,r_lexicals_0_0,EMPTY,'') fi;
+    if t_sy ~= 19 then testsymdd(s_19,dont_skip,r_lexicals_0_1,'"ident"') fi;
+    while s_19[t_sy] = 1
+    do
+      # line: 10#
+      upredef[sy] := 1;
+      nextsym;
+      if dont_skip[t_sy]=0 & r_lexicals_0_1_0_0[t_sy]=0 then testsymee(dont_skip,r_lexicals_0_1_0_0,EMPTY,'') fi;
+      if t_sy = 3
+      then
+        nextsym;
+        if t_sy ~= 19 then testsymdd(s_19,dont_skip,r_lexicals_0_1_0_1,'"ident"') fi;
+      elif s_19[t_sy] = 1
+      then error('Separating ","',lnr);
+      fi;
+    od;
+    if t_sy = 4
+    then
+      nextsym;
+      if dont_skip[t_sy]=0 then testsym(dont_skip,EMPTY,'') fi;
+    else error('"."',lnr);
+    fi;
+  fi;
+);
+
+
+proc  p_list(dont_skip)
+(
+  var lab,name,tsnode ;
+  # line: 207#
+  var curnode, altnode, my_parent;
+  curnode := body(parent_node, UNDECIDED_STATE);
+  altnode := alt(curnode, UNDECIDED_STATE);
+  my_parent := parent_node;
+  parent_node := altnode;
+  if t_sy ~= 15 then testsym(s_15,dont_skip,'<list>') fi;
+  if t_sy = 15
+  then
+    nextsym;
+    if dont_skip[t_sy]=0 & r_list_0_0[t_sy]=0 then testsymee(dont_skip,r_list_0_0,EMPTY,'') fi;
+    if t_sy = 5
+    then
+      lab := p_label(dont_skip.disj(r_list_0_1_0_0));
+      # line: 212#
+      place_label(altnode, lab);
+    fi;
+    p_primary(dont_skip.disj(r_list_0_2));
+    if f_list_0_3[t_sy]=0 then testsymdd(f_list_0_3,dont_skip,r_list_0_3,'"<","keyword" or "string"') fi;
+    if f_list_0_3_0[t_sy] = 1
+    then
+      tsnode := p_terminal_symbol(dont_skip.disj(r_list_0_3_0_0));
+    elif t_sy = 8
+    then
+      name := p_name(dont_skip.disj(r_list_0_3_1_0));
+      # line: 214#
+      # Check that "name" is a lexical-id #
+      if upredef[name] = undefined
+      then ermsg('No rule name allowed as separator.', lnr)
+      else tsnode := term(altnode, name);
+      tsnode.subtype := 'lex-id';
+      fi;
+    fi;
+    # line: 221#
+    if tsnode ~= undefined
+    then tsnode.state := EMPTY_STATE;
+    tsnode.rep := 'norep';
+    fi;
+    if t_sy = 5
+    then
+      lab := p_label(dont_skip.disj(r_list_0_4_0_0));
+      # line: 226#
+      place_label(tsnode, lab);
+    fi;
+    if t_sy = 17
+    then
+      nextsym;
+      if dont_skip[t_sy]=0 & r_list_0_5[t_sy]=0 then testsymee(dont_skip,r_list_0_5,EMPTY,'') fi;
+    else error('"}"',lnr);
+    fi;
+    if f_list_0_6[t_sy]=0 then testsym(f_list_0_6,dont_skip,'"*" or "+"') fi;
+    if t_sy = 2
+    then
+      # line: 228#
+      curnode.subtype := 'list';
+      curnode.rep := '+';
+      if altnode.children[0] ~= undefined
+      then	altnode.state := altnode.children[0].state;
+      fi;
+      nextsym;
+      if dont_skip[t_sy]=0 then testsym(dont_skip,EMPTY,'') fi;
+    elif t_sy = 1
+    then
+      # line: 234#
+      curnode.state := EMPTY_STATE;
+      curnode.subtype := 'list';
+      curnode.rep := '*';
+      nextsym;
+      if dont_skip[t_sy]=0 then testsym(dont_skip,EMPTY,'') fi;
+    fi;
+    # line: 238#
+    # check whether the info of the alternative can be assembled. #
+    if altnode.first_UND = 0
+    then	get_first(altnode);
+    fi;
+    backpatch(altnode);
+    # Check whether the info of the body-node can be assembled. #
+    if curnode.first_UND = 0
+    then	get_first(curnode);
+    if curnode.state = UNDECIDED_STATE
+    then	curnode.state := NONEMPTY_STATE;
+    fi;
+    fi;
+  fi;
+  # line: 256#
+  parent_node := my_parent;
+  return(curnode);
+);
+
+
+proc  p_name(dont_skip)
+(
+  # line: 293#
+  var nm := '???';
+  if t_sy ~= 8 then testsym(s_8,dont_skip,'<name>') fi;
+  if t_sy = 8
+  then
+    nextsym;
+    if dont_skip[t_sy]=0 & r_name_0_0[t_sy]=0 then testsymee(dont_skip,r_name_0_0,EMPTY,'') fi;
+    if t_sy = 19
+    then
+      # line: 295#
+      nm := sy;
+      nextsym;
+      if dont_skip[t_sy]=0 & r_name_0_1[t_sy]=0 then testsymee(dont_skip,r_name_0_1,EMPTY,'') fi;
+    else error('"ident"',lnr);
+    fi;
+    if t_sy = 9
+    then
+      nextsym;
+      if dont_skip[t_sy]=0 then testsym(dont_skip,EMPTY,'') fi;
+    else error('">"',lnr);
+    fi;
+  fi;
+  # line: 297#
+  return(nm);
+);
+
+
+proc  p_nothing(dont_skip)
+(
+  );
+
+
+proc  p_option(dont_skip)
+(
+  # line: 192#
+  var curnode := body(parent_node, EMPTY_STATE),
+  my_parent := parent_node;
+  parent_node := curnode;
+  if t_sy ~= 13 then testsym(s_13,dont_skip,'<option>') fi;
+  if t_sy = 13
+  then
+    nextsym;
+    if dont_skip[t_sy]=0 & r_option_0_0[t_sy]=0 then testsymee(dont_skip,r_option_0_0,EMPTY,'') fi;
+    p_rule_body(dont_skip.disj(r_option_0_1));
+    if t_sy = 14
+    then
+      nextsym;
+      if dont_skip[t_sy]=0 then testsym(dont_skip,EMPTY,'') fi;
+    else error('"]"',lnr);
+    fi;
+  fi;
+  # line: 196#
+  curnode.subtype := 'option';
+  curnode.rep := 'norep';
+  parent_node := my_parent;
+  return(curnode);
+);
+proc pgentext(args)
+(
+  var dont_skip := s_23;
+  # line: 5#
+  pgen1(args);
+  nextsym;
+  if f_pgentext[t_sy]=0 & dont_skip[t_sy]=0 then testsymee(f_pgentext,dont_skip,EMPTY, '') fi;
+      if t_sy = 12
+    then
+      p_lexicals(dont_skip.disj(r_pgentext_0_0_0_0));
+    fi;
+    while s_8[t_sy] = 1
+    do p_rule(dont_skip.disj(r_pgentext_0_1));
+    od;
+  # line: 6#
+  pgen2(args);
+  if errcnt > 0
+  then stop(1)
+  fi;
+);
+
+
+proc  p_primary(dont_skip)
+(
+  var curnode,lab ;
+  # line: 168#
+  var my_parent := parent_node;
+  if f_primary[t_sy]=0 then testsym(f_primary,dont_skip,'<primary>') fi;
+  if f_primary[t_sy] = 1
+  then
+    if f_primary_0_0_0[t_sy] = 1
+    then
+      if f_primary_0_0_0_0_0[t_sy] = 1
+      then
+        curnode := p_terminal_symbol(dont_skip.disj(r_primary_0_0_0_0_0_0));
+      elif f_primary_0_0_0_0_1[t_sy] = 1
+      then
+        curnode := p_rule_call(dont_skip.disj(r_primary_0_0_0_0_1_0));
+      elif t_sy = 18
+      then
+        curnode := p_compound(dont_skip.disj(r_primary_0_0_0_0_2_0));
+      fi;
+      if t_sy = 2
+      then
+        # line: 170#
+        if curnode ~= undefined
+        then	curnode.rep := '+';
+        fi;
+        nextsym;
+        if dont_skip[t_sy]=0 & r_primary_0_0_0_1_0_0[t_sy]=0 then testsymee(dont_skip,r_primary_0_0_0_1_0_0,EMPTY,'') fi;
+      elif t_sy = 1
+      then
+        # line: 174#
+        if curnode ~= undefined
+        then	curnode.rep := '*';
+        curnode.state := EMPTY_STATE;
+        fi;
+        nextsym;
+        if dont_skip[t_sy]=0 & r_primary_0_0_0_1_1_0[t_sy]=0 then testsymee(dont_skip,r_primary_0_0_0_1_1_0,EMPTY,'') fi;
+      else
+        p_nothing(dont_skip.disj(r_primary_0_0_0_1_2_0));
+        # line: 179#
+        if curnode ~= undefined
+        then	curnode.rep := 'norep';
+        fi;
+      fi;
+    elif t_sy = 15
+    then
+      curnode := p_list(dont_skip.disj(r_primary_0_0_1_0));
+    elif t_sy = 13
+    then
+      curnode := p_option(dont_skip.disj(r_primary_0_0_2_0));
+    fi;
+    if t_sy = 5
+    then
+      lab := p_label(dont_skip);
+      # line: 183#
+      place_label(curnode, lab);
+    fi;
+  fi;
+  # line: 185#
+  if curnode ~= undefined
+  then	backpatch(curnode);
+  fi;
+  parent_node := my_parent;
+);
+
+
+proc  p_rule(dont_skip)
+(
+  var rn ;
+  # line: 14#
+  labeltab := table(10, undefined);
+  if t_sy ~= 8 then testsym(s_8,dont_skip,'<rule>') fi;
+  if t_sy = 8
+  then
+    rn := p_rule_def(dont_skip.disj(r_rule_0_0));
+    # line: 16#
+    rule_name := rn;
+    if f_rule_0_1[t_sy] = 1
+    then
+      p_code_spec(dont_skip);
+    fi;
+  fi;
+);
+
+
+proc  p_rule_body(dont_skip)
+(
+  # line: 111#
+  var my_parent := parent_node;
+  if f_rule_body[t_sy]=0 & dont_skip[t_sy]=0 then testsymee(f_rule_body,dont_skip,EMPTY, '') fi;
+      while f_rule_body[t_sy] = 1
+    do
+      p_alternative(dont_skip.disj(r_rule_body_0_0_0_0));
+      if t_sy = 16
+      then
+        nextsym;
+        if f_alternative[t_sy]=0 then testsymdd(f_alternative,dont_skip,r_rule_body_0_0_0_1,'<alternative>') fi;
+      elif f_alternative[t_sy] = 1
+      then error('Separating "|"',lnr);
+      fi;
+    od;
+  # line: 112#
+  # Check whether the parent-node, which is a body-node
+  or the root-node, can be determined.
+  #
+  scan my_parent
+  for	if first_UND = 0
+  then	if child_count > 0
+  then	get_first(subject);
+  if state = UNDECIDED_STATE
+  then	state := NONEMPTY_STATE;
+  fi;
+  else	state := EMPTY_STATE;
+  fi;
+  fi;
+  rof;
+  parent_node := my_parent;
+);
+
+
+proc  p_rule_call(dont_skip)
+(
+  var name ;
+  # line: 301#
+  var varname, curnode;
+  if f_rule_call[t_sy]=0 then testsym(f_rule_call,dont_skip,'<rule_call>') fi;
+  if f_rule_call[t_sy] = 1
+  then
+    if t_sy = 19
+    then
+      # line: 303#
+      varname := sy;
+      nextsym;
+      if dont_skip[t_sy]=0 & r_rule_call_0_0_0_0[t_sy]=0 then testsymee(dont_skip,r_rule_call_0_0_0_0,EMPTY,'') fi;
+      if t_sy = 6
+      then
+        nextsym;
+        if dont_skip[t_sy]=0 & r_rule_call_0_0_0_1[t_sy]=0 then testsymee(dont_skip,r_rule_call_0_0_0_1,EMPTY,'') fi;
+      else error('":"',lnr);
+      fi;
+    fi;
+    name := p_name(dont_skip);
+  fi;
+  # line: 305#
+  if name ~= undefined
+  then	if upredef[name] ~= undefined
+  then	curnode := term(parent_node,name);
+  curnode.subtype := 'lex-id';
+  if varname ~= undefined
+  then	var_decl[varname] := 1;
+  curnode.ass_var := varname;
+  fi;
+  else	curnode := nont(parent_node,name);
+  if treetab[name] = undefined
+  then	treetab[name] := tt_entry;
+  fi;
+  treetab[name].reftab[curnode] := 1;
+  if varname ~= undefined
+  then	var_decl[varname] := 1;
+  curnode.ass_var := varname;
+  fi;
+  fi;
+  else	curnode := nont(parent_node,'???');
+  fi;
+  return(curnode);
+);
+
+
+proc  p_rule_def(dont_skip)
+(
+  var name ;
+  if t_sy ~= 8 then testsym(s_8,dont_skip,'<rule_def>') fi;
+  if t_sy = 8
+  then
+    name := p_name(dont_skip.disj(r_rule_def_0_0));
+    if t_sy = 7
+    then
+      # line: 69#
+      if upredef[name] ~= undefined
+      then ermsg('Lexical_id redefined : '||name||'.',lnr);
+      fi;
+      if treetab[name] = undefined
+      then treetab[name] := tt_entry;
+      fi;
+      if treetab[name].root ~= undefined
+      then ermsg('Nonterminal redefined : '||name||'.',lnr);
+      else treetab[name].root := rule_root(name);
+      fi;
+      parent_node := treetab[name].root;
+      nextsym;
+      if dont_skip[t_sy]=0 & r_rule_def_0_1[t_sy]=0 then testsymee(dont_skip,r_rule_def_0_1,EMPTY,'') fi;
+    else error('"::="',lnr);
+    fi;
+    p_rule_body(dont_skip.disj(r_rule_def_0_2));
+    if t_sy = 4
+    then
+      # line: 85#
+      # The tags that occurred within the rule
+      are now converted to a declaration-string, which
+      is stored in the init-code field of the root
+      node.
+      #
+      if var_decl.size > 0
+      then	var i,j := 0;
+      scan treetab[name].root
+      for	initcode := 'var ';
+      for i in var_decl.index
+      do	if j= 0
+      then j:= 1;
+      initcode := initcode || i;
+      else initcode := initcode || ',' || i
+      fi;
+      od;
+      initcode := initcode || ' ;\n';
+      rof;
+      var_decl := table(5,undefined);
+      fi;
+      nextsym;
+      if dont_skip[t_sy]=0 then testsym(dont_skip,EMPTY,'') fi;
+    else error('"."',lnr);
+    fi;
+  fi;
+  # line: 108#
+  return(name);
+);
+
+
+proc  p_terminal_symbol(dont_skip)
+(
+  # line: 278#
+  var symbol, curnode, tp;
+  if f_terminal_symbol[t_sy]=0 then testsym(f_terminal_symbol,dont_skip,'<terminal_symbol>') fi;
+  if t_sy = 20
+  then
+    # line: 280#
+    symbol := sy.replace(upper,lower);
+    symtab[symbol] := 1;
+    tp := 'keyword';
+    nextsym;
+    if dont_skip[t_sy]=0 then testsym(dont_skip,EMPTY,'') fi;
+  elif t_sy = 21
+  then
+    # line: 283#
+    symbol := sy;
+    chartab[sy] := 1;
+    tp := 'string';
+    nextsym;
+    if dont_skip[t_sy]=0 then testsym(dont_skip,EMPTY,'') fi;
+  fi;
+  # line: 287#
+  curnode := term(parent_node, symbol);
+  curnode.subtype := tp;
+  return(curnode);
+);

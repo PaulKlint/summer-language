@@ -1,0 +1,18 @@
+Oldest is een programmatje wat van een aantal als argument meegegeven files
+bepaald welke van deze de oudste is. De index van de oudste file in de lijst
+dient als terugkeer waarde, mocht een file niet bestaan is de terugkeer
+waarde altijd "0".
+Een voorbeeld:
+
+
+% echo > a
+% echo > b
+% oldest a b
+% echo $status
+1
+% oldest a bestaatniet
+% echo $status
+0
+% 
+
+

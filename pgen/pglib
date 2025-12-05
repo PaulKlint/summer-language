@@ -1,0 +1,83 @@
+const
+	lower := 'abcdefghijklmnopqrstuvwxyz',
+	upper := 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+	digit := '0123456789',
+	ASCII := ' !"#$%&''()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~';
+
+var
+	lnr := 0, sy, t_sy, line := scan_string(' '), errcnt := 0;
+
+proc SET(syms)
+(	var i, b := bits(SETSIZE,0);
+
+	for i in syms
+	do
+		b[i] := 1;
+	od;
+	return(b);
+);
+
+
+proc UN2(s1,s2)
+(	
+	return(s1.disj(s2))
+);
+
+
+proc UN3(s1,s2,s3)
+(
+	return((s1.disj(s2)).disj(s3))
+);
+
+
+proc error(mess,ln)
+(
+	ermsg(mess || ' expected', ln);
+);
+
+
+proc testsymee(exp1, exp2, dont_skip, message)
+(	testsym(UN2(exp1, exp2), dont_skip, message);
+);
+
+proc testsymeee(exp1, exp2, exp3, dont_skip, message)
+(	testsym(UN3(exp1, exp2, exp3), dont_skip, message);
+);
+proc testsymdd(exp, dont_skip1, dont_skip2, message)
+(	testsym(exp, UN2(dont_skip1, dont_skip2), message);
+);
+
+proc testsym(exp,dont_skip,message)
+(	if exp[t_sy] = 0
+	then	var mess := '  ',
+		    nskipped := 0,
+		    erlnr := lnr,
+		    both := UN2( exp,dont_skip);
+
+
+		 	while both[t_sy] = 0
+			do	if nskipped < 6
+				then	if nskipped < 5
+					then mess := mess || sy || ' '
+					else mess := mess || sy || ' ...';
+					fi;
+					nskipped := nskipped + 1;
+				fi;
+				nextsym;
+			od;
+                        if mess ~= '  ' 
+                        then    mess := ' "'|| mess || '"' || ' skipped.';
+				if lnr - erlnr > 2 then
+					mess := mess ||
+						'\n       scan resumed at "' ||
+						sy || '", in line '||string(lnr)
+				fi
+			fi;
+                        if  message ~= ''
+			then error(message,erlnr);
+			fi;
+			if mess ~= '  '
+			then ermsg(mess,erlnr);
+			fi;
+	fi;
+);

@@ -1,0 +1,12 @@
+.iy I FR
+.iy I FRETURN
+.iy I a_undefined
+.{{
+\fBif\fR \jg{{ \fIe\fR =\h'-0.3m'= \jh\s-2FRETURN\s0 \ji}}
+\fBthen\fR
+\h'|\ngu'\fIreturn\fR\^(\^[\fIa\*_undefined\fR, \fIFR\fR]\^)
+\fBfi\fR;
+.}}
+.iy I FR
+.iy I FRETURN
+.iy I a_undefined

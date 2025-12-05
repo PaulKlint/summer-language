@@ -1,0 +1,17 @@
+Fri Aug 14 03:57:07 EDT 1981
+if f_bla[t_sy] = 1
+==> 
+if f_bla_sym = sy
+als f_bla = {f_bla_sym}
+Fri Aug 14 03:58:39 EDT 1981
+laat tag:lexical toe
+Fri Aug 14 03:59:19 EDT 1981
+testsym(UN2(a,b), ...)
+kan vervangen worden door
+if a[t_sy] = 0 | b[t_sy] = 0 then call testsymtail ... fi;
+(Dit elimineert de constructie van een conjunctie)
+Fri Aug 14 04:01:31 EDT 1981
+Combineer
+nextsym;testsym
+Fri Aug 14 11:11:17 EDT 1981
+er rammelt iets met get_prog, p17-18

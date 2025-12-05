@@ -1,0 +1,24 @@
+.{{
+\fBproc\fR \jg\fIeval\fR\^(\fIs\fR)
+\z(     \jg\fBvar\fR \jh\fIe\fR, \fIexprs\fR, \fIid\fR1, \fIid\fR2, \fIrhs\fR, \fIstr\fR, \fIval\fR;
+\h'|\ngu'\fBif\fR \ji{{ \fIs\fR =\h'-0.3m'= \jj\fIexprs\fR: { \*<assignment\*> \*`\fI;\fR\^\*' }\v'0.25m'*\v'-0.25m' }}
+\h'|\ngu'\fBthen\fR
+\h'|\niu'\fBfor\fR \jk\fIe\fR \fBin\fR \jl\fIexprs\fR
+\*#a\jm\*#\h'|\niu'\fBdo\fR \jn{{ \fIe\fR =\h'-0.3m'= \jo\fIid\fR1:\*<identifier\*> \*`\fI:=\fR\^\*' \fIrhs\fR:\*<right-hand-side\*> }} ;
+\h'|\nnu'\fBif\fR \jp{{ \fIrhs\fR =\h'-0.3m'= \jq\fIid\fR2:\*<identifier\*> }}
+\h'|\nnu'\fBthen\fR
+\h'|\npu'\fIval\fR := \fICURRENT\*_ENV\fR.\fIbinding\fR\^(\fIid\fR2)
+\h'|\nnu'\fBelif\fR \jj{{ \fIrhs\fR =\h'-0.3m'= \jr\fIid\fR2:\*<identifier\*> \*`\fI+\fR\^\*' \fIstr\fR:\*<string-literal\*> }}
+\h'|\nnu'\fBthen\fR
+\h'|\npu'\fIval\fR := \fICURRENT\*_ENV\fR.\fIbinding\fR\^(\fIid\fR2) || \fIstr\fR
+\h'|\nnu'\fBelse\fR
+\*#b\jm\*#\h'|\npu'{{ \fIrhs\fR =\h'-0.3m'= \jq\fIstr\fR:\*<string-literal\*> }} ;
+\h'|\npu'\fIval\fR := \fIstr\fR
+\h'|\nnu'\fBfi\fR;
+\h'|\nnu'\fICURRENT\*_ENV\fR.\fIbind\fR\^(\fIid\fR1, \fIval\fR\|)
+\h'|\niu'\fBod\fR
+\h'|\ngu'\fBelse\fR
+\h'|\niu'\fIERROR\fR
+\h'|\ngu'\fBfi\fR
+);
+.}}

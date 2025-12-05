@@ -1,0 +1,49 @@
+.iy I ENV
+.iy I FOR
+.iy I N
+.iy I ROF
+.iy I SCAN
+.iy I bind
+.iy I dereference
+.iy I eval
+.iy I eval_call
+.iy I is_string
+.iy I name_copy
+.iy I new_inner_scope
+.iy I scan_string
+.iy I subject
+.{{
+\fBif\fR \jg{{ \fIe\fR =\h'-0.3m'= \jh\s-2SCAN\s0 \ji\fIexpr\fR:\*<expression\*> \s-2FOR\s0 \jj\fIb\fR:\*<block\*> \s-2ROF\s0 \jk}}
+\fBthen\fR
+\h'|\ngu'\fBvar\fR \jl\fIENV\fR1, \fIv\fR, \fIsig\fR;
+.sp 0.5
+\h'|\ngu'[\fIv\fR, \fIsig\fR] := \fIeval\fR\^(\fIexpr\fR);
+\h'|\ngu'\fBif\fR \jm\fIsig\fR \(ap\h'-0.2m'= \fIN\fR \fBthen\fR \jn\fIreturn\fR\^(\^[\fIv\fR, \fIsig\fR]\^) \fBfi\fR;
+\h'|\ngu'\fIv\fR := \fIdereference\fR\^(\fIv\fR);
+\h'|\ngu'\fBif\fR \jm\fIis\*_string\fR\^(\fIv\fR)
+\h'|\ngu'\fBthen\fR
+\h'|\nmu'[\fIv\fR, \fIsig\fR] := \fIeval\*_call\fR\^(\*`\fI\h'-0.1m'scan\*_string\fR\^\*', [\fIv\fR]\^)
+\h'|\ngu'\fBfi\fR;
+\h'|\ngu'\fIENV\fR1 := \fIENV\fR;
+\h'|\ngu'\fIENV\fR := \fIENV\fR.\fIname\*_copy\fR;
+\h'|\ngu'\fIENV\fR.\fInew\*_inner\*_scope\fR;
+\h'|\ngu'\fIENV\fR.\fIbind\fR\^(\*`\fI\h'-0.1m'subject\fR\^\*', \fIv\fR);
+\h'|\ngu'[\fIv\fR, \fIsig\fR] := \fIeval\fR\^(\fIb\fR);
+\h'|\ngu'\fIENV\fR := \fIENV\fR1;
+\h'|\ngu'\fIreturn\fR\^(\^[\fIv\fR, \fIsig\fR]\^)
+\fBfi\fR;
+.}}
+.iy I ENV
+.iy I FOR
+.iy I N
+.iy I ROF
+.iy I SCAN
+.iy I bind
+.iy I dereference
+.iy I eval
+.iy I eval_call
+.iy I is_string
+.iy I name_copy
+.iy I new_inner_scope
+.iy I scan_string
+.iy I subject

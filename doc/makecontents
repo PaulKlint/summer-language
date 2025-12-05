@@ -1,0 +1,8 @@
+echo .so firstpage >@t
+echo .DS C >>@t
+echo TABLE OF CONTENTS >>@t
+echo .DE >>@t
+echo .LP >>@t
+echo ".Ib" >>@t
+grep ".In C" <index.all | grep -v "\.[abcdefg]\. " | troff /summer/jan/format/mctract index.ms @t - >contents
+rm @t

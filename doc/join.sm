@@ -1,0 +1,15 @@
+program join()
+( var line, cur;
+  while line := get
+  do 
+	scan line
+	for
+	   if cur ~= undefined & lit(cur) then put(', ', rtab(0))
+	   elif cur := (find('" ') || lit('" '))
+	   then put('\n', line)
+	   else put(line, '\n') ; cur := undefined
+	   fi
+	rof
+  od;
+  put('\n')
+)

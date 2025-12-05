@@ -1,0 +1,24 @@
+.DS
+.nf
+.vs -0.2
+.ft I
+.cs I 36
+                 |
+ \(mi\(mi\(mi\(mi\(mi\(mi\(mi\(mi\(mi\(mi\(mi\(mi\(mi\(mi\(mi\(mi\(mi\(mi\(mi\(mi\(mi\(mi\(mi\(mi\(mi\(mi\(mi\(mi\(mi\(mi\(mi\(mi\(mi
+  |            |             |  |
+  a  \(mi\(mi\(mi\(mi\(mi\(mi\(mi\(mi\(mi\(mi\(mi\(mi\(mi\(mi\(mi\(mi\(mi\(mi\(mi\(mi\(mi\(mi  j  k
+      |    |       |     |
+      d  \(mi\(mi\(mi\(mi\(mi\(mi  \(mi\(mi\(mi\(mi\(mi\(mi  i
+          |  |    |  |
+          e  f    g  h
+.DE
+.cs I
+.ft R
+.vs +0.2
+.ce 1
+\s-1\fBFigure #{fig pattern list=figs+}\fP. The result of applying the pattern \*{list\*} to
+.br
+\h'3.8c'\*{'(a (d (e f) (g h) i) j k)'\*}\s0
+.fi
+.sp 2
+.DE

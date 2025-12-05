@@ -1,0 +1,32 @@
+.iy I DO
+.iy I F
+.iy I FR
+.iy I N
+.iy I NR
+.iy I OD
+.iy I WHILE
+.iy I eval
+.{{
+\fBif\fR \jg{{ \fIe\fR =\h'-0.3m'= \jh\s-2WHILE\s0 \ji\fIt\fR:\*<test\*> \s-2DO\s0 \jj\fIb\fR:\*<block\*> \s-2OD\s0 \jk}}
+\fBthen\fR
+\h'|\ngu'\fBvar\fR \jl\fIv\fR, \fIsig\fR;
+.sp 0.5
+\h'|\ngu'[\fIv\fR, \fIsig\fR] := \fIeval\fR\^(\fIt\fR);
+\h'|\ngu'\fBcase\fR \jm\fIsig\fR
+\h'|\ngu'\fBof\fR \jn\fIN\fR:\h'|\niu'\*# do nothing \jo\*#,
+\h'|\nnu'\fIF\fR:\h'|\niu'\fIreturn\fR\^(\^[\fIv\fR, \fIN\fR\|]\^),
+\h'|\nnu'\fINR\fR: \fIFR\fR:\h'|\niu'\fIreturn\fR\^(\^[\fIv\fR, \fIsig\fR]\^)
+\h'|\ngu'\fBesac\fR;
+\h'|\ngu'[\fIv\fR, \fIsig\fR] := \fIeval\fR\^(\fIb\fR);
+\h'|\ngu'\fBif\fR \jn\fIsig\fR \(ap\h'-0.2m'= \fIN\fR \fBthen\fR \jp\fIreturn\fR\^(\^[\fIv\fR, \fIsig\fR]\^) \fBfi\fR;
+\h'|\ngu'\fIreturn\fR\^(\fIeval\fR\^(\fIe\fR))
+\fBfi\fR;
+.}}
+.iy I DO
+.iy I F
+.iy I FR
+.iy I N
+.iy I NR
+.iy I OD
+.iy I WHILE
+.iy I eval

@@ -1,0 +1,37 @@
+.iy I INIT
+.iy I N
+.iy I a_integer
+.iy I array
+.iy I dereference
+.iy I eval
+.iy I eval_array_init
+.iy I eval_call
+.iy I eval_field_selection
+.iy I index
+.{{
+\fBproc\fR \jg\fIeval\*_array\*_init\fR\^(\fIsz\fR, \fIdef\fR, \fIinitexpr\fR)
+\z(  \jh\fBvar\fR \ji\fIar\fR, \fIexprlist\fR, \fIi\fR, \fIv\fR, \fIv\fR1, \fIsig\fR;
+.sp 0.5
+\h'|\nhu'[\fIar\fR, \fIsig\fR] := \fIeval\*_call\fR\^(\*`\fI\h'-0.1m'array\fR\^\*', [\fIsz\fR, \fIdef\fR\|\|]\^);
+\h'|\nhu'\fBif\fR \jg\fIsig\fR \(ap\h'-0.2m'= \fIN\fR \fBthen\fR \jj\fIreturn\fR\^(\^[\fIar\fR, \fIsig\fR]\^) \fBfi\fR;
+\h'|\nhu'{{ \fIinitexpr\fR =\h'-0.3m'= \jk\s-2INIT\s0 \jl\*`\fI[\fR\^\*' \fIexprlist\fR:{\*<expression\*> \*`\fI,\fR\^\*' }\v'0.25m'*\v'-0.25m' \*`\fI]\fR\^\*' }};
+\h'|\nhu'\fBfor\fR \ji\fIi\fR \fBin\fR \jm\fIexprlist\fR.\fIindex\fR
+\h'|\nhu'\fBdo\fR \jg[\fIv\fR,\fIsig\fR] := \fIeval\fR\^(\fIexprlist\fR\^[\fIi\fR\|]\^);
+\h'|\ngu'\fBif\fR \jn\fIsig\fR \(ap\h'-0.2m'= \fIN\fR \fBthen\fR \jl\fIreturn\fR\^(\^[\fIv\fR, \fIsig\fR]\^) \fBfi\fR;
+\h'|\ngu'\fIv\fR := \fIdereference\fR\^(\fIv\fR);
+\h'|\ngu'[\fIv\fR1, \fIsig\fR] := \fIeval\*_field\*_selection\fR\^(\*`\fI\h'-0.1m'fetch\fR\^\*', \fIar\fR, \*`\fI\h'-0.1m'update\fR\^\*', [\fIa\*_integer\fR\^(\fIi\fR\|), \fIv\fR]\^);
+\h'|\ngu'\fBif\fR \jn\fIsig\fR \(ap\h'-0.2m'= \fIN\fR \fBthen\fR \jl\fIreturn\fR\^(\^[\fIv\fR1, \fIsig\fR]\^) \fBfi\fR;
+\h'|\nhu'\fBod\fR;
+\h'|\nhu'\fIreturn\fR\^(\^[\fIar\fR, \fIN\fR\|]\^)
+);
+.}}
+.iy I INIT
+.iy I N
+.iy I a_integer
+.iy I array
+.iy I dereference
+.iy I eval
+.iy I eval_array_init
+.iy I eval_call
+.iy I eval_field_selection
+.iy I index

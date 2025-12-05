@@ -1,0 +1,120 @@
+  proc match(curs, expr, pat)
+  ( var curs1, curs2, expr1, expr2, P, P1, Q, Q1;
+    var rpat1, rpat2, str, id;
+
+    enter([curs, expr, pat]);
+#a# if {{ pat == P:<pattern-primary> '|' Q:<pattern-primary> }}
+    then
+       if [curs1, expr1, P1] := match(curs, expr, P)
+       then
+          return(?[curs1, expr1, mk_comp(curs, expr, mk_alt(P1, Q))])
+       elif [curs2, expr2, Q1] := match(curs, expr, Q)
+       then
+          return(?[curs2, expr2, mk_comp(curs, expr, Q1)])
+       else
+          fret;freturn
+       fi
+#b# elif {{ pat == P:<pattern-primary> '--' Q:<pattern-primary> }}
+    then
+       if [curs1, expr1, P1] := match(curs, expr, P)
+       then
+          if [curs2, expr2, Q1] := match(curs1, expr1, Q)
+          then
+             rpat1 := mk_comp(curs1, expr1, Q1);
+             if P1 = null
+             then
+                rpat2 := null
+             else
+                rpat2 := mk_subs(mk_comp(curs, expr, P1), Q)
+             fi;
+             return(?[curs2, expr2, mk_alt(rpat1, rpat2) ])
+          else
+             if P1 ~= null
+             then
+                if [curs2, expr2, Q1] := match(curs, expr, mk_subs(P1, Q))
+                then
+                   return(?[curs2, expr2, Q1])
+                fi
+             fi
+          fi
+       fi;
+       fret;freturn
+#c# elif {{ pat == '(' P:<pattern> ')' }}
+    then
+       return(?match(curs, expr, P))
+#d# elif {{ pat == str:<string-literal> }}
+    then
+       if curs1 := litmatch(curs, str)
+       then
+          return(?[curs1, expr, null])
+       else
+          fret;freturn
+       fi
+#e# elif {{ pat == id:<identifier> }}
+    then
+       P := INITIAL_ENV.binding(id);
+       if [curs1, expr1, P1] := match(curs, expr, P)
+       then
+          return(?[curs1, expr1, P1])
+       else
+          fret;freturn
+       fi
+#f# elif {{ pat == '*' id:<identifier> }}
+    then
+       P := CURRENT_ENV.binding(id);
+       if [curs1, expr1, P1] := match(curs, expr, P)
+       then
+          return([curs1, expr1, P1])
+       else
+          fret;freturn
+       fi
+#g# elif {{ pat == '<' curs1:<integer-constant> ','
+                       expr1:<expression> ',' P:<pattern> '>' }}        
+    then
+       if [curs2, expr2, P1] := match(integer(curs1), expr1, P)
+       then
+          return(?[curs2, expr2, P1])
+       else
+          fret;freturn
+       fi
+#h# elif {{ pat == IMSBAS '(' P:<pattern-primary> ',' id:<identifier> ')' }}
+    then
+       if [curs1, expr1, P1] := match(curs, expr, P)
+       then
+          CURRENT_ENV.bind(id, mk_string(curs, curs1));
+          if P1 = null
+          then
+             rpat1 := null
+          else
+             rpat1 := mk_comp(curs, expr, mk_imsbas(P1, id))
+          fi;
+          return(?[curs1, expr1, rpat1])
+       else
+          fret;freturn
+       fi
+#i# elif {{ pat == CDSBAS '(' P:<pattern-primary> ',' id:<identifier> ')' }}
+    then
+       if [curs1, expr1, P1] := match(curs, expr, P)
+       then
+          expr2 := mk_expr(expr1, mk_assign(id, mk_string(curs, curs1)));
+          if P1 = null
+          then
+             rpat1 := null
+          else
+             rpat1 := mk_comp(curs, expr, mk_cdsbas(P1, id))
+          fi;
+          return(?[curs1, expr2, rpat1])
+       else
+          fret;freturn
+       fi
+#j# elif {{ pat == IMACT '(' expr1:<expression> ')' }}
+    then
+       eval(expr1);
+       return(?[curs, expr, null])
+#k# elif {{ pat == CDACT '(' expr1:<expression> ')' }}
+    then
+       return(?[curs, mk_expr(expr, expr1), pat])
+#l# else
+       ERROR
+    fi
+  );

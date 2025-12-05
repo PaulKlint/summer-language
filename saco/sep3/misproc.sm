@@ -1,0 +1,86 @@
+#****************** Miscellaneous procedures *****************************#
+
+
+proc check_forward_references()
+( var nm, e, ent;
+
+  for nm in montab.index
+  do if (e := montab[nm][O_STATUS]) < 0 then
+	ermsg('undeclared monadic operator "' || nm || '"', -e)
+     fi
+  od;
+  for nm in dytab.index
+  do if (e := dytab[nm][O_STATUS]) < 0 then
+	ermsg('undeclared dyadic operator "' || nm || '"', -e)
+     fi
+  od;
+  for ent in symtab
+  do var x := ent[S_VALUE];
+     if x.kind = Forward then
+	var node := x.src_node;
+	if node.code_for_this = True
+	then
+	  # This error message will only be generated for true source
+	    files (type ".sm"), not for summaries, because there are
+	    no local variable declarations while they are used in summaries
+	    of cases.
+	    Saco Bekius 28-03-'84
+	  #
+	  var swich_node := if node.name ~= src.name then True else False fi,
+	    c_node;
+	  if swich_node
+	  then
+	    [c_node, src] := [src, node]
+	  fi;
+	  ermsg('"' || x.name || '" undeclared', x.lino);
+	  if swich_node = True
+	  then
+	    src := c_node
+	  fi
+	fi
+     fi
+  od;
+);
+
+proc comermsg(m)
+(	put(string(lnr).right(5, ' '), ': compiler error; ', m, newl);
+	stop(-1)
+);
+
+proc ermsg(message, lnr)
+(
+# Chanced a little so emacs can parse the errors.
+  Saco Bekius 12-03-'84
+#
+  f_er.put('"', src.name, if src.code_for_this = True
+                          then '.sm' else '.sk'
+			  fi,
+			  '", line ', lnr,
+	   ': ', message, newl);
+  errcnt := errcnt + 1;
+); # ermsg #
+
+proc cant(name)
+(	put('Cannot open ', name, '\n');
+	if src ~= undefined
+	then
+	  ermsg('Cannot open ' || name, lnr)
+	fi;
+	stop(1);
+);
+
+proc basenm(totnm, suffix)
+# This procedure extracts the suffix from a name if it has that suffix,
+  else the total name is returned.
+  Saco Bekius 02-04-'84
+#
+( var pos, suffix_size := suffix.size;
+  if (pos := totnm.size - suffix_size) < 0
+     |
+     totnm.substr(pos,suffix_size) ~= suffix
+  then
+    return(totnm)
+  else
+    return(totnm.substr(0,pos))
+  fi
+);

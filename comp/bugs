@@ -1,0 +1,1531 @@
+From arthur Tue Sep 14 23:50:10 1982
+To: paulk
+
+BUG Report #1:
+de file dfa3.sm geeft problemen.
+In de class SUPER_PARSE_TREE_NODE komt een procedure breaklit voor en
+ook een procedure treat_operand. In deze laatste procedure komt een scan
+statement voor met als subject-expressie een if-statement. In die
+if-statement komt weer een aanroep van breaklit voor wat dus naar de klasse-
+procedure verwijst maar de interpretator denkt dat het een veld van de 
+subject moet zijn.
+De directory is arthur/dflow/dfa/dfcod
+de source file is dfa3.sm met de files level[012] included.
+De vertaalde versie staat onder newdfa3
+de aanroep is newdfa3 sub1a
+veel plezier
+
+From chris Mon Oct  4 13:55:07 1982
+To: paulk
+
+
+Foutje in de nieuwe compiler: (?)
+
+/mao/chris/summer/bin/tb2 levert de volgende foutmelding op:
+
+Error: field 'mem' not defined on 'integer' value 16384
+297-308:        in procedure %%
+677:    %%(16384,l_integer['undefined',1,[]])
+131-135:        l_integer(16384)
+126:    convert_to_bit_strings()
+
+ENTERING TRACER
+ (297)
+
+In ../tb1 staat hetzelfde programma, maar dan met behulp van de oude
+compiler gegenereerd (source is ../tobits.sm); dit programma werkt wel
+naar behoren!
+
+
+From chris Mon Oct  4 13:57:02 1982
+To: paulk
+
+
+De SUMMER compiler staat het openen van files binnen een try (niet
+meer?) toe; wordt dit toch gedaan, dan wordt er een stop uitgevoerd.
+Zou dit in een freturn omgezet kunnen worden?
+
+
+From chris Mon Oct  4 17:31:58 1982
+To: paulk
+
+
+Kijk ook maar eens in /mao/chris/tmp/pk/noop0.s_out (vertaling van ../noop0.sm
+mbv nieuwe compiler): dat lukt dus nog niet erg!
+
+From chris Thu Oct  7 17:28:11 1982
+To: paulk
+
+
+Uitvoering van het commando "asynIO < inp" (in /mao/chris/tmp/asynIO)
+levert de volgende foutmelding op:
+
+Error: attempt to use undefined subject
+30-34:  in procedure activate
+123-134:        activate(asynIO[schedule[[[...],[...],1],[2*1],[2*1],1],'executi
+34-484: simulate()
+15:     simulator([])
+
+Ligt dit aan de nieuwe compiler ?
+
+
+From chris Mon Oct 11 17:30:11 1982
+To: paulk
+
+Vraag me niet hoe deze fout is ontstaan (ivm reproduceren):
+
+SYSTEM ERROR: copy -- illegal datatype
+28-30:  copy(sequence['undefined',[0:[...],1:0,2:[...],...],-1,...])
+210:    initialize_simulator_restart()
+34-484: perform_interactive_session(queue['string',sequence['string',table[...],
+15:     simulator([])
+
+ENTERING TRACER
+initialize_simulator_restart+16 (28)
+
+
+From chris Mon Oct 11 17:36:02 1982
+To: paulk
+
+
+Wat betreft die fout in asynIO: in dezelfde directory (/mao/chris/tmp/asynIO)
+staat ook een versie die mbv de oude SUMC vertaald is (asynIO.old_c);
+wanneer je deze met toevoeging van "< inp" aanroept zul je zien dat alles
+goed gaat (totdat de file leeg is).
+NB: vergeet niet telkens eerst file asynIO.log op te ruimen voordat je het
+programma aanroept!
+
+
+From chris Thu Oct 14 15:02:26 1982
+To: paulk
+
+
+Onderstaande foutmeldingen zijn ontstaan nav een dubbele class decaratie
+(via twee includes); dat is niet duidelijk aan de foutmelding te zien;
+kan daar iets aan veranderd worden?
+
+errors in /mao/chris/summer/sg/class/uniform.sm:
+    3: "delta" redeclared
+   10: "u0" redeclared
+   10: "from" redeclared
+   10: "length" redeclared
+   16: "nxt_u0" redeclared
+   26: "uniform_rng" redeclared
+
+
+From chris Sat Oct 16 00:26:50 1982
+To: paulk
+
+
+Daar heb je hem weer:
+
+SYSTEM ERROR: copy -- illegal datatype
+53-59:  copy(sequence['instruction',[0:instruction[...],1:instruction[...],2:ins
+161-172:        save_processor_status()
+34-1269:        simulate()
+15:     simulator(['2920.init'])
+
+ENTERING TRACER
+save_processor_status+42 (53)
+
+
+From chris Sat Oct 16 12:26:41 1982
+To: paulk
+
+
+Het is weer eens zover: (uitvoer simulator vanaf bepaald moment)
+
+......
+
+Clock = 429
+
+Error: cache overflow
+673-689:	in procedure l_integer
+345-392:	l_integer(1)
+444-451:	l_integer['undefined',1,[]].%%(l_integer['undefined',1,[]])
+80-86:	tobits(l_integer['undefined',1,[]])
+33-35:	obtain('DAR_bit_minus_1',-1,-1,-1)
+35-40:	obtain(['DAR_bit_minus_1',3*-1],-1,-1,-1)
+713-724:	write_yalll_result([['DAR',-1,6,['DAR_bit_minus_1',3*-1]],bit_string[1,0,bits[...]]])
+34-40:	action_15[schedule[[[...],[...],2],[2*1],[2,1],2],'executing',430,...].execute()
+122-146:	action_15[schedule[[[...],[...],2],[2*1],[2,1],2],'executing',430,...].activate()
+34-1269:	simulate()
+15:	simulator(['2920.init'])
+
+(de lay-out is nog steeds niet optimaal!)
+
+
+From chris Sun Oct 17 20:38:41 1982
+To: paulk
+
+Onderstaande foutmelding is een weinig cryptisch, wanneer je regel 37
+(en omgeving) van de betreffende file bekijkt (zie verder op):
+
+errors in /mao/chris/summer/sg/int_act/intact.sm:
+   37: ")" expected
+   37: ";" expected
+
+
+
+File "/mao/chris/summer/sg/int_act/intact.sm":
+
+    33: include '/mao/chris/summer/sg/int_act/askpar.sm';
+    34: include '/mao/chris/summer/sg/int_act/chk_cnd.sm';
+    35: include '/mao/chris/summer/sg/int_act/contnts.sm';
+    36: include '/mao/chris/summer/sg/int_act/correct.sm';
+    37: include '/mao/chris/summer/sg/int_act/dat_pth.sm';
+    38: include '/mao/chris/summer/sg/int_act/evafld.sm';
+    39: include '/mao/chris/summer/sg/int_act/getinp.sm';
+    40: include '/mao/chris/summer/sg/int_act/getpar.sm';
+
+Nu weet ik toevallig dat ik het een en ander aan/in file ..../correct.sm
+veranderd heb, terwijl ook bekend is dat een foutmelding op de 
+aangegeven regel betrekking heeft of op een van de eraan voorafgaande
+regels; inderdaad blijkt er dan iets fout te zitten in de aangeduide
+file:
+
+
+File "/mao/chris/summer/sg/int_act/correct.sm":
+
+   204: 
+   205: proc restore_mode()
+   206: (
+   207: var x;
+   208: 
+   209: assert(x := save_mode_parms_temp.pop());
+   210: 
+   211: if x.size = 1
+   212:    then mode := x[0]
+   213:    else [mode,fn1,fptr1,inp_lnr] := ['read',x[0],x[1],x[2]]
+   214: fi;
+   215: 
+   216: #====================================================================# 
+
+   Regels 206 t/m 210 had ik toegevoegd aam deze file, terwijl ik
+   aan regel 215 "return);" had moeten toevoegen.
+
+   Is het mogelijk een foutmelding te produceren die iets minder
+   denkwerk vergt?
+
+					Chris.
+
+
+From chris Sun Oct 17 23:43:02 1982
+To: jan paulk
+
+
+Hier enige timing info omtrent nieuwe SUMC:
+
+S: compilation of source file /mao/chris/summer/bin/tobits.sm completed.
+   (program available in file "/mao/chris/bin/tobits";
+    Sun Oct 17 20:47:36 EST 1982)
+
+=> 4:34.0 real      3:53.0 user        17.7 sys  
+
+NS: compilation of source file /mao/chris/summer/bin/tobits.sm completed.
+    (program available in file "/mao/chris/bin/tobits";
+     Sun Oct 17 20:50:56 EST 1982)
+
+=> 3:20.0 real      2:45.0 user        15.4 sys  
+
+
+S: compilation of source file /mao/chris/tmp/asynIO/asynIO.sm completed.
+   (program available in file "/mao/chris/tmp/asynIO/asynIO";
+    Sun Oct 17 21:16:39 EST 1982)
+
+=> 25:43.0 real     24:00.0 user        50.2 sys  
+
+NS: compilation of source file /mao/chris/tmp/asynIO/asynIO.sm completed.
+    (program available in file "/mao/chris/tmp/asynIO/asynIO.new";
+     Sun Oct 17 21:39:26 EST 1982)
+
+=> 22:47.0 real     20:26.8 user        34.9 sys  
+
+
+From chris Mon Oct 18 00:39:43 1982
+To: paulk
+
+
+Foutieve foutmelding:
+
+SYSTEM ERROR: too many values in array initialization
+43-45:  in procedure list_tble_indx
+316-321:        list_tble_indx('Possible resource names are:\n',['':'undefined',
+undefined',...],...],'file' fp)
+30-34:  ask_parm('Resource name','resname','?')
+211:    show_specifications('resource information')
+-1,...]])
+15:     simulator([])
+
+
+File "/mao/chris/summer/sg/util/list.sm":
+
+    35: 
+    36: if (lines := tble_ptr.size%per_line-1) = 0 
+    37:    then
+    38:      lines := 1
+    39: fi;
+    40: 
+    41: save := array(lines,empty);   <=== hier trad dus de fout op
+    42: 
+
+Het bleek  dat lines de waarde -1 bevatte!
+(de test = 0 moet dus vervangen worden door <= 0, maar dat is verder
+mijn probleem)
+
+
+From chris Mon Oct 18 00:42:19 1982
+To: paulk
+
+
+Bovendien gebeurde er nog het volgende:
+
+(de test = 0 moet dus vervangen worden door <= 0, maar dat is verder
+mijn probleem)
+
+mess" 28 lines, 732 characters
+!
+!mail paulk < mess
+  !
+!rm mess
+  !
+                   <======= hier gebeurde er een hele tijd niets!
+
+Illegal instruction - core dumped
+
+Bingo!
+
+
+From chris Tue Oct 19 23:58:51 1982
+To: paulk
+
+
+Foutmelding oude compiler:
+
+errors in /mao/chris/summer/sg/util/readval.sm:
+   44: newline not allowed in string
+   45: Separating "," expected
+
+Foutmelding nieuwe compiler: (een beetje teveel van het goede?)
+
+errors in /mao/chris/summer/sg/util/readval.sm:
+   44: string not terminated
+   44:  "  : " skipped.
+   44: Separating "," expected
+   44: illegal character """
+   44: ")" expected
+
+errors in /mao/chris/summer/bin/tobits.sm:
+   44: "EOF" undeclared
+
+Zo ziet (zag) de file er uit:
+
+File "/mao/chris/summer/sg/util/readval.sm":
+
+    40: 	        put(LF,'File "',fname,'" is empty!',LF);
+    41: 	 
+    42:          elif flag1 = 'yes'
+    43:               then
+    44:                 put(LF,string(lnr).right(5,space),': EOF (",fname,
+    45: 		    '")',LF)
+    46:          fi;
+    47: 
+    48:          return([lnr,'EOF'])
+
+    (de fout is duidelijk: in regel 44 is na "...,': EOF ("" een quote 
+    vergeten!)
+
+
+From chris Wed Oct 20 00:20:22 1982
+To: paulk
+
+
+Een SUMMER executable file aangeroepen met de -p optie, levert
+- zoals bekend - een info omtrent procedure aanroepen op.
+Is het mogelijk de uitvoer gesorteerd op alfabetische volgorde
+van de proc. namen te laten produceren?
+En is het mogelijk - zoals reeds eens eerder gevraagd - de uitvoer
+in een file achter te laten (de uitvoer van een simulatiesessie
+is pakweg 4 screenfuls lang, hetgeen nogal veel tijd in beslag neemt 
+wanneer je via de telefoon werkt, terwijl je bovendien niet de moge-
+lijkheid hebt om de zaak te laten stoppen!)
+
+
+From chris Thu Oct 21 01:34:23 1982
+To: paulk
+
+
+Wanneer er een run time error optreedt in een SUMMER programma,
+dan biedt de tracer de mogelijkheid om variabele waarden te 
+inspecteren.
+Nu gebruik ik in mijn simulator nogal ruim ingewikkelde data-
+structuren, hetgeen ertoe leidt, dat velden die ik wil bekijken
+vaak niet eenvoudig (of helemaal niet) te bereiken zijn (je typt
+je naar aan namen).
+Ten behoeve van dit probleem heb ik al langere tijd een procedure
+geschreven die van elke mogelijke datastructuur een helder overzicht
+geeft van zijn actuele waarde.
+Zoals je zult begrijpen kan ik deze procedure alleen maar in 
+programma gecontroleerde condities aanroepen (dus wanneer ik zelf
+ergens problemen verwacht, of reeds  geconstateerd heb), maar wat
+ik nu zo graag zou willen is, dat je als gebruiker vanuit de tracer
+een dergelijke proc. kunt opstarten.
+Het lijkt mij dat dit mogelijk is (de tracer is toch zelf naar ik
+aanneem ook een proc.?); dat je zoiets wilt zou dan bijv.
+bij aanroep van sumc kenbaar gemaakt moeten worden (met name hoe
+deze proc. heet).
+Een meer geavanceerde mogelijkheid zou het zelf genereren van
+een dergelijke proc. zijn (lijkt mij niet al te ingewikkeld:
+het skelet van een dergelijke proc. heb ik al, het enige wat er
+dan nog moet gebeuren is het toevoegen van niet-standaard 
+datastructuren door sumc: misschien leuk voor een stagiair?!)!
+
+Indien je geinteresseerd bent hoe mijn procs eruit zien,
+maak dan een afdruk van /mao/chris/summer/sg/util/prt* (3 files;
+1 voor de basis datastructuren van SUMMER, 1 voor idem + datastructuren
+voor sequence/stack/queue en 1 voor alle in mijn simulator voorkomende
+datastructuren).
+
+
+From chris Thu Oct 21 15:12:36 1982
+To: paulk
+
+
+De proc die proc prt aanroept (om datastructuren die in de simulator
+gebruikt worden overzichtelijk te tonen) staat in 
+/mao/chris/summer/sg/int_act/show.sm
+
+
+From chris Thu Oct 21 15:12:46 1982
+To: paulk
+
+
+Ik heb een eenvoudige manier gevonden om de "copy-fout" tevoorschijn
+te toveren!
+
+Ga naar directory /mao/chris/tmp/pk (mag je rommelen wat je maar wilt);
+aldaar tref je o.a. file asynIO aan, die je moet aanroepen met
+standaard input vanuit file asynIO.input;
+na enige tijd verschijnt dan het volgende in beeld:
+
+.....
+(reminder: processor status from clock = 12 saved)
+
+Clock = 13
+
+SYSTEM ERROR: copy -- illegal datatype
+53-59:  copy(sequence['instruction',[0:instruction[...],1:instruction[...],2:ins
+161-172:        save_processor_status()
+34-484: simulate()
+15:     simulator([])
+
+
+Illegal instruction - core dumped
+
+(die illegal instruction is ook wel leuk: daar komt ie pas heel
+laat achter)
+
+Als je wilt weten hoe proc save_processor_status eruit ziet:
+die bevindt zich in file /mao/chris/summer/sg/int_act/save_st.sm;
+de datastructuur sequence staat in file /mao../sg/class/seqnce.sm.
+
+
+From chris Fri Oct 22 17:01:49 1982
+To: paulk
+
+
+Aan SUMC mankeren mijns inziens enkele zaken:
+
+- a.out wordt leesbaar en schrijfbaar achtergelaten, terwijl dat
+  helemaal niet nodig is (zo'n file zal je nooit gaan editen of
+  afdrukken; als dat dan perse toch nodig is, dan is er altijd 
+  nog chmod),
+
+- het is ook niet mogelijk dat de executable file in een nader
+  gespecificeerde file achtergelaten wordt ipv a.out, hetgeen
+  het gelijktijdig in 1 directory laten vertalen van twee 
+  programma's bemoeilijkt (daar heb ik wel eens last van gehad);
+  overigens komt hier wel een probleem om de hoek kijken,
+  vanwege de loader, die gebruik maakt van de file l.out: SUMC 
+  zal dan moeten testen of er zo'n file is en - als dat het geval
+  blijkt - moeten wachten tot deze weer vrij komt
+  (extra probleem als deze file nooit opgeruimd wordt!),
+
+- het is ook niet mogelijk om vanuit een willekeurig punt in het
+  file systeem SUMC op te starten (en tevens is het dus ook niet
+  mogelijk om a.out in een evenzo willekeurig punt van het file
+  systeem achter te laten).
+
+(bij de twee vorige punten: ik heb zelf nog al eens de neiging om
+in de directory waar ik op dat moment toevallig ben SUMC op te
+starten om dan het resultaat in het algmeen achter te laten 
+in mijn bin directory onder een bepaalde "roepnaam").
+
+Al deze punten worden in mijn versie van SUMC (/mao/chris/bin/s) al
+min of meer ondervangen; ook bewaar ik altijd oude versies van 
+executable files in een scratch directory (/tmp/.rm/xxx, waarbij
+xxx dan de padnaam van de te bewaren file is, hetgeen het terugvinden
+en de uniekheid in naamgeving aanzienlijkt bevorderd;
+voor dit doel heb ik een aangepaste versie van rm geprogrammeerd, 
+zijnde file /mao/chris/bin/r).
+
+Misschien zijn dit enige overwegingen, die het overnemen waard zijn?
+
+				Chris.
+
+
+From chris Fri Oct 22 17:12:30 1982
+To: paulk
+
+
+Zou het ook niet aan te bevelen zijn om een directory aan te leggen
+van SUMMER utility programmatuur (classes/procs)?
+Ik stel bijv. vast dat Henk opnieuw zelf een stack geprogrammeerd
+heeft, die er lang is.
+Aan het heruitvinden van het wiel heeft dacht ik niemand iets!
+
+
+From chris Sat Oct 23 14:10:22 1982
+To: paulk
+
+
+Dit soort foutmeldingen zijn bepaald niet eenvoudig op te lossen,
+wanneer je van include statements gebruik maakt en in de orde van
+80 files hebt (en ook net in vele files veranderingen hebt aangebracht):
+
+errors in /mao/chris/tmp/asynIO/asynIO.sm:
+  168: "Out1" undeclared
+  200: "o" undeclared
+
+Ter ondersteuning heb ik een speciaal programmaatje ontworpen, dat
+1 of meerdere willekeurige regels van een of meerdere files afdrukt
+(zoiets bestaat voor zover ik weet niet in het UNIX systeem):
+/mao/chris/bin/line.
+Misschien hebben andere SUMMER gebruikers daar ook iets aan of is
+het mogelijk dergelijke foutmeldingen te relateren aan de file(s)
+waarin deze voorkomen?
+
+
+From chris Tue Oct 26 00:04:37 1982
+To: paulk
+
+
+Ten aanzien van PGEN heb ik ook enige opmerkingen:
+
+Het lijkt mij dat iedereen die PGEN gebruikt, ook zijn eigen
+*.ud en *.ns files naast *.syn produceert.
+Waarom PGEN dan niet "by default" laten nagaan of deze files er
+zijn en "if so" deze in te laten lezen?
+Dan behoef je als gebruiker alleen nog maar afwijkende parameter-
+lijsten bij de aanroep van PGEN mee te geven! ("pgen -none" bijv.)
+Ook lijkt het handig om vanuit PGEN (bij succes) maar direct de
+SUMMER compiler aan te roepen, daar dit normaliter het geval zal
+zijn (hoewel: misschien beter alleen indien een bepaalde vlag
+meegegeven wordt); deze SUMC dient dan liefst de eigenschappen te
+hebben zoals beschreven in een van mijn eerdere mailings (onder
+het motto: gooi geen oude schoenen weg, voordat... ^ what difference
+does it make in what directory you are!).
+
+In mijn bin directory kun je een voorbeeld aantreffen hoe ik deze
+voorstellen opgelost heb (/mao/chris/bin/mkpar).
+
+
+From chris Sat Oct 30 19:19:55 1982
+To: paulk
+
+
+De nieuwe SUMC is blijkbaar nog niet helemaal kits:
+
+Start simulation of processor "INTEL2920":
+
+Clock = 1
+
+Error: attempt to use undefined subject
+30-34:  in procedure activate
+123-147:        activate(INTEL2920[schedule[[[...],[...],1],[2*1],[2*1],1],'exec
+34-1269:        simulate()
+15:     simulator(['2920.init'])
+
+ENTERING TRACER
+activate+6 (30)
+
+(de oude SUMC gaat hier niet in de fout).
+
+
+From jan Sun Oct 31 20:43:58 1982
+To: paulk
+
+Wat is er mis met deze table-initialisatie?
+
+PROD := table (10,0) 
+        [ ['A','B'] : ['S' : 1], ['A','A'] : ['A' : 1], 'a' : ['A' : 1],
+          'b' : ['B' : 1] ];
+
+   76:  "  : " skipped.
+   76:  "  : " skipped.
+   76: "]" expected
+   76: "]" expected
+   76: Separating ";" expected
+   76:  "  ] , " skipped.
+   76: illegal subscription
+   76:  "  , " skipped.
+   76: "]" expected
+   76: Separating ";" expected
+   76:  "  ] : " skipped.
+   76: illegal subscription
+   76:  "  : " skipped.
+   76: "]" expected
+   76: Separating ";" expected
+   76:  "  ] , " skipped.
+   76: Separating ";" expected
+   76:  "  : " skipped.
+   76: illegal subscription
+   76:  "  : " skipped.
+   76: "]" expected
+   76: Separating ";" expected
+   76:  "  ] , " skipped.
+   77: Separating ";" expected
+   77:  "  : " skipped.
+   77: illegal subscription
+   77:  "  : " skipped.
+   77: "]" expected
+   77: Separating ";" expected
+   77:  "  ] ] " skipped.
+
+From jan Sun Oct 31 21:34:32 1982
+To: paulk
+Subject: summer tracer
+
+tracer raakt in oneidige loop "Error: array bounds exceeded"
+als je waarde van niet bestaand array-element opvraagt.
+Alleen te stoppen met CNTR\.
+
+From jan Sun Oct 31 21:37:49 1982
+To: paulk
+Subject: summer tracer
+
+opvragen van associate van tablekey lukt niet als tablekey
+van type array is.
+
+From jan Sun Oct 31 21:57:09 1982
+To: paulk
+Subject: table access
+
+retrieval van tablewaarden met een key van type array werkt niet
+
+From chris Mon Nov  1 21:05:48 1982
+To: paulk
+
+
+Zoals je mij gemailed hebt, roep ik nu een simulator aan met een
+-s parameter; 
+ondanks een -s10000 kreeg ik weer de bekende copy-fout, zij het
+deze keer met een begrijpelijke foutboodschap: not enough memory;
+so far so good; alleen jammer dat het programma dan blijkbaar in een
+oneindige loop komt: na de foutboodschap kom je niet in de tracer
+terecht, ergo er gebeurd blijkbaar helemaal niets, totdat de fout-
+boodschap nogmaals getoond wordt enz.; kortom: laatste redmiddel
+toepassen dmv control-backslash!
+
+
+From player Thu Nov  4 01:17:40 1982
+To: paulk
+Subject: attempt to use undefined subject
+
+De source van INTEL2920 staat in /summer/jan/micro/2920.new.sm,
+     ,,        asynIO       ,,   /mao/chris/tmp/asynIO/asynIO.sm;
+
+In de bijbehorende directory's staan tevens executable versie's van deze beide
+files, die echter mbv de oude SUMC vertaald zijn;
+om versie's te verkrijgen die problemen opleveren, moet je ze zelf maar even 
+laten vertalen door de nieuwe SUMC;
+de procedure "activate" vind je ook in beide genoemde files terug!
+
+From player Thu Nov  4 01:19:31 1982
+To: paulk
+Subject: cache overflow
+
+Ha, eindelijk verlost van dit gigantische probleem, waar ik al menig nachtje
+van wakker heb gelegen....
+
+Ben je al door mijn vele op/aanmerkingen/suggesties heen?
+
+
+From player Thu Nov  4 01:52:48 1982
+To: paulk
+
+
+In directory /mao/chris/tmp/pk heb ik copieen gemaakt van asynIO.sm
+en 2920.sm; tevens heb ik alvast de nieuwe SUMC weer losgelaten op
+deze beide files.
+Indien alles gelukt is, tref de exec. versies thans in genoemde dir. 
+aan; de fouten waarnaar je aan het zoeken bent, treden - naar ik hoop -
+op dmv de volgend aanroepen:
+
+2920 < 2920.input resp. asynIO < asynIO.input.
+
+Succes er mee!
+
+From chris Thu Nov  4 17:58:28 1982
+To: paulk
+
+
+De nieuwe SUMC blijkt opeens moeilijkheden te hebben met mijn uniform distributd random number generator: kijk maar in *er files van dir /mao/chris/tmp/pk.
+De oude SUMC had hier geen moeilijkheden mee!
+Al met al dus geen executable files in deze directory; zodra je deze fout gere-
+pareerd hebt, moet je zelf maar even de nieuwe SUMC op beide *sm files loslaten.
+
+From chris Thu Nov  4 19:22:42 1982
+To: paulk
+
+
+Helaas..., ik kan er ook niets aan doen, maar ik heb weer eens een 
+vreemde foutmelding te pakken (oude SUMC):
+
+Daartoe verplaatsen wij ons eventjes naar directory 
+/mao/chris/tmp/transient, alwaar wij file transient.sm aantreffen.
+De vertaling hiervan leverde onderstaande foutmelding op:
+
+errors in /mao/marleen/util/l_integer.sm:
+  227:  "  do " skipped.
+  227: "do" expected
+
+Nu betreft deze fout dus een file die al bijna een jaar lang probleem-
+loos vertaald wordt (indien je het niet gelooft: in xx.sm staat een
+copie van l_integer.sm; vertaling hiervan levert slechts de consta-
+tering op - van oude SUMC - dat de programmadeclaratie mist).
+Rara, wat is hier aan de hand (misschien iets ivm includes?).
+
+Misschien geeft dit extra houvast: vertaling van de simulator in
+/mao/chris/tmp/sequence1 levert hetzelfde probleem op, alle
+andere simulators worden probleemloos vertaald.
+
+
+From chris Fri Nov  5 12:45:28 1982
+To: paulk
+Subject: too large integer constant
+
+OK, dat die integers te groot zijn, dat klopt; maar waarom worden die niet
+automatisch naar reals geconverteerd?
+Inderdaad produceert de RNG geen perfecte randomverdeling
+(probeer het interactieve testprogramma /mao/chris/summer/bin/tcrng maar
+eens!); ik zal ten leste dus zelf maar even de integer=>real conversie;
+lijkt me niet zo'n probleem.
+
+From chris Fri Nov  5 13:02:52 1982
+To: paulk
+
+
+Indien je weer eens van een bepaalde proc of class wilt weten in
+welke file(s) deze voorkomt, roep dan eens mijn aangepaste versie
+van grep aan: /mao/chris/bin/g; dit programma verwacht nul of meer
+parameters; deze parameters dienen daarbij directory namen te zijn;
+indien de parameter achterwege wordt gelaten, dan werkt g op alle
+files uit `pwd` (zoals je weet, werkt grep niet op files uit een
+andere directory; g zorgt er daarbij dan voor dat alle genoemde
+directory's - die van de parameterlijst dus - afgefietst worden
+mbv cd).
+Stel je wilt weten waar proc activate staat, dan zou je de volgende
+sessie kunnen uitvoeren:
+
+$ g `cat $s/.sum` <=== $b = /mao/chris/summer
+
+G: enter search string  >>
+
+proc activate
+
+
+G: grep -l "proc activate":
+---------------------------------------------------------------
+
+Directory "/mao/chris/summer":
+
+
+Directory "/mao/chris/summer/bin":
+
+Can't open tcrng
+Can't open tcs
+
+Directory "/mao/chris/summer/sg":
+
+
+Directory "/mao/chris/summer/sg/class":
+
+
+during.sm
+
+
+Directory "/mao/chris/summer/sg/int_act":
+
+
+Directory "/mao/chris/summer/sg/util":
+
+G: grep output available in file "/mao/chris/g.out".
+
+De volledige namen van de file(s), waarin de search string gevonden
+is/zijn, wordt daarbij achtergelaten in file g.out:
+
+cat g.out
+
+/mao/chris/summer/sg/class/during.sm
+
+cat `cat g.out`
+
+#=====================================================================
+
+External procedure calls:
+
+evaluate_operand             (- in SUMMER code generated by SIMGEN -)
+stoval                       (/mao/chris/summer/sg/class/resrce.sm)
+to                           (/mao/chris/summer/sg/class/seqnce.sm)
+
+=====================================================================#
+
+class during(schedule_parms)
+begin
+
+fetch activate, schedule_parms, stage, termination_time, flag_name;
+
+var   stage := 'executing', termination_time, flag_name := empty;
+
+#====================================================================#
+
+proc execute(); # wordt door class action_X opnieuw gedefinieerd! #
+
+#====================================================================# 
+
+proc activate()
+(
+if   stage = 'executing'
+     then
+
+enz., enz.
+
+
+From chris Fri Nov  5 21:12:15 1982
+To: paulk
+Subject: too large integer constant
+
+Wat betreft die plotfacilteiten: dat wordt verzorgd door een enkele
+procedure in file .../tcrng.sm; dergelijke procedures heb ik ruime ervaring
+mee, omdat de taal SIMULA - waar ik op de TH regelmatig mee gewerkt heb - deze
+niet - of slechts rudimentair - kent; met weinig moeite valt deze procedure
+te veralgemeniseren (wat een woord!): misschien leuk voor die door mij 
+voorgestelde lib-directory; op die manier kan ik nog vele "leuke" From chris Fri Nov  5 21:25:16 1982
+To: paulk
+
+Als je eens wilt zien hoe de uitvoer van procedure prt(..) - voor het printen
+van willekeurige datastructuren - er in de praktijk uitziet, start dan eens
+een willekeurige simulator op - bijv. /summer/jan/micro/2920 (op de gesttelde
+vragen kun je gewoon met return antwoorden) - en toets dan na het verschijnen
+van de prompt "(i) >>" het commando show in (op de vraag die dan gesteld wordt
+weer gewoon met return reageren => dan wordt de default - wat tussen haakjes
+vermeld staat - genomen; het resultaat is dan dat je van een aantal door
+de simulator gebruikte variabelen de huidige waarde getoond krijgt!
+
+From chris Fri Nov  5 21:31:05 1982
+To: paulk
+
+Ik zie dat het nog wel even kan duren voordat de gevraagde *.sm files er weer
+zijn, dus zal ik ze wel even zelf genereren (een monster achtergrondprogramma
+- to_do _ doet dat op dit moment ook, maar dat verloopt nogal traag);
+overigens kan je zoiets ook zelf:
+
+gebruik daartoe file /mao/chris/bin/simgen met als parameter een filenaam
+die op .midl eindigt; deze midl files vind je in alle directory's onder
+/mao/chris/tmp aan, die zelf weer afkomstig zijn uit de directory
+/mao/marleen/micro/test; deze directory bevat alle originele - door Marleen
+opgestelde test micro architectuur beschrijvingen; simgen leest deze dus in en
+vertaald ze naar SUMMER (misschien herinner je je dit nog van mijn praatje
+destijds); ondertussen doe ik dit dus vast voor je!
+
+From chris Fri Nov  5 21:39:47 1982
+To: paulk
+
+Het is nog leuker om de simulator van Jan als volgt
+aan te roepen:
+
+2920 2920.init
+
+Typ dan si, reageer dan met return, wacht tot de eerstvolgende vraag
+en antwoord dan met @; vervolgens weer show e.d. intoetesen!
+
+			Chris
+
+From chris Fri Nov  5 22:28:37 1982
+To: paulk
+
+In dir /mao/chris/tmp/pk staan verse exec. versies van simulators die mbv de
+nieuwe SUMC gegenereerd zijn en spontaan op tilt gaan bij aanroep als volgt:
+2920 < 2920.input resp. asynIO < asynIO.input!
+
+
+From chris Sat Nov  6 01:16:28 1982
+To: paulk
+
+
+Hieronder zie je de laatste paar regels van file 
+/mao/chris/summer/bin/uniform.out2; het plaatje had eiegenlijk moeten
+doorlopen tot met number = 25; je ziet echter dat er midden tijdens de
+afwerking van number = 22  opgehouden wordt; waar igt dit aan;  dit
+effect is mij al herhaaldelijk opgevallen; komt het soms doordat een
+filepointer die in een executerend SUMMER programma undefined wordt,
+domweg ook het I/O kanaal direct afknijpt (ik kan mij voorstellen
+dat de programmaexecutie doorgaat, terwijl er nog I/O plaatsvind;
+maar je zou wel verwachten dat er gewacht wordt met genoemd "afknijpen"
+totdat de I/O voltooid is; of is er soms een andere verklaring voor
+dit fenomeen?
+
+|      20 |   1987 |   1.98 |  92.00 | *************************************  |
+|      21 |   1998 |   1.99 |  94.00 | *************************************  |
+|      22 |   2
+
+From chris Sun Nov  7 03:24:14 1982
+To: paulk
+
+Betreft: do-expected-skipped:
+
+In dir /mao/chris/tmp/transient => SUMC aanroepen op de aldaar aanwezige
+file transient.sm (die gegenereerd is via de aanroep
+/mao/chris/bin/simgen /mao/marleen/micro/test/transient.midl /mao/chris/tmp/transient/transient.sm); dat is alles wat ik er verder over kan zeggen!
+
+From jan Sun Nov  7 11:28:22 1982
+To: paulk
+Subject: stop
+
+return vanuit program = stop(0)
+freturn vanuit program = stop(1)
+nadeel(?) van dit laatste: 
+falen in diep geneste procedure kan tot stop(1) leiden
+zonder dat run-time error verschijnt.
+
+From chris Sun Nov  7 12:30:51 1982
+To: paulk
+
+Mijn eerste indrukken van file asynIO in jouw directory zijn positief:
+vooralsnog gebeurd er precies wat er gebeuren moet!
+Indien er toch nog onverwijld problemen optreden, dan hoor je dat natuurlijk.
+
+From chris Sun Nov  7 13:00:43 1982
+To: paulk
+
+
+Betreft: afkappen output SUMMER programma.
+
+Ik heb nog een prachtig voorbeeld weten te construeren;
+maak hierbij gebruik van de door jouw gegenereerde simulator (asynIO)
+en roep deze aan mbv de parameter /mao/chris/tmp/asynIO/paul.inp;
+na enige tijd stopt het programma; als je dan het volgende commando
+intoetst: "tail log.out", dan zie je dat de laatste regel weer op
+de bekende wijze afgekapt is (ergo: er missen diverse regels, maar
+dat kun je niet zien uiteraard).
+Rara, hoe komt dit!
+
+(overigens: bij herhaling van deze test, dien je telkens wel eerst
+file "log.out" op te ruimen, anders werkt de testinvoer niet meer!)
+
+
+From chris Sun Nov  7 13:09:26 1982
+To: paulk
+
+NB: wat betreft die fout "do-expected", die is ontstaan vanuit de oude SUMC!
+
+From jan Mon Nov  8 15:57:50 1982
+To: paulk
+Subject: tracer
+
+deze omineuze melding kreeg ik na enige malversaties gepresenteerd:
+
+% TERING TRACER
+% ad_value+23 (32)
+
+
+From arthur Sun Nov 14 20:35:11 1982
+To: paulk
+
+Problemen met de nieuwe parser.
+In /mao/arthur/paulk staan de problematige files.
+Als je "make" doet komt er een foutmelding die een met de oude compiler
+vertaald programma niet geeft.
+hoor ik het, als het gerepareerd is?
+
+From frank Wed Nov 17 11:39:43 1982
+To: paulk
+
+ foutje in de nieuwe summer compiler
+ zie /summer/frank/NEWSUMC/[test.sm, test.er]
+
+From chris Wed Nov 24 01:09:25 1982
+To: paulk
+
+
+PGEN copieert nu nog steeds *.ud en *.ns files in de gegenereerde
+parser.sm file; nu het include statement beschikbaar is, lijkt dit 
+overbodig!
+
+
+From arthur Thu Dec  2 15:44:23 1982
+To: paulk
+Subject: fout in oude SUMMER parser
+
+In /mao/arthur/paulk staat het programma aag.sm.
+In regel 67 heb ik iets toegevoegd dat naar mijn mening correct is.
+Ik krijg echter de foutmelding
+!cat *.er
+
+errors in aag.sm:
+  135:  "  , " skipped.
+  135: Separating "," expected
+
+
+From chris Wed Dec  8 13:32:55 1982
+To: paulk
+
+
+Beste Paul,
+
+Eindelijk weer eens een "complaint":
+
+Volgende foutmelding levert een berg zoekwerk op:
+
+errors in /summer/jan/micro/2920/2920.sm:
+   33: return: value required
+
+De fout zit n.l. helemaal niet in genoemde file ==>
+
+File "2920.sm":
+
+    30: write_yalll_result([['A_port',-1,27,3],yalllres]) &
+    31: s_lnr := 104 &
+    32: yalllres := sjift('A_port',-1,-1,-1,3,b_integer(obtain('A_sign',-1,-1,-
+        1)),[],'SR') &
+    33: write_yalll_result([['A_port',-1,-1,-1],yalllres]) # end of block 2 # )
+        ,
+    34: 
+    35: '40':
+    36: (block_nmbr := 3 &
+
+Tot op heden heb ik nog niet kunnen ontdekken waar de fout zit, 
+ondanks het feit dat ik alle door 2920.sm gebruikte files rond
+regel 33 bekeken heb (slechts enkele files hebben aldaar een return,
+maar die zagen er allen betrouwbaar uit); ligt het miscchien aan 
+de nieuwe compiler?
+
+				Chris.
+
+
+From chris Wed Dec  8 23:49:28 1982
+To: paulk
+
+
+NOODKREET!
+
+De gemelde foutsituatie heb ik nog steeds niet weten te localiseren,
+ondanks het feit dat ik alle source files van regel 20 t/m 40 
+geinspecteerd heb AND alle files apart heb laten vertalen (daarbij
+begon elke *er file met de kreet "program declaration missing");
+uit arren moede heb ik nu maar eens de oude summer compiler van
+stal gehaald; al met al heeft het me al verschrikkelijk veel tijd
+- en geld: mijn telefoonkosten krijg ik niet vergoed en overdag
+werken (op het MC dus) heeft weinig zin in mijn geval - gekost;
+een snelle oplossing zou dus op zijn plaats zijn!
+
+
+From chris Thu Dec  9 01:04:48 1982
+To: paulk
+
+&a0c0YJ
+
+Beste Paul,
+
+De oude compiler biedt het volgende:
+
+   33: return: value required
+     in procedure string_addr_parms
+
+Deze procedure staat in dir /mao/chris/summer/sg/util en zit gemeen
+in elkaar (blijkbaar dus fout):
+
+proc string_addr_parms(...)
+
+return(case .... of
+
+       ......
+
+       'array'     : assert(in1.size = 4 & in2 = UNDEF &
+			    in3 = UNDEF  & in3 = UNDEF);
+de boosdoener =>     return(string_addr_parms(in1[0],in1[1],
+					      in1[2],in1[3])),
+(deze case entry is er als laatste bijgeprogrammeerd;
+ die return moet dus weg;
+ het gekke is dat het regelnummer van de foutmelding niet klopt:
+ het betreft hier de regels 40,46!)
+
+       .....);
+
+Misschien dat dit je enigzins helpt bij het verbeteren van de nieuwe
+summer compiler;
+veel succes,
+tot ziens,
+
+				Chris.
+
+
+From chris Thu Dec 16 23:40:02 1982
+To: paulk
+
+
+Paul,
+
+Het is mij zwaar te meode je weer eens lastig moeten te vallen met een
+SUMMER probleem; plotseling wordt ik geconfronteerd met de volgende
+foutmelding (eerst dacht ik dat het aan Andries met zijn "memory
+consuming program" lag, maar dat blijkt dat dus niet waar te zijn):
+
+Error: Not enough memory
+2077-2082:	['r_reset_options_0_2_3_0':'S3269','r_change_clock_0_0_1_0':'S3083','r_change_clock_0_0':'S3081',...].index()
+2185-2192:	declstrings()
+5221:	exp_terminate()
+5137:	p_summer_program(['/summer/jan/micro/2920/2920'])
+
+Zo ziet de  timing uitvoer eruit waarmee ik de compiler telkens aanroep:
+("nohup /mao/chris/time /mao/chris/bin/s 2920.sm .2920")
+
+Command: s 2920.sm .2920
+Start  : Thu Dec 16 21:24:42 EST 1982
+Uptime :   9:24pm  up 5 days, 16:47,  6 users,  load average: 2.70, 2.10, 1.62
+
+
+s: compilation of source file "/summer/jan/micro/2920/2920.sm" failed.
+   (Thu Dec 16 23:18:46 EST 1982)
+
+
+Times elapsed:
+
+Real   : 1:54:01.0
+User   : 30:05.0
+System : 45.4
+
+End    : Thu Dec 16 23:18:49 EST 1982
+Uptime :  11:18pm  up 5 days, 18:41,  3 users,  load average: 2.10, 2.19, 2.39
+
+Valt hier wat aan te doen, door bijv. een parameter te veranderen of zo,
+of moet ik strings slopen uit mijn programma? (dat zou namelijk evt.
+kunnen; het betreft nu nog slechts een simulator voor een eenvoudig
+chippie, dus berg je maar als bijv. een Cyber of VAX gesimuleerd moet 
+worden!).
+
+In gespannen afwachting op nadere aanwijzingen,
+mister complaint,
+
+				Chris.
+
+
+From player Fri Dec 17 01:37:35 1982
+To: paulk
+
+
+Helaas,
+
+er blijkt een fout(je) in PGEN te zitten:
+(roep - indien aanwezig - /summer/jan/micro/2920/.2920 aan;
+ tik dan na de prompt ">>" iets willekeurigs in - zoals hieronder -
+ en ziet wat er gebeurt!)
+
+>> kjdfg;tgdn
+
+Error: 'retrieve' expects argument of type 'integer' instead of 'undefined'
+60:     bits[...].retrieve('undefined')
+40-44:  testsym(bits[...],bits[...],'')
+1403-1406:      testsymee(bits[...],bits[...],bits[...],'')
+91-1258:        perform_interactive_session()
+31:     micro_simulator([])
+
+ENTERING TRACER
+testsym+9 (60)
+*
+
+Oplossing verzocht!
+
+
+From chris Thu Dec 23 23:37:14 1982
+To: paulk
+
+
+Paul, 
+
+Er is weer eens een vraag annex probleem bij mij gerezen:
+
+Bij het openen van een file controleren de SUMMER procedures blijkens
+mijn ervaringen niet of de als parameter meegegeven filenaam een
+directory is (nu ja: schrijven lukt in dat geval niet); bij lezen krijg
+je dan een gigantische hoop herrie je programma binnen; kan daar iets
+aan gedaan worden?
+
+Een zijdelingse vraag die hierbij ontstaat: waarom kan je vanuit een 
+SUMMER programma geen shell commando's opstarten?; vanuit de tracer
+- die naar ik mag aannemen in SUMMER is geschreven - kan dat wel;
+bovendien rommelt er toch een in C geschreven interpretator onder een
+in executie verkerend SUMMER programma?; het zou in ieder geval erg
+handig zijn wannneer dit zou kunnen; rara, hoe zit dat?
+
+				Chris.
+
+
+From chris Sat Jan  1 19:02:05 1983
+To: paulk
+
+
+Hoi Paul,
+
+Eveneens een voorspoedig 1983 toegewenst!
+
+Wat betreft de SUMMER procedure "file" stel ik het volgende voor:
+
+De eerste parameter zou als volgt veranderd kunnen worden: 'rf' voor
+het lezen van een file, 'wf' idem schrijven, 'rd' voor het lezen van
+een directory-file en 'wd' (of 'cd') voor het creeren van een nieuwe
+directory (lijkt me handig, hoewel overbodig indien je UNIX system calls
+vanuit een SUMMER programma toestaat).
+
+Voorts heb ik weer een nieuwe suggestie:
+de "-p" optie bij aanroep van een SUMMER programma naast de timing
+info over procedures die run time aangeroepen zijn, tevens een lijst
+van proc namen laten produceren die NIET aangeroepen  zijn; dit kan
+soms erg interessante info opleveren!
+
+
+				Chris.
+
+
+From chris Sun Jan  2 14:19:53 1983
+To: paulk
+
+
+Overigens zou je me zeer verplichten indien je UNIX system calls vanuit SUMMER
+programma's toestaat: bij het testen van een simulator moet ik frequent door
+geforceerd in de tracer te gaan zitten, system calls uitvoeren; bovendien
+is het voor toekomstige gebruikers van een simulator ook handig om een
+dergelijke escape te hebben (alleen al vanuit analogie overwegingen: bijna alle
+system programma's hebben zo'n mogelijkheid - via "!command").
+
+From chris Mon Jan  3 20:20:35 1983
+To: paulk
+
+
+Paul,
+
+Reprise van het "not enough memory problem":
+
+Ik heb de simulator opgestart interactief ("op de voorgrond" dus) en
+heb het zo gearrangeerd dat elke kloktik de processortoestand bewaard
+zou blijven; kortom: een aardige partij geheugen zou nodig zijn;
+zie hier dan het resultaat; het programma kwam in de tracer terecht,
+die geen commando's meer verwerken kon (ik vroeg de waarde van "clock",
+waarna er een hele tijd niets gebeurde; vervolgens verscheen om de x
+seconden (x > 10) de melding "Not enough memory" in beeld;
+de vraag is: om wat voor geheugen tekort gaat het hierbij, maw valt er
+wat te regelen met parameters of niet (indien niet dan vormt dit
+overigens geen bezwaar, want in het normale geval zal je nooit zoveel 
+processortoestanden willen bewaren):
+
+Error: Not enough memory
+121-133:        in procedure show_field_value
+88-98:  field['DAR_bit','program_store',[[0,2,21],[0,1,22],[2*0,23]],...].show_f
+80-82:  field['DAR_bit','program_store',[[0,2,21],[0,1,22],[2*0,23]],...].eval_f
+39-41:  obtain('DAR_bit',-1,-1,-1)
+165-170:        obtain(['DAR_bit',3*-1],-1,-1,-1)
+713-724:        write_yalll_result([['DAR',-1,['DAR_bit',3*-1],['DAR_bit',3*-1]]
+34-40:  action_15[schedule[[[...],[...],2],[2*1],[2,1],2],'executing',87,...].ex
+139-163:        action_15[schedule[[[...],[...],2],[2*1],[2,1],2],'executing',87
+113-1256:       simulate()
+29:     micro_simulator(['2920.init'])
+
+ENTERING TRACER
+field.show_field_value+23 (121)
+* clock
+
+Error: Not enough memory
+
+Error: Not enough memory
+
+Error: Not enough memory
+
+Error: Not enough memory
+
+2920: 1306 Quit - core dumped (nav een control-backslash!)
+
+				Chris.
+
+
+From chris Wed Jan  5 23:04:53 1983
+To: paulk
+
+
+Hoi Paul,
+
+Als je bepaalde fouten/suggesties/opmerkingen van mij verwerkt hebt,
+krijg ik dat dan altijd te horen?
+Ik weet namelijk zelf niet meer precies wat in de loop van de tijd
+in deze geproduceerd heb, dus...
+Waar ik nu echt op zit te wachten, is de "UNIX system cal facility";
+allerlei elegante oplossingen voor diverse problemen rijzen in mijn
+breintje op; is het ook mogelijk om het falen van een shell-commando
+- nav een exit 1 oid - door te geven naar een SUMMER programma?
+
+Yours,
+			Chris.
+
+
+From chris Fri Jan  7 01:33:20 1983
+To: paulk
+
+
+Paul,
+
+Mijn commentaar op de door jouw op mijn verzoek aangebrachte "system"
+procedure is kort maar krachtig: het werkt prima!
+Al mijn SUMMER (utility) programma's welke interactie plegen, heb ik
+van de standaard shell escape ("!command") voorzien;
+het werkt nu stukken prettiger dan de tot nu toe gevolgede methode
+tot het uitvaardigen van shell commands (==> geforceerd in de tracer);
+indien je het zelf wilt proberen, roep dan eens voor de grap programma
+/mao/chris/summer/bin/txa (of ...../tcrng) aan!
+
+See you,
+
+			Chris.
+
+
+From chris Sat Jan 15 18:23:12 1983
+To: paulk
+
+
+Paul,
+
+Nog een vraag/probleem tav "file(..,..)":
+
+Bij het openen van een file wordt de op dan moment aanwezige inhoud
+van deze file overschreven - gelijk UNIX "> file-name" -; je voelt
+het misschien al aankomen: ik mis daarbij de mogelijkheid om te
+"appenden" - gelijk UNIX ">> file_name" -; thans los ik dat via twee
+keer copieren en bewaren van de laatste output file pointer op;
+het lijkt wat omslachtig; kan het sneller/eenvoudiger via "file(   )"?
+(mocht je mijn oplossing willen bekijken: die staat in 
+/mao/chris/summer/util/file.sm; deze file kun je ook testen mbv
+/mao/chris/summer/bin/txa door tijdens het interactiegedeelte, waarbij
+file-namen in het geding komen, "gekke dingen" te antwoorden!).
+
+			Chris.
+
+
+From arthur Wed Jan 19 13:36:58 1983
+To: paulk
+Subject: compatibility of new make and sumc
+
+Wil je als eerste regel aan sumc toevoegen
+#!/bin/sh
+de nieuwe make voert het anders als onder de csh uit bij mij en dat geeft
+problemen
+
+From chris Mon Jan 24 02:51:03 1983
+To: jan paulk
+
+
+Typ voor de grap eens "more /mao/chris/summer/bin/logins.out"
+(uitvoer programma ~logins; source: ~logins.sm ==> ruim gebruik van
+SUMMER procedure "system")!
+
+
+From chris Fri Jan 28 19:09:05 1983
+To: paulk
+
+
+Ik heb gemerkt dat de nieuw aangebrachte procedure "system" niet in
+de "-p" uitvoer voorkomt; kan/moet daar wat aan gedaan worden?!
+
+
+From arthur Mon Jan 31 15:01:36 1983
+To: paulk
+Subject: SUMMER error message format
+
+Foutboodschappen die emacs kan begrijpen zien er als volgt uit:
+ffff, line n xxxxxxx
+waar ffff een filenaam is al of niet omsloten door "
+n is een integer
+en xxxxx (de rest van de regel) is willekeurig
+
+From uucp Wed Feb  2 03:51:07 1983
+>From marleen Tue Feb  1 11:04:24 1983 remote from kunivv1
+Hallo paul,
+Mailen van Nijmegen naar MC kan dus.
+Morgen, zo is mij verteld, krijgt het IVV een VAX 11/780 met UNIX,
+die ook voor Informaticamensen toegankelijk blijkt te zijn.
+Er is nog niet zoveel geheugen (half Mbyte), en je wordt ook geacht niet
+al te wild met de schijfruimte om te springen; dat laatste geldt
+ook voor de VMS-machine overigens. Maar het lijkt me dus wel zo handig om
+het implementeren van SUMMER onder VMS voorlopig maar even te vergeten, en het
+gewoon onder UNIX te installeren. 
+Stuur je even een bevestiging van de ontvangst van deze mail, zodat ik kan
+controleren of het echt werkt? Ik heet kunivv1!marleen.
+
+
+From wim Wed Feb  2 16:39:36 1983
+To: paulk
+
+Het is onhandig dat er geen man pag. is voor summer!
+
+From arthur Thu Feb 10 17:29:58 1983
+To: paulk
+Subject: pgen en de csh
+
+Kan je ook aan pgen als eerste regel
+#!/bin/sh
+toevoegen
+
+From jan Mon Feb 14 15:26:05 1983
+To: paulk
+Subject: include
+
+Probleem bij SUMMER-include:
+Programma dat verschillende includes heeft
+waarvan 2 of meer op hun beurt dezelfde include
+hebben. Dat kan gemakkelijk gebeuren en 
+daar bedoel je iets anders mee dan wat er 
+in feite nu gebeurt.
+(Oplossing lijkt me niet urgent.)
+
+From jan Fri Feb 25 17:54:24 1983
+To: paulk
+Subject: integer
+
+Klaagt niet over argumenten die te groot zijn zoals
+10000000000000000000000000000000000000000000000000.
+
+Probeer:
+
+program X()
+(
+put(integer('10000000000000000000000000000000000'));
+stop(0)
+);
+
+From arthur Sat Mar  5 15:44:42 1983
+To: paulk
+Subject: problemen met nieuwe parser
+
+In /mao/arthur/error.sm
+staat een door pgen gegenereerd programma waar de nieuwe parser wel
+maar de oude parser geen moeite mee heeft
+
+From arthur Mon Mar  7 14:43:31 1983
+To: paulk
+Subject: problemen met nieuwe parser
+
+Een globale procedure die gebruilt wordt voordat hij wordt gececlareerd
+en die ook als field van een class voorkomt wordt abusievelijk als
+access van het subject beschouwd.
+De oude parser en code generator doet het goed
+Zie ~arthur/problem.sm
+
+From arthur Wed Mar  9 16:17:20 1983
+To: paulk
+Subject: reeds besproken fout over field verwarring
+
+In /mao/arthur/paulk staan alle relevante files.
+De aanroep is
+dfa4 sub1a
+add_proc_in wordt niet aangeroepen in PROC_DECL, PROCEDURE of SUPER_PROCEDURE
+Succes
+
+From arthur Mon Mar 14 10:56:45 1983
+To: paulk
+Subject: reeds getoonde fout in binaire files
+
+In ~arthur/paulk staan de betreffende files.
+De aanroep is weer "dfa4 sub1a".
+De binaire file wordt geschreven door het programma 
+ ~arthur/dflow/dfa/graph/dg/dfa4
+met als aanroep "dfa4 -Aosub1a sub1a"
+deze file wordt ingelezen in procedure partial_execution op file
+appl_dependent.
+Een segmentation fault wordt gededecteerd in procedure PUT.ident aangeroepen
+in globale procedure extract.
+Geluk ermee.
+Bedankt voor de overige reparaties. Ik heb init-bug/a.out over genomen
+dus die kan je weg doen. Het schijnt voorlopig allemaal weer soepel
+te werken.
+
+From arthur Sun Apr 10 19:29:58 1983
+Date: Sun, 10 Apr 83 19:29:57 MET DST
+From: mcvax!arthur (Arthur Veen)
+To: paulk
+Subject: fout in binary file read
+
+In ~arthur/paulk staan een aantal files die met een SYSTEM ERROR
+tijdens het lezen van een binaire file te maken hebben.
+Doe
+	pe/dfa4 sub4e
+output is
+SYSTEM ERROR: limits -- illegal cell
+11-23:  'file'.get()
+2-11:   partial_execution()
+2:      data_flow_analysis(['sub4e'])
+de gelezen file is sub4e.dg, die wordt aangemaakt door
+dg/dfa4
+De files komen oorspronkelijk uit ~arthur/dfa/dflow/dfcod
+
+From arthur Wed Mar  7 17:31:18 1984
+Received: by mcvax.UUCP (4.12/4.7)
+	id AA04900; Wed, 7 Mar 84 17:31:15 -0100
+Date: Wed, 7 Mar 84 17:31:15 -0100
+From: arthur (Arthur Veen)
+Message-Id: <8403071631.AA04900@mcvax.UUCP>
+To: paulk
+Status: RO
+
+
+Wed Mar  7 02:17:01 MET 1984
+
+Stop.
+o dfa4 dfa4
+
+Error: value 1 outside case list
+572-581:	in procedure code
+572-581:	CALL[VARIABLE['current_proc',1,417],[]].code('',1)
+1390-1393:	CALL[FIELD_DECL['current_proc','',69,...],[]].code('',1)
+508-513:	FIELD_DECL['current_proc','',69,...].code('',1)
+606-611:	ASSIGN[VARIABLE['in_procedure',2,6],FIELD_DECL['current_proc','',69,...]].code('',0)
+1661-1665:	SEMI[[]].code('',0)
+1627-1638:	PROC_DECL[5,'set_lines',['self'],...].generate_body()
+5256:	PROC_DECL[7,'SUPER_NODE',['self'],...].generate_body()
+5166:	p_summer_program(['dfa4'])
+*** Error code 1
+Wed Mar  7 02:47:43 MET 1984
+
+From saco Thu Mar  8 11:24:09 1984
+Received: by mcvax.UUCP (4.12/4.7)
+	id AA19557; Thu, 8 Mar 84 11:23:49 -0100
+Date: Thu, 8 Mar 84 11:23:49 -0100
+From: saco (Saco Bekius)
+Message-Id: <8403081023.AA19557@mcvax.UUCP>
+To: paulk
+Status: R
+
+Hoi paul,
+Ik heb wat problemen met de summer tracer, misschien zijn ze al bekend.
+
+De eerste betreft file acces onder de -c flag (show calls) de foutmelding
+die ik na de return van get krijg is:
+	Illegal file access.
+
+De tweede betrefd interupts in de tracer, deze willen mij nog wel eens uit-
+loggen. Iets wat nogal lastig is als er toevallig iemand op een terminal zit
+te wachten.
+
+Dat waren ze, mijn vraag: "Is er iets aan te doen om om deze of door deze 
+	fouten heen te komen?".
+
+		Hoi,
+		    hoi Saco.
+

@@ -1,0 +1,6 @@
+
+program x()
+( var x, e;
+  e := scan_string('abc');
+  x := e.find('abc');
+)

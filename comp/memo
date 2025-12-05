@@ -1,0 +1,21 @@
+- door de overgang op parse trees kan eindelijk het newfl/oldfl
+  mechanism verfijnd worden: construeer compile time de slaag/faal
+  boom en encodeer die in de abstracte machine code.
+- optimaliseer case statements voor de gevallen:
+  . allemaal integers
+  . allemaal strings van lengte 1.
+  in beide gevallen moet op een geindiceerde jump instructie
+  in de abstracte machine overgegaan worden.
+- evalueer relationele expressies en verwijder niet bereikbare code.
+- voeg een een eenvoudig use/def schema in om enkele evidente
+  fouten op te sporen.
+- kijk naar de LINE instructies.
+- onderzoek de mogelijkheden om in bepaalde situaties
+  machine code te produceren.
+- de tracer weet niets van flexibele arrays.
+- de exp_opw1 procedure is lelijk; deze eist dat de aanroeper iets
+  weet van de codering van de abstracte machine instructies.
+  meng met exp_op1.
+- = en ~= operator op verschillende types.
+- integer overflow in integer constants
+- gechopte versie van test/reals loopt

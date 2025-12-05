@@ -1,0 +1,13 @@
+class C()
+begin fetch a;
+      store a;
+      var a:=10;
+end C;
+
+var x:=1, y:=2;
+program p(x)
+( var r:=C;
+  x:=r.a;
+  r.a:=20;
+  y:=r.a;
+)

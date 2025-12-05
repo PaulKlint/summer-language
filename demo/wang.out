@@ -1,0 +1,45 @@
+
+Formula: imp(not(or(p,q)),not(p))
+
+ ->  imp(not(or(p,q)),not(p))
+ not(or(p,q)) ->  not(p)
+ ->  not(p) or(p,q)
+ p ->  or(p,q)
+ p ->  p q
+VALID
+
+Formula: not(imp(not(or(p,q)),not(p)))
+
+ ->  not(imp(not(or(p,q)),not(p)))
+ imp(not(or(p,q)),not(p)) -> 
+ not(p) -> 
+ ->  p
+NOT VALID
+
+Formula: imp(and(not(p),not(q)),equ(p,q))
+
+ ->  imp(and(not(p),not(q)),equ(p,q))
+ and(not(p),not(q)) ->  equ(p,q)
+ not(p) not(q) ->  equ(p,q)
+ not(q) ->  equ(p,q) p
+ ->  equ(p,q) p q
+ p ->  p q q
+ q ->  p q p
+VALID
+
+Formula: imp(imp(or(p,q),or(p,r)),or(p,imp(q,r)))
+
+ ->  imp(imp(or(p,q),or(p,r)),or(p,imp(q,r)))
+ imp(or(p,q),or(p,r)) ->  or(p,imp(q,r))
+ or(p,r) ->  or(p,imp(q,r))
+ p ->  or(p,imp(q,r))
+ p ->  p imp(q,r)
+ p q -> p r
+ r ->  or(p,imp(q,r))
+ r ->  p imp(q,r)
+ r q -> p r
+ ->  or(p,imp(q,r)) or(p,q)
+ ->  or(p,q) p imp(q,r)
+ ->  p imp(q,r) p q
+ q -> p p q r
+VALID

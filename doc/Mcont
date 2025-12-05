@@ -1,0 +1,1 @@
+troff -t -s4 /summer/jan/format/mctract index.ms t.contents summary.ms samen.ms ack.ms cur.ms |catohari | harprot

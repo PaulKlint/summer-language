@@ -1,0 +1,8 @@
+include 'incB';
+include 'incA';
+program x()
+( var f, a;
+  f := file('yyy', 'rb');
+  a := f.get;
+  a := f.get;
+)

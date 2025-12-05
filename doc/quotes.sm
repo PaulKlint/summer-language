@@ -1,0 +1,79 @@
+
+var fin, fout, lino := 0;
+var lq1 := '<', rq1 := '>';
+var lq2 := '\\*<', rq2 := '\\*>';
+var line, lastline := '';
+var verify := 'true';
+
+proc error(s)
+( stand_er.put(s, '\n\n'); stop(1) );
+
+proc ack(s)
+( var a;
+  if line ~= lastline then
+     put(lino, ': ', line, '\n');
+     lastline := line;
+  fi;
+  put('\t', lq1, s, rq1);
+  if verify = 'false' then
+     put('\n');
+     fout.put(lq2, s, rq2);
+     return
+  else
+     put(' ? ');
+     while 'true'
+     do a := ( get() | undefined );
+        case a of
+        '': 'y': 'yes': fout.put(lq2, s, rq2); return,
+        'n': 'no': fout.put(lq1, s, rq1); return
+        default: put('\n? ')
+        esac
+     od
+   fi
+);
+
+program quotes(args)
+( var pre, q, a;
+
+  for a in args
+  do  if a = '-noverify' then
+         verify := 'false'
+      elif a[0] = '-' then
+	var b := a.substr(3, a.size-3);
+        case a.substr(1,2) of
+        'lf':	lq1 := b,
+        'lt':	lq2 := b,
+	'rf':	rq1 := b,
+	'rt':	rq2 := b
+	default:
+           error('Illegal argument: ' || a)
+        esac
+      elif fin = undefined then
+        fin := file(a, 'r') | error('Cannot open ' || a);
+      elif fout = undefined then
+        if file(a, 'r').close then
+           error('File "' || a || '" exists already!');
+        fi;
+        fout := file(a, 'w') | error('Cannot open ' || a);
+      else
+        error('Too many file arguments');
+      fi
+   od;
+  if fin = undefined | fout = undefined then
+     error('Incomplete file specs')
+  fi;
+  while line := fin.get
+  do lino := lino + 1;
+     scan line 
+     for while pre := find(lq1) & lit(lq1)
+         do fout.put(pre);
+            if q := find(rq1) & lit(rq1) then
+               ack(q)
+	    else
+               fout.put(lq1)
+            fi
+         od;
+         fout.put(rtab(0), '\n')
+     rof
+  od;
+)

@@ -1,0 +1,186 @@
+#****************************************************************
+* This program implements a formal rewriting system that	*
+* models pattern matching operations.				*
+* All pattern components are described by unary or binary	*
+* operators:							*
+*	a -- b	subsequentiation				*
+*	a | b	alternation					*
+*	p !=: x	immediate subject asg.				*
+*	p =: x conditional subject asg. 			*
+*	!@e	immediate action				*
+*	@e	conditional action				*
+* A pattern is defined as					*
+* 	a variable (the initial value is used as pattern)	*
+* or								*
+*	a string (succeeds if that string occurs at the current	*
+*		 cursor position.				*
+* or								*
+*	<curs,actions,pattern>					*
+*		pattern is applied at position cursor with the	*
+*		given list of actions.				*
+* or								*
+*	a functional composition of the primitive operators	*
+*	with patterns as operands.				*
+*								*
+* An action consists of an identifier followed by ':=' followed	*
+* by either an identifier or a string. An action list consists	*
+* of actions separated by semicolons.				*
+****************************************************************#
+
+# flex -- flexible arrays #
+
+class flex ()
+begin fetch update, retrieve, append, size, next, index;
+
+      var mem, size;
+
+      proc retrieve(i)
+      if 0 <= i < size then return(mem[i]) else stop(-1) fi;
+
+      proc update(i, v)
+      if 0 <= i < size then return(mem[i] := v) else stop(-1) fi;
+
+      proc append(v)
+      ( if size >= mem.size then
+           var i, m1 := array(mem.size + 10, undefined);
+	   for i in mem.index do m1[i] := mem[i] od;
+	   mem := m1
+	fi;
+	mem[size] := v;
+	size := size + 1;
+	return(v)
+      );
+
+      proc next(state)
+      ( if state = undefined then
+	 state := 0
+	fi;
+        if state < size then
+	   return([mem[state], state + 1])
+        else
+	   freturn
+        fi
+      );
+
+      proc index()
+      return(interval(0, size - 1, 1));
+
+init: mem := array(10, undefined);
+      size := 0;
+end flex;
+var    ruletrace,
+    pre, post,
+    subject_string,		# current subject string #
+    INITIAL_ENV,		# environment at start of pattern match #
+    CURRENT_ENV,		# current environment #
+    null  := '',
+    quote := '''',
+    debug := 1,
+    model,	# designates immediate/conditional, reversible or
+		  recovery model #
+    IMMEDIATE_CONDITIONAL := 0,
+    REVERSIBLE	 	  := 1,
+    RECOVERY		  := 2,
+    modelname		  := ['IMMEDIATE/CONDITIONAL','REVERSIBLE','RECOVERY'];
+
+
+
+proc string_literal ()
+( var res := '';
+   lit(quote) & res := break(quote) & move(1) &
+   while lit(quote) do res := res || quote || break(quote) & move(1) od;
+
+);
+proc ERROR() put('\nERROR\n');
+
+class environment()
+begin fetch binding, bind;
+      var t := table(10, undefined);
+      proc binding(id) return(t[id]);
+      proc bind(id, val) t[id] := val;
+end environment;
+
+
+proc mk_expr(e1, e2)
+  if e1 = null
+  then
+     return(e2)
+  else
+     return(e1 || ';' || e2)
+  fi;
+
+proc substr(s, start, length) 
+  scan s for tab(start) & return(move(length)) rof;
+
+proc mk_2(operator, a, b)
+  if a = null then return(b)
+  elif b = null then return(a)
+  else
+    return(a || operator || b )
+  fi;
+
+proc mk_subs(a, b) return(mk_2('--', a, b));
+
+proc mk_alt(a, b) return(mk_2('|', a, b));
+
+proc mk_imsbas(p, v) return('imsbas(' || p || ',' || v || ')' );
+
+proc mk_cdsbas(p, v) return('cdsbas(' || p || ',' || v || ')' );
+
+proc mk_assign(id, val)
+  return(mk_2(':=', id, val));
+
+proc mk_comp(curs, act, pat)
+  if pat = null then
+     return(null)
+  else
+    return('<' || string(curs) || ',' || act || ',' || pat || '>')
+  fi;
+
+proc mk_string(start, finish)
+  return(quote || subject_string.substr(start, finish - start) || quote);
+
+proc litmatch(curs, str)
+( var t := str.substr(1, str.size - 2); #remove surrounding quotes#
+  scan subject_string for tab(integer(curs)) & lit(t) rof &
+  return(curs + t.size)
+);
+
+var indent := 0;
+proc enter(v)
+( var i;
+
+  put(' '.repl(indent), ' match(');
+  for i in v.index
+  do if i > 0 then put(',') fi;
+     if type(v[i]) = 'string' & v[i] = ''
+     then
+        put(' ')
+     else
+        v[i]
+     fi
+  od;
+  put(')\n');
+  indent := indent + 2;
+);
+op ?(v)
+( indent := indent -2;
+  put(' '.repl(indent), ' returns ');
+  if type(v) = 'array' then
+     var i;
+     put('[');
+     for i in v.index do
+         if i > 0 then put(', ') fi;
+         put(v[i])
+     od;
+     put(']\n')
+  else
+     put(v, '\n')
+  fi;
+  return(v)
+);
+
+proc fret()
+( indent := indent - 2;
+  put(' '.repl(indent), ' fails\n');
+);

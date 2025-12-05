@@ -1,0 +1,4 @@
+(PARSER=parser codgen=CODGEN  sumc .o .s parser)
+cmp a.out parser
+(PARSER=parser codgen=CODGEN  sumc .o .s codgen)
+cmp a.out codgen

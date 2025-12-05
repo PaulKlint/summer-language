@@ -1,0 +1,138 @@
+const TRUE := 1, OKE := 1;
+var karsize := kartab.size,
+    kars := kartab.index;
+proc get_string ()
+(
+	const quote := '''';
+	var symbol := '';
+
+	scan line
+	for	var s := cursor;
+		while break(quote) & lit(quote||quote)
+		do	od;
+
+		if ~lit(quote)
+		then	ermsg('Newline not allowed in string.\n',lnr)
+		else	move(-1);
+		fi;
+
+		s := cursor - s;
+		symbol := move(-s);
+		move(s);
+
+		if lit(quote)
+		then	if symbol = ''
+			then	ermsg('Character constant missing.\n',lnr)
+			fi
+		fi
+	rof;
+	return(symbol);
+);
+
+
+
+	# get_string reads a character-constant from the input.
+	  The quote character can be denoted by doubling it.
+	  Note that escape sequences are not converted . This
+	  means that things like '\' are not detected.
+	#
+
+
+
+proc comment()
+(
+	while line.break('#') fails do
+		if line := scan_string(get()) fails
+		then ermsg('Comment not terminated.',lnr);
+		     line := scan_string(' ');
+		     return
+		else lnr:=lnr+1;
+		fi;
+	od;
+
+
+	if line.move(1) fails
+	then if line:= scan_string(get())
+	     then lnr:=lnr+1;
+	     fi;
+	fi;
+);
+
+
+
+	# comment() skips comment in the metalanguage.
+	  An error message is printed when the comment isn't terminated.
+	#
+
+
+
+
+
+proc nextsym()
+(
+	while TRUE do
+		line.span(' \t')|OKE;
+
+		if line.lit('<') succeeds
+                then    sy := 
+			  line.span(lower||digit||'-'||'_').replace('-','_') |
+			  OKE;
+			if line.lit('>') fails then error('>', lnr) fi;
+			t_sy := predef['rule_name'];
+			return;
+
+		elif sy := line.any(upper) succeeds
+		then	sy := sy || line.span(upper) | OKE;
+			t_sy := predef['terminal_symbol'];
+			return
+
+		elif line.lit('''')
+		then	t_sy := predef['terminal_symbol'];
+			sy := get_string;
+			return;
+		elif line.rpos(0) succeeds
+                then    (line := scan_string(get()) & lnr:=lnr+1) |
+			(t_sy:=predef['EOF'] & sy := 'EOF' & return);
+
+		else	var i;
+			for i in interval(karsize-1,0,-1)
+			do	sy := kars[i];
+				if line.lit(sy) succeeds
+				then	t_sy := kartab[sy];
+					return;
+				fi;
+			od;
+
+
+			sy := line.move(1);
+			if sy = '#'
+			then	comment();
+			else	ermsg('Character "' || sy ||
+					'" not in legal context.',lnr);
+			fi;
+		fi;
+	od;
+);
+
+	# nextsym() is the scanner for the parsergenerator. It reads
+	  the next symbol from the input , puts it in the variable sy
+	  and puts the type in t_sy.
+	  The procedure tries to recognise the symbols in the following
+	  order :
+		1.	identifiers (lower-case letters + hyphens)
+		2.	keywords (upper-case letters)
+	        3.	a string constant in the grammar (a quote)
+                4.      a character constant ( e.g. ::= )
+
+	  When neither of these possibilities succeeds, comment is
+	  checked or an error message is printed. Of course, a new
+	  line is read, when necessary.
+	#
+
+
+
+
+
+
+
+

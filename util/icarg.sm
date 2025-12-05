@@ -1,0 +1,72 @@
+#**********************************************************************
+*									*
+* icarg -- frequency of intermediate code operator arguments		*
+*									*
+* This program reads a SUMMER intermediate code file and counts both	*
+* occurrences of individual opcodes and of opcode/argument pairs.	*
+* These statistics can be used to optimize the intermediate code by	*
+* combining frequently occurring opcode/argument pairs into a single	*
+* new opcode.								*
+* Consequtive instructions are not considered here.			*
+*									*
+*									*
+* optab contains opcode/argtable pairs.					*
+* Each argtable contains argument/frequency count pairs.		*
+* The table aignore contains opcodes whose arguments should be ignored	*
+* to prevent much redundant output.					*
+*									*
+************************************************************************#
+
+var optab := table(50, undefined),
+    aignore := [ 'dclstr': 'call': 'proc': 'procend': 'program':
+		 'lab': 'go': 'load': 'subr':
+		 'glob': 'asglob': 'newfl': 
+		 'dclglob': 'aline':
+		1];
+
+proc show()
+( var ic_op;
+
+  put('opcode'.left(10, ' ') , 'count'.right(10, ' ') ,  '     ',
+      'args'.left(10, ' ') , 'count'.right(10, ' ') , '\n\n');
+  for ic_op in optab.index 
+  do
+     var op_args := optab[ic_op], operand, totcnt := 0, i;
+     for i in op_args do totcnt := totcnt + i od;
+     put(ic_op.left(10, ' ') , string(totcnt).right(10, ' ') , '\n');
+     # Each entry in op_args contains either one element with #
+     # the empty string as key and a cumulative count or more #
+     # than one element. The latter must now be shown here    #
+     if op_args.size > 1 then
+        for operand in op_args.index 
+        do
+	   put(' '.repl(25) , operand.left(10, ' ') );
+           put(string(op_args[operand]).right(10, ' ') , '\n')
+        od;
+     fi
+  od;
+);
+program icarg (args)
+( var letter := 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_',
+      layout := ' \t',
+      inp, outp, line;
+
+  inp := if args.size = 0 then stand_in else file(args[0], 'r') fi;
+
+  while line := inp.get 
+  do
+	var ic_op, args, t;
+	scan line
+	for
+	   ic_op := span(letter) &
+	   args := ((span(layout) | '') & rtab(0))
+	rof;
+        if (t := optab[ic_op]) = undefined then
+	   t := table(20, 0)
+	fi;
+	if aignore[ic_op] ~= undefined then args := '' fi;
+	t[args] := t[args] + 1;
+	optab[ic_op] := t;
+  od;
+  show();
+)

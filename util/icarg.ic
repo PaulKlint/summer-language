@@ -1,0 +1,422 @@
+classes
+endclasses
+fields
+fld	any
+scan_string,~proc,any,any,~nil
+fld	bal
+scan_string,~proc,bal,bal,~nil
+fld	break
+scan_string,~proc,break,break,~nil
+fld	center
+string,~proc,center,center,~nil
+fld	close
+file,~proc,close,close,~nil
+fld	compl
+bits,~proc,compl,compl,~nil
+fld	conj
+bits,~proc,conj,conj,~nil
+fld	cursor
+scan_string,~var,1,~simple,~nil
+fld	disj
+bits,~proc,disj,disj,~nil
+fld	find
+scan_string,~proc,find,find,~nil
+fld	get
+file,~proc,get,get,~nil
+fld	index
+array,~proc,index,index,~nil
+table,~proc,index,index,~nil
+string,~proc,index,index,~nil
+bits,~proc,index,index,~nil
+fld	left
+string,~proc,left,left,~nil
+fld	lit
+scan_string,~proc,lit,lit,~nil
+fld	move
+scan_string,~proc,move,move,~nil
+fld	pos
+scan_string,~proc,pos,pos,~nil
+fld	put
+file,~proc,put,put,~nil
+fld	repl
+string,~proc,repl,repl,~nil
+fld	replace
+string,~proc,replace,replace,~nil
+fld	reverse
+string,~proc,reverse,reverse,~nil
+fld	right
+string,~proc,right,right,~nil
+fld	rpos
+scan_string,~proc,rpos,rpos,~nil
+fld	rtab
+scan_string,~proc,rtab,rtab,~nil
+fld	size
+array,~proc,size,size,~nil
+bits,~proc,size,size,~nil
+string,~proc,size,size,~nil
+table,~proc,size,size,~nil
+fld	sort
+array,~proc,sort,sort,~nil
+fld	span
+scan_string,~proc,span,span,~nil
+fld	substr
+string,~proc,substr,substr,~nil
+fld	tab
+scan_string,~proc,tab,tab,~nil
+fld	text
+scan_string,~var,0,~simple,~nil
+endfields
+dclglob	optab
+dclglob	aignore
+proc	show,S32,0,11,27,48
+newfl	nil
+undef
+asloc	0
+void
+load	S15
+int	10
+load	S16
+fld	left,3
+load	S17
+int	10
+load	S18
+fld	right,3
+load	S19
+load	S20
+int	10
+load	S21
+fld	left,3
+load	S22
+int	10
+load	S23
+fld	right,3
+load	S24
+call	put,6
+void
+oldfl
+line	5
+undef
+asloc	1
+void
+glob	optab
+fld	index,1
+asloc	2
+void
+lab	L1
+newfl	F1
+loc	2
+loc	1
+fld	next,2
+xar	2
+asloc	0
+void
+asloc	1
+void
+oldfl
+newfl	nil
+glob	optab
+loc	0
+ind
+asloc	3
+void
+undef
+asloc	4
+void
+int	0
+asloc	5
+void
+undef
+asloc	6
+void
+line	3
+undef
+asloc	7
+void
+loc	3
+asloc	8
+void
+lab	L2
+newfl	F2
+loc	8
+loc	7
+fld	next,2
+xar	2
+asloc	6
+void
+asloc	7
+void
+oldfl
+loc	5
+loc	6
+add
+asloc	5
+void
+go	L2
+lab	F2
+loc	0
+int	10
+load	S25
+fld	left,3
+undef
+loc	5
+call	string,2
+int	10
+load	S26
+fld	right,3
+load	S27
+call	put,3
+void
+oldfl
+newfl	F3
+line	5
+loc	3
+fld	size,1
+int	1
+gt
+void
+oldfl
+line	1
+undef
+asloc	9
+void
+loc	3
+fld	index,1
+asloc	10
+void
+lab	L3
+newfl	F4
+loc	10
+loc	9
+fld	next,2
+xar	2
+asloc	4
+void
+asloc	9
+void
+oldfl
+newfl	nil
+load	S28
+int	25
+fld	repl,2
+loc	4
+int	10
+load	S29
+fld	left,3
+call	put,2
+void
+oldfl
+undef
+loc	3
+loc	4
+ind
+call	string,2
+int	10
+load	S30
+fld	right,3
+load	S31
+call	put,2
+void
+go	L3
+lab	F4
+lab	F3
+go	L1
+lab	F1
+procend	0
+program	icarg,S37,1,8,49,72
+newfl	nil
+aline	20
+undef
+int	50
+tabinit
+asglob	optab
+void
+aline	20
+aline	21
+undef
+int	15
+tabinit
+int	1
+load	S1
+load	S2
+load	S3
+load	S4
+load	S5
+load	S6
+load	S7
+load	S8
+load	S9
+load	S10
+load	S11
+load	S12
+load	S13
+load	S14
+tabelem	14
+asglob	aignore
+void
+aline	25
+oldfl
+aline	49
+newfl	nil
+load	S33
+asloc	1
+void
+load	S34
+asloc	2
+void
+undef
+asloc	3
+void
+undef
+asloc	4
+void
+undef
+asloc	5
+void
+undef
+line	5
+newfl	F5
+loc	0
+fld	size,1
+int	0
+eq
+void
+oldfl
+load	S35
+go	L4
+lab	F5
+loc	0
+int	0
+ind
+lab	L4
+load	S36
+call	file,3
+asloc	3
+void
+line	2
+lab	L5
+newfl	F6
+loc	3
+fld	get,1
+asloc	5
+void
+oldfl
+undef
+asloc	6
+void
+undef
+asloc	7
+void
+undef
+asloc	8
+void
+loc	5
+newsubj
+subject
+loc	1
+fld	span,2
+asloc	6
+void
+newfl	F7
+subject
+loc	2
+fld	span,2
+void
+oldfl
+go	L6
+lab	F7
+lab	L6
+subject
+int	0
+fld	rtab,2
+asloc	7
+oldsubj
+void
+newfl	F8
+line	8
+glob	optab
+loc	6
+ind
+asloc	8
+undef
+eq
+void
+oldfl
+int	0
+int	20
+tabinit
+asloc	8
+void
+lab	F8
+newfl	F9
+line	3
+glob	aignore
+loc	6
+ind
+undef
+ne
+void
+oldfl
+nullstr
+asloc	7
+void
+lab	F9
+loc	8
+loc	7
+ind
+int	1
+add
+loc	8
+loc	7
+asind
+void
+loc	8
+glob	optab
+loc	6
+asind
+void
+go	L5
+lab	F6
+oldfl
+call	show,0
+void
+procend	0
+subr	put
+subr	string
+subr	file
+dclstr	S1,6,144,143,154,163,164,162
+dclstr	S2,4,143,141,154,154
+dclstr	S3,4,160,162,157,143
+dclstr	S4,7,160,162,157,143,145,156,144
+dclstr	S5,7,160,162,157,147,162,141,155
+dclstr	S6,3,154,141,142
+dclstr	S7,2,147,157
+dclstr	S8,4,154,157,141,144
+dclstr	S9,4,163,165,142,162
+dclstr	S10,4,147,154,157,142
+dclstr	S11,6,141,163,147,154,157,142
+dclstr	S12,5,156,145,167,146,154
+dclstr	S13,7,144,143,154,147,154,157,142
+dclstr	S14,5,141,154,151,156,145
+dclstr	S15,6,157,160,143,157,144,145
+dclstr	S16,1,040
+dclstr	S17,5,143,157,165,156,164
+dclstr	S18,1,040
+dclstr	S19,5,040,040,040,040,040
+dclstr	S20,4,141,162,147,163
+dclstr	S21,1,040
+dclstr	S22,5,143,157,165,156,164
+dclstr	S23,1,040
+dclstr	S24,2,012,012
+dclstr	S25,1,040
+dclstr	S26,1,040
+dclstr	S27,1,012
+dclstr	S28,1,040
+dclstr	S29,1,040
+dclstr	S30,1,040
+dclstr	S31,1,012
+dclstr	S32,37,151,143,137,157,160,054,054,054,157,160,137,141,162,147,163,054,157,160,145,162,141,156,144,054,164,157,164,143,156,164,054,151,054,054,054,054,054
+dclstr	S33,52,141,142,143,144,145,146,147,150,151,152,153,154,155,156,157,160,161,162,163,164,165,166,167,170,171,172,101,102,103,104,105,106,107,110,111,112,113,114,115,116,117,120,121,122,123,124,125,126,127,130,131,132
+dclstr	S34,2,040,011
+dclstr	S35,8,163,164,141,156,144,137,151,156
+dclstr	S36,1,162
+dclstr	S37,46,141,162,147,163,054,154,145,164,164,145,162,054,154,141,171,157,165,164,054,151,156,160,054,157,165,164,160,054,154,151,156,145,054,151,143,137,157,160,054,141,162,147,163,054,164,054

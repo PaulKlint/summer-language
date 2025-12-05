@@ -1,0 +1,307 @@
+#********** low-level assembly language generation procedures *************#
+
+var	clab	:= labelgenerator('CS'),
+		# labels generated in case statements #
+	f_s,	# assembler output file #
+	nrc	:= 0,
+		# try statement (recovery cache) nesting level #
+	nsubj	:= 0,
+		# scan statement (subject) nesting level #
+	flstack := array(30,''),
+	flstp	:= -1;
+		# fail label stack and stackpointer #
+
+		# Following vars and constants determine the dimensions	#
+		# of assembler output.					#
+var	linesize:= 0,
+	opsep	:= '.byte ',
+	n256	:= 256;
+const	opsize0 := 5,
+	opsize1 := 9,
+	opsize2 := 13,
+	linemax := 100;
+
+proc lineflush()
+( if linesize > 0 then
+     f_s.put(newl);
+     opsep := '.byte ';
+     linesize := 0
+  fi
+);
+
+proc dec(n) return(string(n));
+
+proc exp_op0(opc)
+( if linesize > linemax then lineflush() fi;
+  f_s.put(opsep, opc);
+  linesize := linesize + opsize1;
+  opsep := sc
+);
+
+proc exp_op1(opc, arg)
+  if 0 <= arg < n256 then
+     if linesize > linemax then lineflush() fi;
+     f_s.put(opsep, opc, sc, dec(arg));
+     linesize := linesize + opsize2;
+     opsep := sc
+  else
+     f_s.put(opsep, 'x' || opc);
+     linesize := linesize + opsize1;
+     lineflush();
+     f_s.put('.long ', dec(arg), newl)
+  fi;
+
+proc exp_op2(opc, arg1, arg2)
+  if 0 <= arg1 < n256 then
+     if linesize > linemax then lineflush() fi;
+     f_s.put(opsep, opc, sc, dec(arg1), sc, dec(arg2));
+     linesize := linesize + opsize2;
+     opsep := sc
+  else
+     f_s.put(opsep,  'x' || opc);
+     linesize := linesize + opsize0;
+     lineflush();
+     f_s.put('.long ', dec (arg1), newl);
+     f_s.put(opsep, arg2);
+     linesize := linesize + opsize0;
+     opsep := sc;
+  fi;
+
+proc exp_opw1(opc, arg)
+( f_s.put(opsep, opc);
+  linesize := linesize + opsize1;
+  lineflush();
+  f_s.put('.long ', arg, newl)
+);
+
+proc declstring(s,stringtab)
+( if s.size > 0 & stringtab[s] = undefined then
+     stringtab[s] := slab.next
+  fi;
+  return(stringtab[s])
+);
+
+proc declstrings(stringtab)
+(	var lab, str, i, sep;
+	const linemax := 40;
+
+	if errcnt ~= 0 then return fi;
+	for str in stringtab.index
+	do lab := stringtab[str];
+	   f_s.put(lab, ':\n',
+	   	   long, 'dt_string', newl,
+          	   long, dec(str.size));
+	   if str.size < 80 & ~scan str for break(NON_STANDARD_CHARS) rof
+	   then
+	      f_s.put(newl, '.ascii "', str, '"')
+	   else
+	      for i in str.index
+	      do if i % linemax * linemax = i then
+           	    f_s.put(newl, '.byte ');
+	   	    sep := ''
+        	 fi;
+                 f_s.put(sep, char_to_int[str[i]]);
+        	 sep := sc
+     	      od;
+   	   fi;
+   	   f_s.put(newl)
+	od;
+);
+
+proc exp_real(realval)
+( exp_op0('undef'); exp_op0('load');
+  lineflush();
+  f_s.put('.long ', declstring(string(realval),src.stringtab), newl);
+  exp_op2('call', symtab['real'][S_VALUE].seq, 2);
+);
+
+proc exp_classes()
+( var cname, s, sizes := array(nclasses, 0), names := array(nclasses, '');
+
+  f_s.put('.globl _class_sizes\n',
+          '_class_sizes:\n');
+  for cname in classtab.index
+  do var descr := classtab[cname];
+     sizes[descr[5]] := descr[0];
+     names[descr[5]] := cname;
+  od;
+  for s in sizes do f_s.put(long, s, newl) od;
+  f_s.put('.globl _class_names\n',
+          '_class_names:\n');
+  for cname in names
+  do f_s.put(long, '\t', declstring(cname,fld_stringtab), newl);
+  od;
+);
+
+
+proc exp_fields()
+( var fld, n;
+
+  for fld in fieldtab do fld.generate od;
+
+  f_s.put('.globl _fields', newl);
+  f_s.put('_fields:', newl);
+  for n in interval(0, nfields - 1, 1) do f_s.put(long, '\tFLD', n, newl) od;
+);
+
+proc exp_terminate()
+( var i, nm,
+      globval := array(glcnt, 0),
+      globname:= array(glcnt, 0);
+  if errcnt ~= 0 then return fi;
+  f_s.put('.globl _nclasses; _nclasses:', newl,
+	long, dec(nclasses), newl,
+	'.globl _nfields; _nfields:', long, dec(nfields), newl,
+	'.globl _globals', newl,
+	'.globl _eglobals', newl,
+	'.globl _globnames', newl,
+	'.globl _stand_in', newl,
+	'.globl _stand_out', newl,
+	'.globl _stand_er', newl);
+  for nm in symtab.index
+  do var entry := symtab[nm][S_VALUE], pre;
+     if entry.isglobal then
+	case nm of
+	'stand_in':
+	'stand_out':
+	'stand_er':
+		pre := '_' || nm || ':'
+	default:
+		pre := ''
+	esac;
+        globval[entry.seq] := pre || long ||
+	   if entry.kind = GlobalVar then 'nil' else entry.tag fi;
+	globname[entry.seq] := nm;
+	if entry.kind = Class then
+	   var p;
+	   for p in entry.procs
+	   do globval[p.seq] := long || p.tag;
+	      globname[p.seq] := p.name;
+	   od;
+	elif entry.kind = BuiltinProc | entry.kind = BuiltinClass then
+	   var refname := '__' || entry.name;
+	   f_s.put(entry.tag, ':', newl);
+	   f_s.put(long, 'dt_subr', newl);
+	   f_s.put(long, if entry.kind = BuiltinClass then -1 else 'nil' fi, newl);
+	   f_s.put('\t.globl\t', refname, newl,
+		   long, refname, newl,
+		   long, dec(0), newl,		# freq #
+		   long, dec(0), newl);		# prof #
+	fi
+     fi;
+  od;
+  f_s.put('_globals:\n');
+  for i in globval do f_s.put(i, newl) od;
+  f_s.put('_eglobals:\n',
+          '_globnames:\n');
+  for i in globname.index
+  do 
+     f_s.put(long, declstring(globname[i],env_stringtab), newl)
+  od;
+  declstrings(env_stringtab);
+);
+
+proc inspect(rval, expr)
+(	if rval = Value
+	then	ermsg(expr || ': value required', lnr)
+	elif rval = Assign
+	then	ermsg('illegal assignment to ' || expr, lnr)
+	fi
+);
+
+proc void(aval)
+(	if aval ~= Novalue
+	then	exp_op0('void')
+	fi
+);
+
+proc voidcall(rval)
+(	if rval = Novalue
+	then	exp_op0('void')
+	fi
+);
+
+proc abs(rval)
+	return(if rval < 0 then -rval else rval fi);
+
+var flab	:= labelgenerator('F');
+
+var llab	:= labelgenerator('L');
+
+proc label(l)	(lineflush(); f_s.put(l, ':'));
+
+proc glob(l)
+( lineflush();
+  f_s.put('.globl ', l, newl);
+);
+
+proc gofl()	exp_op0('gofl');
+
+proc newrc()	exp_op0('newrc');
+
+proc oldrc()	exp_op0('oldrc');
+
+proc resrc()	exp_op0('resrc');
+
+proc close_rc()
+( var i;
+  for i in interval(1, nrc, 1) do exp_op0('oldrc') od;
+);
+
+proc newsubj()	exp_op0('newsubj');
+
+proc oldsubj()	exp_op0('oldsubj');
+
+proc close_subj()
+( var i;
+  for i in interval(1, nsubj, 1) do exp_op0('oldsubj') od;
+);
+
+proc go(l)	exp_opw1('go', l);
+
+proc retu(n)
+( close_rc();
+  close_subj();
+  exp_op1('return', n);
+);
+
+proc fretu()
+( close_rc();
+  close_subj();
+  exp_op0('freturn');
+);
+
+proc ercode(c)
+( exp_op0('error');
+  exp_op0('er_' || c)
+);
+
+proc pushfl(f)
+if errcnt = 0
+then	flstack[flstp := flstp + 1] := f
+fi;
+
+proc popfl()
+if errcnt = 0
+then	if flstp < 0
+	then	comermsg('pop tried from empty flstack')
+	else	flstack[flstp] := '';
+		flstp := flstp - 1
+	fi
+fi;
+
+proc newfl(f)
+if errcnt = 0
+then	if flstp = -1 | ~(flstack[flstp] = f = NIL)
+	then	exp_opw1('newfl', f)
+	fi;
+	pushfl(f)
+fi;
+
+proc oldfl()
+if errcnt = 0
+then	if flstp <= 0 | ~(flstack[flstp] = flstack[flstp-1] = NIL)
+	then	exp_op0('oldfl')
+	fi;
+	popfl()
+fi;

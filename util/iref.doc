@@ -1,0 +1,204 @@
+.DS C
+IREF Reference Manual
+.sp 2
+Paul Klint
+.DE
+.SH
+ABSTRACT
+IP
+IREF is a UNIX program for automatic section and paragraph
+numbering and cross referencing.
+This document summarizes the facilities of IREF and
+shows some examples of its use.
+.SH
+INTRODUCTION
+.PP
+IREF can perform the following operations on a series
+of input files:
+.IP -
+Automatic section numbering, with different numbering styles
+(digits, upper or lower case letters, upper or lower case
+roman numerals).
+.IP -
+Resolve (symbolic) references to paragraphs by actual
+paragraph numbers.
+.LP
+IREF uses a set of
+.UL counters
+to be used for numberings various entities in a document,
+such as paragraph number, figure number, table number,
+bibliographic entry number, etc.
+Such a counter should be declared at the beginning of the
+document by means of a counter definition.
+In subsequent parts of the document such counters may
+be incremented, their nesting level may increased or decreased
+(to obtain I.20.7.a. style nested paragraph numbers),
+or their value may be assigned to a symbolic name (tag).
+In the latter case this tag can be used in any part
+of the document (before or after the definition of the tag)
+and will then be replaced by the counter value.
+Optionally, the values of all tags of the previous run of iref are saved in
+a file.
+In this way iref can be used on a subset of a large document:
+for all tags that are not defined in that subset,
+the value assigned to it in the previous run will be used.
+.PP
+Iref is called as follows:
+.DS
+iref [-i[Indexfile]] file1 file2 ...
+.DE
+This command will process the files file1, file2, etc. in order.
+The argument -i is necessary to instruct iref that an index file
+of previous runs has to be used.
+Optionally the file with name Indexfile can be used for
+maintaining iref's index instead of the default file "iref.index".
+.PP
+We give now first an annoted grammar of the IREF commands
+and next show some examples.
+.SH
+ANNOTATED IREF COMMANDS
+.LP
+iref-command ::= '#{ simple-command '}' .
+.IP
+Each command starts with a number sign ('#') and is enclosed
+by braces.
+Some typical examples are:
+.sp 1
+	#{counter,SN,1}
+.br
+	#{introduction paragraph=SN+}
+.br
+	#{FN<+;}
+.LP
+simple-command ::= counter-def | assignment | insert .
+.IP
+A simple-command may have three forms: a counter-def declares
+a new counter, an assignment assigns a counter value to
+a symbolic tag and an insert inserts (several) tag values
+into the document.
+.LP
+counter-def ::= 'counter,' tag ',' format-specifier .
+
+format-specifier ::=
+	 number |
+.br
+	 lower-case-letter | upper-case-letter |
+.br
+	'roman(' number ')' |
+.br
+	'ROMAN(' number ')' | empty .
+.IP
+A counter with the name tag is declared with a given format and
+initial value.
+Subsequent increments of the counter will be represented in
+the choosen format.
+The following examples show counter definitions and
+consecutive values that the declared counter will have.
+.RS
+counter,SN,1                    1,2,3,4,...
+.br
+counter,AP,X                    X,Y,Z,AA,AB,...
+.br
+counter,Figures,ROMAN(8)        VIII,IX,X,XI,...
+.RE
+.LP
+assignment ::= tag '=' expr [;] .
+.IP
+An assignment associates the value of the right-hand-side
+expression with the tag.
+When followed by a semi-colon, the value of the expression wil
+not be inserted in the resulting document.
+.LP
+expr ::= tag operation* ['$'] .
+.LP
+operation ::= '+' | '-' | '<' | '>' [format-specifier] .
+.IP
+An expression consists of a tag followed by operations
+optionally followed by a dollar sign.
+The meaning of the various operations is as follows:
+.RS
+.IP +
+Increment counter
+.IP -
+Decrement counter
+.IP <
+Decrease nesting level
+.IP >
+Increase nesting level and introduce new
+subcounter with given format and starting value.
+If the latter is omitted then numeric type with start
+value zero is assumed.
+.RE
+.sp 1
+If the last character of the expression is a dollar sign,
+then only the value of the last subcounter is returned.
+If the counter SN has value 3.A.VI. then one gets:
+.br
+SN+		3.A.VII.
+.br
+SN-		3.A.V.
+.br
+SN<		3.A.
+.br
+SN>a		3.A.a
+.br
+SN$		VII.
+.sp 1
+Some typical examples are:
+.br
+SN<+		3.B.
+.br
+SN<<+	4.
+.LP
+notagsym ::= '+'|'-'|'<'|'>'|'{'|'}'|'='|';'|'$'|','|' '|'\t'|'\n' .
+.LP
+tag ::= { zero or more ascii chars excluding notagsyms } .
+.LP
+sep ::= notagsym+ .
+.LP
+insert ::= ( tag sep )* .
+.SH
+EXAMPLES
+.PP
+In this section we show how iref can be used to
+maintain section and figure numbers.
+The counters SN and FN will be used for this purpose.
+Sample input
+.DS L
+#{counter,SN,0}
+#{counter,FN,ROMAN(7)}
+#{chap 1=SN+}. INTRODUCTION
+#{preliminaries=SN>1}. Preliminaries
+	See section #{limitations} below.
+	Here we define first figure #{ugly fig=FN+}
+	We promise #{promise=SN;}that 
+	it is not as beatiful as figure #{beaty fig}.
+#{limitations=SN+}. Limitations of this work
+	Nothing interesting here.
+	Some remarks on this topic can be found
+	in section #{future}.
+#{conclusions=SN<+}. CONCLUSIONS
+#{results=SN>1}. Main results
+	At last here is that fantastic figure #{beaty fig=FN+},
+	we alluded to in section #{promise}
+#{future=SN+}. Future work
+.DE
+.LP
+Sample output:
+.DS L
+1. INTRODUCTION
+1.1. Preliminaries
+	See section 1.2 below.
+	Here we define first figure VIII
+	We promise that 
+	it is not as beatiful as figure IX.
+1.2. Limitations of this work
+	Nothing interesting here.
+	Some remarks on this topic can be found
+	in section 2.2.
+2. CONCLUSIONS
+2.1. Main results
+	At last here is that fantastic figure IX,
+	we alluded to in section 1.1
+2.2. Future work
+.DE

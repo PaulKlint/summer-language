@@ -1,0 +1,222 @@
+# used files:
+-rwxr-xr-x 1 paulk   ai       114756 Jan 12  1981 /grp/ai/paulk/summer/pgen/pg
+-rw-rw-r-- 1 paulk   ai         1441 Jan 12  1981 /grp/ai/paulk/summer/pgen/pglib
+-rw-rw-r-- 1 paulk   ai           20 Aug 14 20:34 t0.syn
+-rw-rw-r-- 1 paulk   ai         1592 Jan  7  1981 /grp/ai/paulk/summer/pgen/pglib.ns
+#
+const
+	lower := 'abcdefghijklmnopqrstuvwxyz',
+	upper := 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+	digit := '0123456789',
+	ASCII := ' !"#$%&''()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~';
+
+var
+	lnr := 0, sy, t_sy, line := scan_string(' '), errcnt := 0;
+
+proc SET(syms)
+(	var i, b := bits(SETSIZE,0);
+
+	for i in syms
+	do
+		b[i] := 1;
+	od;
+	return(b);
+);
+
+
+proc UN2(s1,s2)
+(	
+	return(s1.disj(s2))
+);
+
+
+proc UN3(s1,s2,s3)
+(
+	return((s1.disj(s2)).disj(s3))
+);
+
+
+
+
+proc error(mess,ln)
+(
+	put(string(ln).right(5,' '),': ',mess,' expected\n');
+	errcnt := errcnt + 1;
+);
+
+proc ermsg(mess,ln)
+(
+	put(string(ln).right(5,' '),': ',mess,'\n');
+        errcnt := errcnt + 1;
+);
+
+
+
+proc testsym(exp,dont_skip,message)
+(
+
+	if exp[t_sy] = 0
+	then	var mess := '  ',
+		    nskipped := 0,
+		    erlnr := lnr,
+		    both := UN2( exp,dont_skip);
+
+
+		 	while both[t_sy] = 0
+			do	if nskipped < 6
+				then	if nskipped < 5
+					then mess := mess || sy || ' '
+					else mess := mess || sy || ' ....';
+					fi;
+					nskipped := nskipped + 1;
+				fi;
+				nextsym;
+			od;
+			
+
+
+                        if mess ~= '  ' 
+                        then    mess := ' "'|| mess || '"' || '   SKIPPED .\n';
+
+				mess:= mess||'\t\tscan resumed at "' || sy ||
+					'", in line '||string(lnr);
+			fi;
+
+                        if  message ~= ''
+			then error(message,erlnr);
+			fi;
+
+
+			if mess ~= '  '
+			then ermsg(mess,erlnr);
+			fi;
+	fi;
+);
+
+
+
+	var
+	 	keytab := table(20,undefined) init [
+	],
+
+
+	kartab := table(20,undefined) init [
+		'A'  : 0
+	],
+
+
+	predef := table(10,undefined) init [
+		'EOF' : 1
+	],
+
+
+
+	SETSIZE := 2,
+	s_0 := SET([0]),
+	s_1 := SET([1]),
+	EMPTY := SET([]);
+
+const TRUE := 1,
+      OKE := 1,
+      empty := '';
+
+var   karar := kartab.index,
+      karsize := kartab.size;
+
+
+
+
+proc get_str()
+(	const quote := '''';
+
+	scan line
+	for	var s := cursor-1;
+
+		while break(quote) & lit(quote || quote) do od;
+		if ~lit(quote)
+		then	ermsg('newline not allowed in string', lnr);
+			rtab(0)
+		fi;
+		if errcnt = 0
+		then	s := cursor-s; sy := move(-s);  move(s)
+		else	sy := ''
+		fi
+	rof
+);
+
+
+proc get_number()
+assert  scan line
+	for   [sy, t_sy] := [sy || (span(digit) | empty), predef['simple_integer']] &
+	      if try sy := sy || lit('.') || span(digit) yrt
+	      then	t_sy := predef['simple_real']
+	      fi &
+	      if sy := sy || lit('e') ||
+				    (lit('+') | lit('-') | '') || span(digit)
+	      then t_sy := predef['simple_real']
+	      fi
+	rof;
+
+proc nextsym()
+(
+	var i;
+
+	while TRUE do
+		line.span(' \t')|OKE;
+
+
+		if sy := line.any(upper || lower)
+                then    (sy := sy||line.span(lower||upper||digit||'_'))|OKE;
+			t_sy := if keytab[sy] ~= undefined
+				then keytab[sy];
+				else predef['ident']
+				fi;
+
+			return;
+		fi;
+
+		for i in interval(karsize - 1, 0, -1)
+		do
+			sy := karar[i];
+			if line.lit(sy) succeeds
+			then
+				t_sy := kartab[sy];
+				return;
+			fi;
+		od;
+
+		if line.lit('''')
+		then
+			get_str();
+			t_sy := predef['string_const'];
+			return;
+		elif sy := line.any(digit)
+		then
+			get_number;
+			return;
+		elif line.rpos(0)
+		then
+			line := scan_string(get()) & lnr := lnr + 1 |
+			( sy:='EOF' & t_sy := predef['EOF'] & return;)
+		else
+			sy := line.move(1);
+			ermsg('illegal character: ' || sy,lnr);
+		fi;
+	od;
+);
+
+
+program  p_grammar(args)
+(
+  var dont_skip := s_1;
+  nextsym;
+  testsym(s_0,dont_skip,'<grammar>');
+  if t_sy = 0
+  then
+    nextsym;
+    testsym(dont_skip,EMPTY,'');
+  fi;
+  if errcnt > 0
+  then stop(1)
+  fi;
+);

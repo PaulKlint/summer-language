@@ -1,0 +1,90 @@
+op ===(a, b)
+( var x;
+  if a.size = b.size fails
+  then
+    freturn
+  fi;
+  for x in a.index
+  do
+    if a[x] = b[x] fails
+    then
+      freturn
+    fi
+  od;
+);
+
+proc env_not_chanced_by(new)
+(
+  var old;
+  if [old, envdescr[1]] := envdescr[0].next(envdescr[1]) fails
+  then
+    freturn
+  fi;
+  if type(old) = type(new) fails
+  then
+    freturn
+  fi;
+  if
+    case type(new) of
+      'EOF_SUM':,
+      'VAR_SUM':
+      'SOURCE_SUM':
+      'MONADIC_SUM':
+      'DYADIC_SUM':
+        old.name = new.name,
+      'CONST_SUM':
+        old.name = new.name & old.val = new.val,
+      'OP_SUM':
+      'PROC_SUM':
+      'PROGRAM_SUM':
+        old.name = new.name & old.nf = new.nf,
+      'CLASS_SUM':
+        same_assocs(old, new);
+        old.name = new.name & same_fields(old.classfld_sum, new.classfld_sum)
+    esac fails
+  then
+    freturn
+  fi
+); # env_not_chanced_by #
+
+proc append_on_envdescr(element)
+(
+  if always_compile = True
+  then
+    envdescr.append(element)
+  else
+    if env_not_chanced_by(element) fails
+    then
+      stop(errcnt + 2)
+    fi
+  fi
+); # append_on_envdescr #
+
+proc same_assocs(old, new)
+(
+  if old.own_fetchtab === new.own_fetchtab &
+    old.own_storetab === new.own_storetab &
+    old.own_assoctab === new.own_assoctab fails
+  then
+    old.own_fetchtab := new.own_fetchtab;
+    old.own_storetab := new.own_storetab;
+    old.own_assoctab := new.own_assoctab;
+    assocs_chanced := True
+  fi
+); # same_assocs #
+
+proc same_fields(old, new)
+(
+  var i;
+  if old.size = new.size fails
+  then
+    freturn
+  fi;
+  for i in old.index
+  do
+    if type(old[i]) = type(new[i]) & old[i].name = new[i].name fails
+    then
+      freturn
+    fi
+  od
+); # same_fields #

@@ -1,0 +1,10 @@
+include 'incA';
+class B()
+begin var aa;
+end B;
+program x(args)
+( var f, a;
+  f := file('yyy', args[0]);
+  a := f.get;
+  a := f.get;
+)

@@ -1,0 +1,17 @@
+<pattern>	::= <pattern-primary>
+			[ ( '|' | '--' | '=:' | '!=:' ) <pattern-primary> ] .
+
+<pattern-primary>
+		::= <identifier> |
+		    <string-literal> |
+		    ('@' | '!@') '(' <expression> ')' |
+		    '*' <identifier> |
+		    TRY {<pattern> ','}+ UNTIL <pattern> YRT |
+		    '(' <pattern> ')' |
+		    '<' <integer-constant> ',' [<expression>] ',' <pattern> '>' .
+
+<expression>	::= { <assignment> ';' }* .
+
+<assignment>	::= <identifier> ':=' <right-hand-side> .
+<right-hand-side>
+		::= <identifier> | <string-literal> .

@@ -1,0 +1,2 @@
+(echo ".D{"; cat [a-z]*; echo ".D}") |\
+troff -t -s4 /grp/ai/jan/format/mctract ../ix.ms - >OUT 2>ER

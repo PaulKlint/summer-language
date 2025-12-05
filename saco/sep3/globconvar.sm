@@ -1,0 +1,283 @@
+const	alpha		:= 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
+	alphanum	:= 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_',
+	ops		:= '*+-/:<=>|&~!$%\\@?',
+	empty_string	:= '',
+	layout		:= ' \t';
+
+	# Above some constants needed by the scanner.			#
+
+const	lpar		:= '(',
+	sc		:= ',',
+	newl		:= '\n',
+	nullchr		:= '\000',
+	NIL		:= '~nil',
+
+	NOFETCH		:= '_fetcher',
+	NOSTORE		:= '_storeer',
+	SIMPLE		:= '0',
+	PROC		:= '~proc',
+	VAR		:= '~var',
+	fetch_type	:= 'fetch',
+	store_type	:= 'store',
+	empty		:= '',
+
+	o_lpar		:= '(',
+	S_LEVEL		:= 0,
+	S_NEXT		:= 1,
+	S_VALUE		:= 2,
+
+	O_NAME		:= 0,
+	O_ADIC		:= 1,
+	O_STATUS	:= 2,
+	O_PRIOF		:= 3,
+	O_PRIOG		:= 4,
+	O_CODE		:= 5,
+
+	False		:= 0,
+	True		:= 1;
+
+const	LocalVar	:= 0,
+	GlobalVar	:= 1,
+	ClassVar	:= 2,
+	BuiltinProc	:= 3,
+	GlobalProc	:= 4,
+	ClassProc	:= 5,
+	BuiltinClass	:= 6,
+	Class		:= 7,
+	Constant	:= 8,
+	Forward		:= 9,
+	Field		:= 10,
+	Program		:= 11;
+	
+const	Assign		:= -1,
+	Novalue		:= 0,
+	Value		:= 1;
+
+#*************************** GENERAL GLOBAL VARIABLES *********************#
+
+
+var	always_compile,
+		# True or False, when True never a summeray file is     #
+		# and global effects won't suffer the compiler because  #
+		# everything will be compiled.                          #
+	removestring,
+		# This string contains after code generation the 	#
+		# command needed to remove the assembler files.		#
+	linkstring,
+		# This string contains after code generation the string #
+		# with the command needed to link all objects generated #
+		# while assembling.                                     #
+	f_er,
+		# error message file					#
+	src,	# a SOURCE object representing the current source file.	#
+		# Handles the tree structure of nested include files.	#
+	opstack := [],
+		# The operator stack.					#
+		# The stack is pushed by 'opush', popped by 'opush'	#
+		# Elements on opstack are entries from montab and dytab.#
+
+	ndstack := [],
+		# The operand stack.					#
+		# Pushed by 'ndpush', popped by 'ndpop'			#
+		# Entries on the stack are operands.        		#
+	glcnt := 0,
+		# Determines the next global index			#
+	symtab,
+		# global symbol table (see init_tables)			#
+	fieldtab,
+		# global field table (see init_tables)			#
+
+        # classtab (real declaration occurs in 'prefix', see below)	#
+		# Class table. Keys are classnames, entries are arrays	#
+		# of six elements defined as follows:			#
+		# 0:	number of datafields declared in the class	#
+		#	(= size of an class instance)			#
+		# 1:	parameter fields				#
+		# 2:	(remaining) var fields				#
+		# 3:	procedure fields				#
+		# 4:	operator fields					#
+		# 5:	sequence number of this class.			#
+		# These elements are used by 'do_subclass' when a new	#
+		# subclass is declared.					#
+	inhertab := table(10, undefined),
+		# During the parse of a subclass, inhertab contains	#
+		# entries for fields which are inherited from the super-#
+		# class and may still be redefined.			#
+
+        fetchtab := table(5, undefined),
+	storetab := table(5, undefined),
+		# Keys are fieldnames occurring in respectively the	#
+		# 'fetch' and the 'store' declaration of the current	#
+		# class. Values are the associations ('_s' for simple,	#
+		# or a name).						#
+
+	assoctab := table(5, undefined),
+		# keys are procedure names declared as associations,	#
+		# values are fetch_ or store_type. Used to check whether#
+		# number of arguments and return values are correct.	#
+
+	loclist := [],
+		# Names of locals of the current procedure. Used to	#
+		# produce string representing symbolic names (convlocs).#
+		# Names of constants of the current block		#
+
+	par_flds := [],
+	data_flds := [],
+	proc_flds := [],
+	op_flds := [],
+		# parameters, data fields and procedure and operator	#
+		# fields of current class.				#
+		# Names of fields of current class. Used by 'undefine'	#
+		# to remove them from symtab on class exit.		#
+
+	level := 0,
+		# Current depth of name-nesting. Incremented on proce-	#
+		# dure entry, on class entry and on block entry. Decre-	#
+		# Used by 'symentry' to check for illegal redefinitions.#
+	loccnt := 0,
+		# Determines the offset of the next local variable to	#
+		# be declared. For global procedures and operators, the	#
+		# offset is initially 0; for classes and their associa-	#
+		# ted procedures it is 1, as 0 is reserved for the class#
+		# object passes as additional argument.			#
+		# Because the tracer needs a unique mapping from local	#
+		# numbers to associated names, the offset is not reset	#
+		# on block exit. This does however cause an inefficient	#
+		# use of space in the interpreter.			#
+
+	# nclasses  (declared in "prefix"				#
+		# To determine class sequence number. Incremented on 	#
+		# entry of a new class.					#
+
+	nfields := 0,
+		# Determines field sequence number.			#
+	curproc,
+		# The PROC_DECL corresponding to the current procedure	#
+	curclassname,
+		# The name of the current class; used during code generation #
+		# by PROC_DECL and CALL to treat FORWARD nodes.	#
+
+	classvarinit,
+		# array of VARINITs for data field initializations in	#
+		# class declarations.					#
+	classprocs,
+		# array of PROC_DECLs for field and operator procs	#
+		# used by PROC_DECL.complete				#
+	offset,
+		# The current class offset. Set to 0 on class entry,	#
+		# incremented for each new data field.			#
+	clname,
+		# The name of the current class. Used to make field-	#
+		# entries ('procedure', 'vars', 'operator', 'params')	#
+		# and to check whether a field is not redefined within	#
+		# the same class ('fieldentry').			#
+	inproc := 0,
+		# Flag which signals whether the current program point	#
+		# lies within a procedure, an operator, a class init	#
+		# statement or the main program. Used by 'locvars' to	#
+		# detect illegal local declarations (allowed only when	#
+		# inproc = 1), and by 'forloop' to recognize whether it	#
+		# must invent global or local variables.		#
+	inloop := 0,
+		# Indicator for nesting level inside while, for or try	#
+		# expressions; used to determine whether explicit	#
+		# variable initialization should be generated for	#
+		# declaration without initializing expression.		#
+		# See <local_initialization>.				#
+
+	lastlnr := 1,
+		# The source line number on which the most recent line	#
+		# increment was generated. (Such an instruction enables	#
+		# the interpreter and the tracer to compute source line	#
+		# numbers from the ic-code). 'lastlnr' is set to lnr by #
+		# 'LINE' and each time an absolute linenumber is	#
+		# generated in the code.				#
+
+	may_sel := False,
+	may_sub := False,
+		# Indicate whether the last <unit> may be selected or	#
+		# subscribed. See parser.syn				#
+
+	montab := table (20, undefined) init
+		[	'-' :		['-', 1,0,13,14,'neg'],
+			'~' :		['~',  1,0,13,14,'*error*']
+                ],
+
+
+        dytab := table(20, undefined) init
+                [       ':=':           [':=', 2, 0,  7, 8,'*error*'],
+                        '+' :           [ '+', 2, 0, 11,11,'add'],
+                        '-' :           ['-', 2, 0, 11,11,'sub'],
+                        '*' :           [ '*', 2, 0, 12,12,'mul'],
+                        '/' :           [ '/', 2, 0, 12,12,'div'],
+                        '%' :           [ '%', 2, 0, 12,12,'idiv'],
+                        '||':           ['||', 2, 0, 13,13,'conc'],
+                        '&' :           [ '&', 2, 0,  6, 6,'*error*'],
+                        '|' :           [ '|', 2, 0,  4, 5,'*error*'],
+                        '<' :           [ '<', 2, 0, 10,10,'lt'],
+                        '<=':           ['<=', 2, 0, 10,10,'le'],
+                        '>' :           [ '>', 2, 0, 10,10,'gt'],
+                        '>=':           ['>=', 2, 0, 10,10,'ge'],
+                        '=' :           [ '=', 2, 0, 10,10,'eq'],
+                        '~=':           ['~=', 2, 0, 10,10,'ne'],
+                        '(' :           [ '(', 2, 0,  1, 2,'*error*']
+		],
+		# 'montab' and 'dytab' map operator names to a 5-tuple,	#
+		# consisting of the following items:			#
+		# - An internal name (without class suffix). For user	#
+		#   defined operators, this is their external name	#
+		#   followed by a dot followed by 1 or 2 according to	#
+		#   their adicity.					#
+		# - A 1 for monadic and a 2 for dyadic operators.	#
+		#   Entries from montab and dytab are stacked on the	#
+		#   operator stack, and unstacked (by 'treatop' and	#
+		#   'emptystack') without knowing from which table they #
+		#   originally came. Hence the necessity to include the #
+		#   adicity.						#
+		# - A declaration status indicator:			#
+		#   - 0 for build in, global operators.			#
+		#   - 1 for user defined, global operators as yet 	#
+		#     without a namesake within a class.		#
+		#   - 2 for user defined, global operators with a name-	#
+		#     sake within a class. User defined operators which #
+		#     occur both globally and within a class, get an    #
+                #     additional entry in 'fieldtab'. The 1 and 2 serve #
+		#     to see whether this entry has been made already.	#
+		#     (see also 'operator' and 'addglobf').		#
+		#   - 3 for operators defined as yet only within a class#
+		#     Built-in class operators don't occur as yet, but  #
+		#     should get the same treatment as user defined	#
+		#     ones, i.e. when a global namesake is defined, an  #
+		#     additional entry must be amde in the fieldtable.  #
+		#   - -lnr for operator names occurring in 'monadic' and#
+		#     'dyadic' declarations, but not yet defined. lnr	#
+		#     is the source line number on which the declaration#
+		#     occurred, rememberd here in order to be able to	#
+		#     issue an error message at the correct line when	#
+		#     the operator remains undefined.			#
+		#   - The f-priority.					#
+		#   - The g-priority.					#
+		#   All user defined operators get the same priority.   #
+
+	stringtab := table(500,undefined),
+ 		#   global table of stringconstants			#
+
+	slab      := labelgenerator('S'),
+
+	UNDEFINED := CONSTANT(undefined),
+
+	typetag	:= table(10, '') init [
+		'integer':	'I',
+		'real':		'R',
+		'string':	'S',
+		'array':	'A',
+		'table':	'T',
+		'file':		'F',
+		'bits':		'B',
+		'scan_string':	'SC',
+		'interval':	'IV'
+		];
+
+	# table with standard type tags for builtin class procedures	#
+	# Example: the procedure "update" for tables is "T_update"	#
+	# This convention has to be respected in the interpreter	#

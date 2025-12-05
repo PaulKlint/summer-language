@@ -1,0 +1,200 @@
+
+<summer_program> ::=    (  <global_variable_declaration>
+			 | <constant_declaration> /cns/
+			 | <global_procedure>
+			 | <global_operator>
+			 | <class_declaration>
+			 | <monadic_declaration>
+			 | <dyadic_declaration>
+			 | <program_declaration> /prg/
+			)* .
+
+<global_declaration> ::= VAR { <global_initialization> /nxt/ ',' }+ ';' .
+
+<global_initialization> ::= <identifier> /id/
+			    [ ':=' /ass/ <expression> /exp/ ] .
+<constant_declaration> ::=
+		CONST { ci:<constant_initialization> /nxt/ ',' }+ ';'
+				
+<constant_initialization> ::= <identifier> /id/ ':=' <expression> .
+
+<global_procedure> ::= PROC <identifier> /id/
+		       n_nms:<formals_of_procedure> /par/
+		       ( <expression> | <empty> /emp/ ) ';' .
+
+<formals_of_procedure> ::= '(' { <identifier> /nxt/ ',' }* ')' .
+
+<global_operator> ::= OP <operator_symbol> /sym/
+			 n_nms:<formals_of_procedure> /par/
+		         ( <expression> | <empty> /emp/ ) ';' .
+
+<class_declaration> ::= CLASS <identifier> /id/
+			      n_nms:<formals_of_class> /par/
+			BEGIN	super:<subclass_declaration>
+				<fetch_associations>
+				<store_associations>
+				(  <field_procedure>
+				 | <field_operator>
+				 | <field_declaration>
+				 | c:<constant_declaration> /cns/
+				)* /body/
+				(  INIT ':' <block> /init/
+				 | <empty> /emp/
+				)
+			END <identifier> /end/ ';' .
+
+<formals_of_class> ::= '(' { <identifier> /nxt/ ',' }* ')' .
+
+<subclass_declaration> ::= [ SUBCLASS OF <identifier> /id/ ';' ] .
+
+<fetch_associations> ::= [  FETCH
+			   { ( (<identifier> | <operator_symbol>) /fld/
+			       ( ':' <identifier> /ass/ | <empty> /emp/)
+			     ) ','
+			   }+ ';'
+			 ] .
+
+<store_associations> ::= [  STORE
+			   { ( (<identifier> | <operator_symbol>) /fld/
+			       ( ':' <identifier> /ass/ | <empty> /emp/)
+			     ) ','
+			   }+ ';'
+			 ] .
+
+<field_procedure> ::= PROC <identifier> /id/
+		      n_nms:<formals_of_procedure> /par/
+		      ( <expression> | <empty> /emp/ ) ';' .
+
+<field_operator> ::= OP <operator_symbol> /sym/
+			 n_nms:<formals_of_procedure> /par/
+		         ( <expression> | <empty> /emp/ ) ';' .
+
+<field_declaration> ::= VAR { <field_initialization> ',' }+ ';' .
+
+<field_initialization> ::= <identifier> /id/
+			   [ ':=' /ass/ <expression> /exp/ ] .
+
+<monadic_symbol_declaration> ::= MONADIC { <operator_symbol> /sy/ ',' }+ ';' .
+
+<dyadic_symbol_declaration> ::= DYADIC { <operator_symbol> /sy/ ',' }+ ';' .
+
+<program_declaration> ::= PROGRAM <identifier> /id/
+			  n_nms:<formals_of_procedure> /par/
+			  ( <expression> | <empty> /emp/) [';'] .
+
+<expression> ::= <monadic_expression>
+		 ( <operator_symbol> /op/ <monadic_expression> ) * .
+
+<monadic_expression> ::= <operator_symbol>* /op/ <primary> .
+
+<primary> ::= a:<unit> ( /sub/ <subscript> | /sel/ <select> )* .
+
+<unit> ::=	  <constant>			/a01/
+		| <identifier_or_call>		/a11/
+		| <self>			/a11/
+		| <subject>			/a11/
+		| <return_expression>		/a00/
+		| <if_expression>		/a11/
+		| <case_expression>		/a11/
+		| <while_expression>		/a00/
+		| <for_expression>		/a00/
+		| <scan_expression>		/a11/
+		| <try_expression>		/a11/
+		| <assert_expression>		/a11/
+		| <parenthesized_expression>	/a11/
+		| <array_expression>		/a11/
+		| <table_expression>		/a11/
+		| <array_or_table_expression>	/a11/
+		.
+
+<constant> ::=    <string_constant>  /str/
+		| <integer_constant> /int/
+		| <real_constant>    /real/
+		| UNDEFINED	     /und/
+		.
+
+<identifier_or_call> ::= <identifier> /id/ [ n:<actuals> /call/ ] .
+
+<actuals> ::= '(' [ n:<comma_exprlist> ] ')' .
+
+<comma_exprlist> ::= { <expr> /inc/ ','}+ .
+
+<return_expression> ::=   RETURN (  '(' (<expression> /rv/ | <empty> /re/) ')'
+				  | <empty> /re/
+			         ) /ret/
+			| FRETURN /fr/ .
+
+<if_expression> ::=	IF <conditional_expression> FI .
+
+<conditional_expression> ::=	<test>
+				THEN <block>
+			     (  ELIF <condexpr>	/ife/
+			      | ELSE <block>	/ife/
+			      | <empty>		/ift/
+			     ) .
+
+<test> ::= <expression> [ FAILS /f/ | SUCCEEDS ] .
+
+<case_expression> ::= CASE <expression> /def/
+		      OF [ n:<case_body> ] ESAC '.'
+
+<case_body> ::=   <case_entry> ( ',' n:<case_body> /inc/ | <empty> /nod/ )
+		| DEFAULT /d/ ':' ( <block> | <empty> /emp/)
+
+<case_entry> ::= { <block> ':' /tst/ }+
+
+<while_expression> ::= WHILE <test> DO <block> OD .
+
+<for_expression> ::= FOR <identifier> /id/ IN <expression> /exp/
+		     DO <block> OD .
+
+<scan_expression> ::= SCAN <expression> FOR <block> ROF .
+
+<try_expression> ::= TRY n:<comma_exprlist> /exp/
+		     (UNTIL <block> /tru/ | <empty> /try/)
+		     YRT .
+
+<assert_expression> ::= ASSERT <expression> .
+
+<parenthesized_expression> ::= '(' <block> ')'
+
+<array_expression> ::= ARRAY (  <size_definition>
+				[ INIT n:<array_initialization> /mkt/]
+			      | /nosz/ n:<array_initialization> /mkt/
+			     ) .
+
+<size_definition> ::= '(' <expression> ',' <expression> ')' .
+
+<array_initialization> ::= '[' n:<comma_exprlist> ']' .
+
+<table_expression> ::= TABLE (  <size_definition>
+				[ INIT nsum:<table_initialization> /mkt/ ]
+			      | /nosz/ nsum:<table_initialization> /mkt/
+			     ) .
+
+<table_initialization> ::= '[' { nk:<table_element> /nxt/ ',' }* ']'
+
+<table_element> ::= { <expression> /inc/ ':' }+ .
+
+<array_or_table_initialization> ::=
+		'['
+		 (   ']' /ar/
+		   | <expression> (   /one/ ']' /ar/
+				    | ',' n:<comma_exprlist> /inc/ ']' /ar/
+				    | ':' nk:<table_element_tail> /nxt/
+					  { nk:<table_element> ',' /nxt/ }*
+				      ']' /tab/
+				  )
+		 ) .
+
+<table_initialization_tail> ::= {<expression> /inc/ ':'}+ ',' .
+
+<block> ::= (   v:<local_declaration> /var/
+	      | c:<constant_declaration> /cns/
+	    )*
+	      { [<expression> /cnt/] ';' }* .
+
+<local_declaration> ::= VAR { li:<local_initialization> /nxt/ ',' }+ ';' .
+
+<local_initialization> ::= <identifier> /id/
+			   ( ':=' <expression> | <empty> /emp/) .
