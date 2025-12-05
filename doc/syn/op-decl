@@ -1,2 +1,0 @@
-<operator-declaration> ::=
-        OP <operator-symbol> <formals> [ <expression> ] ';' .

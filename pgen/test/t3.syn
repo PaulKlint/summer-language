@@ -1,4 +1,0 @@
-<grammar> ::= 'abc' /act1/ | 'def'  | <r> .
-
-	/act2/:	xxxxxxxx
-<r>	::= .

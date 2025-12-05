@@ -1,1 +1,0 @@
-<while-expression> ::= WHILE <test> DO <block> OD .

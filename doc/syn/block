@@ -1,2 +1,0 @@
-<block> ::=
-        (<variable-declaration>|<constant-declaration>)* {[<expression>] ';'}* .

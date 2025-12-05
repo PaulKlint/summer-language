@@ -1,2 +1,0 @@
-<program-declaration> ::=
-        PROGRAM <identifier> '(' [<identifier>] ')' [<expression>] .

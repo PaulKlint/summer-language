@@ -1,8 +1,0 @@
-.iy I eval
-.{{
-\fBif\fR \jg{{ \fIe\fR =\h'-0.3m'= \jh\*`\fI\z( \ji\fR\^\*' \fIb\fR:\*<block\*> \*`\fI)\fR\^\*' }}
-\fBthen\fR
-\h'|\ngu'\fIreturn\fR\^(\fIeval\fR\^(\fIb\fR))
-\fBfi\fR;
-.}}
-.iy I eval

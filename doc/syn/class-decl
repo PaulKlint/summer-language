@@ -1,9 +1,0 @@
-<class-declaration> ::=
-        CLASS <identifier> <formals>
-        BEGIN <subclass-declaration>
-              <fetch-associations> <store-associations>
-              (  <variable-declaration> | <constant-declaration> |
-                 <procedure-declaration> | <operator-declaration>
-              )*
-              [ INIT ':' <block> ]
-        END <identifier> ';' .

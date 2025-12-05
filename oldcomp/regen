@@ -1,4 +1,0 @@
-PARSER=parser CODGEN=codgen sumc .o .s parser
-cmp parser.s bootVAX/parser.s
-PARSER=parser CODGEN=codgen sumc .o .s codgen
-cmp codgen.s bootVAX/codgen.s

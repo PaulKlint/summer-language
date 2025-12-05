@@ -1,8 +1,0 @@
-include 'incA';
-include 'incB';
-program x()
-( var f, a;
-  f := file('yyy', 'wb');
-  f.put(A(), B());
-  f.close
-)

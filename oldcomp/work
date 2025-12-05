@@ -1,2 +1,0 @@
-PREFIX=prefix sumc parser
-mv a.out parser

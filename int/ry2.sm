@@ -1,7 +1,0 @@
-include 'incA';
-program x(args)
-( var f, a;
-  f := file('yyy', args[0]);
-  a := f.get;
-  a := f.get;
-)

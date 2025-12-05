@@ -1,1 +1,0 @@
-<identifier-or-call> ::= <identifier> [ <actuals> ] .

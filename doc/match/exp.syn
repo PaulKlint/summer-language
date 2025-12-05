@@ -1,5 +1,0 @@
-<expression>       ::= { <assignment> ';' }* .
-.sp 0.5
-<assignment>       ::= <identifier> ':=' <right-hand-side> .
-.sp 0.5
-<right-hand-side>  ::= <string-literal> | <identifier> [ '+'  <string-literal> ] .

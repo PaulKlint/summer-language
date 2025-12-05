@@ -1,2 +1,0 @@
-proc p() (var x:=3; return(x) );
-program q()(p:=4)

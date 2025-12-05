@@ -1,3 +1,0 @@
-eqn ix.ms $@ | pic | Boldkw >M$$
-troff mctract M$$ 2>x.index.all
-: rm M$$

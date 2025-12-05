@@ -1,3 +1,0 @@
-<simple-constant-expression> ::=
-        <constant> | <identifier> | '(' <constant-expression> ')' |
-        '-' <simple-constant-expression> .

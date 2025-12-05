@@ -1,3 +1,0 @@
-<array-expression> ::=
-        ARRAY <size-and-default> [ INIT <array-initialization> ]  |
-        <array-initialization> .

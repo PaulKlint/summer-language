@@ -1,3 +1,0 @@
-<constant-expression> ::=
-        <simple-constant-expression>
-        (<constant-operator> <constant-expression>)* .

@@ -1,4 +1,0 @@
-<if-expression> ::=
-        IF <test> THEN <block>
-        ( ELIF <test> THEN <block> )*
-        [ELSE <block>] FI .

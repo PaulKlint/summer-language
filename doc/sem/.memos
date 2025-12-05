@@ -1,8 +1,0 @@
-Wensen voor Boldkw:
-- extra spatie in ([ en ])
-- vervang '' door `'
-- doe iets aan _ in identifiers
-- verfraai ~=
-- e.v. de \n naar \\n transformatie doen.
-Wed Dec 16 19:58:02 EST 1981
-split elif problem

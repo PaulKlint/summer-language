@@ -1,5 +1,0 @@
-program xx()
-( var f := file('zzz', 'rb');
-  put(f.get, f.get, f.get);
-  f.close
-)

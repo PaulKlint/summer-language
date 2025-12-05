@@ -1,6 +1,0 @@
-<unit> ::= 
-        <constant> | <identifier-or-call> | <return-expression> |
-        <if-expression> | <case-expression> | <while-expression> |
-        <for-expression> | <scan-expression> | <try-expression> |
-        <assert-expression> | <parenthesized-expression> |
-        <array-expression> | <table-expression> .

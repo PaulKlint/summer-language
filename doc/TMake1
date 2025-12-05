@@ -1,4 +1,0 @@
-
-(cat ix.ms; iref -i counters $@ 2>.er) | eqn | pic | Boldkw >.tt
-/usr/local/ditroff mctract .tt 2>x.index.all >sel.out | dhar -t > TMP
-harprot +"springer" <TMP

@@ -1,1 +1,0 @@
-<case-entry> ::= { <constant-expression> ':' }+ <block> .

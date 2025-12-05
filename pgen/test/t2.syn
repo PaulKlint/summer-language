@@ -1,5 +1,0 @@
-<grammar> ::= 'a' /lab/ <b> .
-	INIT: iiiiiiiiiiii
-	/lab/: lllllllll
-	EXIT : eeeeeeeeeee
-<b> ::= 'b' .

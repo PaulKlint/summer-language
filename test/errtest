@@ -1,6 +1,0 @@
-for prog in `ls *.sm`
-do prog=`basename $prog .sm`
-   /b/dick/bin/chopprog $prog.sm > inter
-   /b/dick/lib/chunker -30 inter > $prog.er.sm
-   /summer/paulk/sys/comp/newcomp/npars $prog.er > $prog.er.ger
-done
